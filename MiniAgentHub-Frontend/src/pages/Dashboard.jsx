@@ -1,0 +1,248 @@
+import React, { useState, useRef, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
+import { ChevronDown, Sparkles, Code, Plus, Paperclip, Send } from 'lucide-react';
+import useThemeStore from '../store/themeStore';
+import useAuthStore from '../store/authStore';
+import { useTranslation } from 'react-i18next';
+import axiosClient from '../services/axiosClient';
+import { useParams, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+
+const Dashboard = () => {
+  useThemeStore();
+  const user = useAuthStore((state) => state.user);
+  const { t } = useTranslation();
+  const { id: sessionId } = useParams(); // Lấy ID phiên từ URL
+  const navigate = useNavigate();
+
+  // State quản lý chat
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('Llama 3'); // Trạng thái lưu model đang chọn
+  const [showModelDropdown, setShowModelDropdown] = useState(false); // Trạng thái mở menu model
+  const messagesEndRef = useRef(null);
+
+  // Tự động cuộn xuống cuối khi có tin nhắn mới
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Load tin nhắn cũ khi URL thay đổi (click từ sidebar)
+  useEffect(() => {
+    if (sessionId) {
+      const fetchMessages = async () => {
+        try {
+          const res = await axiosClient.get(`/chat-sessions/${sessionId}/messages`);
+          const msgList = Array.isArray(res) ? res : (res.data || []);
+          setMessages(msgList.map(m => ({ role: m.role, content: m.content })));
+        } catch (error) {
+          console.error("Lỗi tải lịch sử tin nhắn:", error);
+        }
+      };
+      fetchMessages();
+    } else {
+      // Nếu ở trang chủ (/), làm rỗng màn hình để bắt đầu chat mới
+      setMessages([]);
+    }
+  }, [sessionId]);
+
+  const handleSend = async (customMessage) => {
+    const textToSend = typeof customMessage === 'string' ? customMessage : input;
+    if (!textToSend.trim() || isLoading) return;
+
+    const userMessage = { role: 'user', content: textToSend.trim() };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      // Gọi API gửi message tới Backend
+      const response = await axiosClient.post('/chat', { 
+        message: userMessage.content,
+        sessionId: sessionId, // Truyền thêm ID phiên nếu đã có
+        model: selectedModel  // Truyền Model do người dùng chọn lên Server
+      });
+      
+      const aiMessage = { role: 'ai', content: response.message };
+      setMessages((prev) => [...prev, aiMessage]);
+
+      // Nếu vừa tạo tin nhắn ở phiên mới, tự động đổi URL của trình duyệt
+      if (response.sessionId && !sessionId) {
+        navigate(`/chat/${response.sessionId}`);
+      }
+    } catch (error) {
+      console.error("Lỗi khi chat:", error);
+      const errorMessage = { role: 'ai', content: 'Xin lỗi, đã có lỗi xảy ra khi kết nối với máy chủ AI.' };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden transition-colors">
+      
+      <Sidebar />
+
+      <main className="flex-1 flex flex-col relative">
+        
+        <header className="flex justify-end p-6">
+          <div className="relative">
+            <button 
+              onClick={() => setShowModelDropdown(!showModelDropdown)}
+              className="flex items-center gap-2 bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] hover:bg-gray-100 dark:hover:bg-[#2a2b30] text-gray-700 dark:text-gray-300 shadow-sm dark:shadow-none px-4 py-2 rounded-full text-sm font-medium transition-colors"
+            >
+              {selectedModel === 'Llama 3' ? 'Llama 3 (Groq)' : 'Data Analyst (Flowise)'}
+              <ChevronDown size={16} className="text-gray-400" />
+            </button>
+
+            {showModelDropdown && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg overflow-hidden z-10">
+                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors" onClick={() => { setSelectedModel('Llama 3'); setShowModelDropdown(false); }}>
+                  <div className="font-medium text-blue-600 dark:text-blue-400 mb-0.5">Llama 3</div>
+                  <div className="text-xs text-gray-500">Trò chuyện đa năng (qua Groq)</div>
+                </div>
+                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333]" onClick={() => { setSelectedModel('Data Analyst'); setShowModelDropdown(false); }}>
+                  <div className="font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">Data Analyst</div>
+                  <div className="text-xs text-gray-500">Phân tích dữ liệu (qua Flowise)</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {messages.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-32">
+            <div className="text-center mb-12">
+              <h2 className="text-5xl font-bold mb-4 text-blue-600 dark:text-[#d1e5fb]">
+                {t('dashboard.greeting', { name: user?.full_name || 'User' })}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">{t('dashboard.subtitle')}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+              <div 
+                onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
+                className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
+              >
+                <Sparkles className="text-blue-500 dark:text-blue-400 mb-4" size={24} />
+                <h3 className="text-gray-800 dark:text-gray-200 font-semibold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-white transition-colors">
+                  {t('dashboard.card1Title')}
+                </h3>
+                <p className="text-gray-500 text-sm">{t('dashboard.card1Desc')}</p>
+              </div>
+
+              <div 
+                onClick={() => handleSend(`${t('dashboard.card2Title')}: ${t('dashboard.card2Desc')}`)}
+                className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
+              >
+                <Code className="text-blue-500 dark:text-blue-400 mb-4" size={24} />
+                <h3 className="text-gray-800 dark:text-gray-200 font-semibold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-white transition-colors">
+                  {t('dashboard.card2Title')}
+                </h3>
+                <p className="text-gray-500 text-sm">{t('dashboard.card2Desc')}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6">
+            <div className="max-w-3xl w-full mx-auto flex flex-col space-y-6">
+              {messages.map((msg, index) => (
+                <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed ${
+                    msg.role === 'user' 
+                      ? 'bg-blue-600 text-white rounded-br-sm' 
+                      : 'bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm'
+                  }`}>
+                    {msg.role === 'user' ? (
+                      <span className="whitespace-pre-wrap">{msg.content}</span>
+                    ) : (
+                      <ReactMarkdown
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
+                          li: ({node, ...props}) => <li {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                          pre: ({node, ...props}) => <pre className="bg-[#1e1e1e] text-gray-300 rounded-lg p-4 overflow-x-auto my-3 text-[13px] font-mono border border-gray-700 shadow-sm" {...props} />,
+                          code: ({node, inline, ...props}) => 
+                            inline 
+                              ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} /> 
+                              : <code {...props} />,
+                          a: ({node, ...props}) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                          table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" {...props} /></div>,
+                          thead: ({node, ...props}) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
+                          th: ({node, ...props}) => <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider" {...props} />,
+                          td: ({node, ...props}) => <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props} />
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex flex-col items-start">
+                  <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-2">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        )}
+
+        <div className="absolute bottom-0 w-full p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
+          <div className="w-full max-w-3xl relative flex items-center bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-full p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
+            
+            <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+              <Plus size={22} />
+            </button>
+
+            <input 
+              type="text" 
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={t('dashboard.promptPlaceholder')} 
+              className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 px-2 text-base"
+            />
+
+            <div className="flex items-center gap-2 pr-1">
+              <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                <Paperclip size={20} />
+              </button>
+              
+              <button 
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                className={`bg-[#3b82f6] hover:bg-[#2563eb] text-white p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <Send size={20} className="ml-1" /> {/* Thêm ml-1 để icon send căn giữa đẹp hơn */}
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-4 text-[11px] text-gray-600 font-mono tracking-wide">
+            {t('dashboard.footerNote')}
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;

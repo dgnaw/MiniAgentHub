@@ -1,0 +1,68 @@
+{
+  "sidebar":{
+    "chat": "Trò chuyện",
+    "group": "Nhóm",
+    "setting": "Cài đặt",
+    "users": "Người dùng",
+    "history": "Lịch sử",
+    "logoutConfirm": "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+    "logoutTitle": "Đăng xuất"
+  },
+
+  "roles": {
+    "Admin": "Quản trị viên",
+    "User": "Người dùng"
+  },
+
+  "change-password-modal":{
+    "title": "Đổi mật khẩu",
+    "description": "Nhập mật khẩu mới dưới đây để cập nhật thông tin đăng nhập.",
+    "newPassword": "Mật khẩu mới",
+    "placeholderNewPassword": "Nhập mật khẩu mới",
+    "newPasswordConfirm": "Xác thực mật khẩu",
+    "placeholderNewPasswordConfirm": "Xác thực mật khẩu mới",
+    "updatePassword": "Cập nhật mật khẩu"
+  },
+
+  "dashboard": {
+    "greeting": "Xin chào, {{name}}",
+    "subtitle": "Tôi có thể giúp gì cho công việc của bạn hôm nay?",
+    "card1Title": "Phân tích các tập dữ liệu phức tạp",
+    "card1Desc": "Tải lên tệp CSV hoặc liên kết cơ sở dữ liệu",
+    "card2Title": "Xem xét và tối ưu hóa mã React của tôi",
+    "card2Desc": "Sửa lỗi hiệu suất hoặc tái cấu trúc thành phần",
+    "promptPlaceholder": "Nhập yêu cầu tại đây...",
+    "footerNote": "Neural Hub có thể hiển thị thông tin không chính xác, vì vậy hãy kiểm tra kỹ các câu trả lời."
+  },
+
+  "theme": {
+    "light": "Sáng",
+    "dark": "Tối"
+  },
+
+  "settings": {
+    "personalInformation": "Thông tin cá nhân",
+    "phoneNumber": "Số điện thoại",
+    "address": "Địa chỉ",
+    "update": "Cập nhật",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "notUpdated": "Chưa cập nhật",
+    "personalization": "Cá nhân hóa",
+    "visualStyle": "Giao diện",
+    "interfaceTheme": "Chủ đề giao diện",
+    "themeDescription": "Điều chỉnh giao diện làm việc để giảm mỏi mắt hoặc phù hợp với môi trường ánh sáng của bạn.",
+    "global": "Toàn cầu",
+    "language": "Ngôn ngữ",
+    "languageDescription": "Đặt ngôn ngữ giao tiếp ưa thích của bạn.",
+    "accountSecurity": "Tài khoản & Bảo mật",
+    "passwordSecurity": "Mật khẩu & Bảo mật",
+    "passwordDescription": "Cập nhật lần cuối 14 ngày trước. Bật 2FA để bảo mật tốt hơn.",
+    "clearChatHistory": "Xóa lịch sử trò chuyện",
+    "clearChatDescription": "Xóa vĩnh viễn tất cả dữ liệu cuộc trò chuyện của bạn trên hệ thống.",
+    "clearChatHistoryConfirm": "Bạn có chắc muốn xóa hết lịch sử trò chuyện này không? Quá trình này không thể hoàn tác.",
+    "clear": "Xóa",
+    "signOut": "Đăng xuất",
+    "signOutDescription": "Kết thúc phiên hiện tại của bạn và đăng xuất khỏi giao diện một cách an toàn."
+  }
+}

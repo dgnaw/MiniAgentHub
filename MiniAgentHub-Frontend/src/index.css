@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Setup màu nền mặc định cho Dark Mode */
+html.dark {
+  background-color: #121212;
+  color: white;
+}

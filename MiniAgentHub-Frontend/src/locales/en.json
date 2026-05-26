@@ -1,0 +1,68 @@
+{
+  "change-password-modal":{
+    "title": "Change Password",
+    "description": "Enter your new password below to update your credentials.",
+    "newPassword": "New Password",
+    "placeholderNewPassword": "Enter new password",
+    "newPasswordConfirm": "Confirm Password",
+    "placeholderNewPasswordConfirm": "Confirm your password",
+    "updatePassword": "Update Password"
+  },
+
+  "dashboard": {
+    "greeting": "Hello, {{name}}",
+    "subtitle": "How can I help your workflow today?",
+    "card1Title": "Analyze complex data sets for patterns",
+    "card1Desc": "Upload your CSV or link a database",
+    "card2Title": "Review and optimize my React code",
+    "card2Desc": "Debug performance or refactor components",
+    "promptPlaceholder": "Enter a prompt here...",
+    "footerNote": "Neural Hub may display inaccurate info, so double-check its responses."
+  },
+
+  "sidebar": {
+    "chat": "Chat",
+    "users": "Users",
+    "group": "Groups",
+    "setting": "Settings",
+    "history": "History",
+    "logoutConfirm": "Are you sure you want to log out of the system?",
+    "logoutTitle": "Log out"
+  },
+
+  "roles": {
+    "Admin": "Admin",
+    "User": "User"
+  },
+
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  },
+
+  "settings": {
+    "personalInformation": "Personal Information",
+    "phoneNumber": "Phone Number",
+    "address": "Address",
+    "update": "Update",
+    "save": "Save",
+    "cancel": "Cancel",
+    "notUpdated": "Not updated",
+    "personalization": "Personalization",
+    "visualStyle": "Visual Style",
+    "interfaceTheme": "Interface Theme",
+    "themeDescription": "Adjust the workspace appearance to reduce eye strain or match your lighting environment.",
+    "global": "Global",
+    "language": "Language",
+    "languageDescription": "Set your preferred communication language.",
+    "accountSecurity": "Account & Security",
+    "passwordSecurity": "Password & Security",
+    "passwordDescription": "Last updated 14 days ago. Enable 2FA for better security.",
+    "clearChatHistory": "Clear Chat History",
+    "clearChatDescription": "Permanently delete all your conversation data across the system.",
+    "clearChatHistoryConfirm": "Are you sure you want to clear this chat history? This action cannot be undone.",
+    "clear": "Clear",
+    "signOut": "Sign Out",
+    "signOutDescription": "End your current session and securely log out of the interface."
+  }
+}
