@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { Permission, RolePermission } = require('../models');
+const { Permission, RolePermission, UserGroup, GroupPermission } = require('../models');
 
 const authenticateToken = (req, res, next) => {
     // Lấy header Authorization từ request
@@ -35,18 +35,40 @@ const checkPermission = (requiredPermission) => {
             // req.user đã được gán từ hàm authenticateToken chạy trước đó
             const roleId = req.user.role_id; 
 
-            if (req.params.id && req.params.id === req.user.id && (requiredPermission === 'USER_R' || requiredPermission === 'USER_U')) {
+            // So sánh kiểu chuỗi (String) vì req.params.id luôn là string, còn req.user.id có thể là number
+            if (req.params.id && String(req.params.id) === String(req.user.id) && (requiredPermission === 'USER_R' || requiredPermission === 'USER_U')) {
                 return next();
             }
 
-            // TÍCH HỢP RBAC: Lấy quyền động từ Database
-            const rolePerms = await RolePermission.findAll({
-                where: { role_id: roleId }
-            });
+            // TÍCH HỢP RBAC: Lấy quyền động từ Database cho Role
+            let rolePermissionIds = [];
+            if (roleId) {
+                const rolePerms = await RolePermission.findAll({
+                    where: { role_id: roleId }
+                });
+                rolePermissionIds = rolePerms.map(rp => rp.permission_id);
+            }
             
-            const permissionIds = rolePerms.map(rp => rp.permission_id);
-            const permissionsList = await Permission.findAll({ where: { id: permissionIds } });
-            const userPermissions = permissionsList.map(p => p.permission_key);
+            // Lấy quyền từ các nhóm mà User đang tham gia
+            const userGroups = await UserGroup.findAll({
+                where: { user_id: req.user.id }
+            });
+            const groupIds = userGroups.map(ug => ug.group_id);
+            
+            let groupPermissionIds = [];
+            if (groupIds.length > 0) {
+                const groupPerms = await GroupPermission.findAll({ where: { group_id: groupIds } });
+                groupPermissionIds = groupPerms.map(gp => gp.permission_id);
+            }
+            
+            // Gộp tất cả các quyền của Role và Group (dùng Set để loại bỏ trùng lặp)
+            const allPermissionIds = [...new Set([...rolePermissionIds, ...groupPermissionIds])];
+            let userPermissions = [];
+            
+            if (allPermissionIds.length > 0) {
+                const permissionsList = await Permission.findAll({ where: { id: allPermissionIds } });
+                userPermissions = permissionsList.map(p => p.permission_key);
+            }
 
             // Kiểm tra xem mảng quyền của user này có chứa quyền yêu cầu không
             if (!userPermissions.includes(requiredPermission)) {

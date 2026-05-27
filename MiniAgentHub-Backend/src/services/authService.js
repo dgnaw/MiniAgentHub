@@ -4,6 +4,7 @@ const User = require('../models/user');
 const Role = require('../models/role');
 const Permission = require('../models/permission');
 const RolePermission = require('../models/rolePermission');
+const { UserGroup, GroupPermission } = require('../models');
 
 const loginUser = async (email, password) => {
     const user = await User.findOne({ where: { email } });
@@ -47,8 +48,21 @@ const loginUser = async (email, password) => {
         where: { role_id: user.role_id }
     });
 
-    const permissionIds = rolePerms.map(rp => rp.permission_id);
-    const permissionsList = await Permission.findAll({ where: { id: permissionIds } });
+    const rolePermissionIds = rolePerms.map(rp => rp.permission_id);
+    
+    const userGroups = await UserGroup.findAll({
+        where: { user_id: user.id }
+    });
+    const groupIds = userGroups.map(ug => ug.group_id);
+    
+    let groupPermissionIds = [];
+    if (groupIds.length > 0) {
+        const groupPerms = await GroupPermission.findAll({ where: { group_id: groupIds } });
+        groupPermissionIds = groupPerms.map(gp => gp.permission_id);
+    }
+
+    const allPermissionIds = [...new Set([...rolePermissionIds, ...groupPermissionIds])];
+    const permissionsList = await Permission.findAll({ where: { id: allPermissionIds } });
     const permissions = permissionsList.map(p => p.permission_key);
 
     return {

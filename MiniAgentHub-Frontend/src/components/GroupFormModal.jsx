@@ -1,0 +1,341 @@
+import React, { useState, useEffect } from 'react';
+import { X, UserPlus } from 'lucide-react';
+import axiosClient from '../services/axiosClient';
+import useAuthStore from '../store/authStore';
+import { useTranslation } from 'react-i18next';
+
+const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData = null }) => {
+  const user = useAuthStore((state) => state.user);
+  const { t } = useTranslation();
+  const [groupName, setGroupName] = useState('');
+  const [entityType, setEntityType] = useState(initialData?.entityType || 'users');
+  
+  const [permissions, setPermissions] = useState({
+    create: initialData?.permissions?.create || false,
+    read: initialData?.permissions?.read || false,
+    update: initialData?.permissions?.update || false,
+    delete: initialData?.permissions?.delete || false,
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [members, setMembers] = useState([]);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setGroupName(initialData?.group_name || initialData?.name || '');
+      setEntityType(initialData?.entityType || 'users');
+      setPermissions({
+        create: initialData?.permissions?.create || false,
+        read: initialData?.permissions?.read || false,
+        update: initialData?.permissions?.update || false,
+        delete: initialData?.permissions?.delete || false,
+      });
+
+      if ((mode === 'update' || mode === 'members') && initialData?.id) {
+        const fetchMembers = async () => {
+          try {
+            const res = await axiosClient.get(`/groups/${initialData.id}`);
+            const groupData = res.data || res;
+            const membersData = groupData.members || [];
+            setMembers(membersData.map(u => ({
+              id: u.id,
+              name: u.full_name || u.email,
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || u.email)}&background=random`
+            })));
+          } catch (error) { console.error('Lỗi lấy thành viên nhóm:', error); }
+        };
+        fetchMembers();
+      } else {
+        setMembers([]);
+      }
+    }
+  }, [isOpen, initialData, mode]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchUsers = async () => {
+        try {
+          const res = await axiosClient.get('/users');
+          setAllUsers(Array.isArray(res) ? res : (res.data || []));
+        } catch (error) {
+          console.error('Lỗi khi lấy danh sách người dùng:', error);
+        }
+      };
+      fetchUsers();
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const filteredUsers = allUsers.filter(u => {
+    const term = searchQuery.toLowerCase();
+    const match = (u.full_name?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term));
+    const notSelected = !members.some(m => m.id === u.id);
+    return match && notSelected;
+  });
+
+  const handleSelectUser = (user) => {
+    setMembers([...members, { 
+      id: user.id, 
+      name: user.full_name || user.email, 
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || user.email)}&background=random` 
+    }]);
+    setSearchQuery('');
+    setShowSuggestions(false);
+  };
+
+  const handleTogglePermission = (key) => {
+    if (user?.role !== 'Admin' && key === 'read' && permissions.read) {
+      alert(t('groupFormModal.alertReadRequired', 'Bạn không thể tắt quyền Read. Quyền này là bắt buộc để bạn có thể tiếp tục nhìn thấy và quản lý nhóm!'));
+      return;
+    }
+    setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleRemoveMember = (id) => {
+    if (user?.role !== 'Admin' && id === user?.id) {
+      alert(t('groupFormModal.alertSelfRemove', 'Bạn không thể tự xóa chính mình khỏi nhóm để tránh việc mất quyền truy cập!'));
+      return;
+    }
+    setMembers(members.filter(m => m.id !== id));
+  };
+
+  const handleSubmit = async () => {
+    if (mode !== 'members' && !groupName.trim()) {
+      alert(t('groupFormModal.alertNoName', 'Vui lòng nhập tên nhóm!'));
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      if (mode === 'members') {
+        await onSave({
+          userIds: members.map(m => m.id)
+        });
+      } else {
+        await onSave({
+          name: groupName,
+          entityType: entityType,
+          userIds: members.map(m => m.id),
+          permissions: permissions
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi khi lưu modal:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
+      
+      <div className="bg-[#131417] border border-[#26272b] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        
+        <div className="p-8 pb-6 relative shrink-0">
+          <button 
+            onClick={onClose}
+            className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
+          <h2 className="text-2xl font-bold text-white mb-2">
+            {mode === 'create' ? t('groupFormModal.createTitle', 'Create New Group') : mode === 'members' ? t('groupFormModal.membersTitle', 'Manage Members') : t('groupFormModal.updateTitle', 'Update Group')}
+          </h2>
+          <p className="text-gray-400 text-sm">
+            {mode === 'create' 
+              ? t('groupFormModal.createDesc', 'Define identity and access control for your new workspace.') 
+              : mode === 'members'
+                ? t('groupFormModal.membersDesc', 'Add or remove members from this group.')
+                : t('groupFormModal.updateDesc', 'Modify identity and access control for this group.')}
+          </p>
+        </div>
+
+        <div className="px-8 pb-8 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
+          
+          {mode !== 'members' && (
+          <section>
+            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.identity', 'Identity')}</h3>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-2">{t('groupFormModal.groupNameLabel', 'Group Name')}</label>
+                <input 
+                  type="text" 
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder={mode === 'create' ? t('groupFormModal.groupNamePlaceholder', 'e.g. Quantum Research Team') : ""}
+                  className="w-full bg-[#1e1f24] border border-transparent focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-2">{t('groupFormModal.targetEntity', 'Target Entity')}</label>
+                <div className="flex bg-[#1a1b20] p-1 rounded-xl border border-[#26272b]">
+                  <button 
+                    onClick={() => setEntityType('users')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                      entityType === 'users' 
+                        ? 'bg-[#1e2b4d] text-blue-400 border border-blue-500/30 shadow-sm' 
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {t('groupFormModal.users', 'Users')}
+                  </button>
+                  <button 
+                    onClick={() => setEntityType('groups')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                      entityType === 'groups' 
+                        ? 'bg-[#1e2b4d] text-blue-400 border border-blue-500/30 shadow-sm' 
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {t('groupFormModal.groups', 'Groups')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+          )}
+
+          {mode !== 'members' && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">{t('groupFormModal.rbacMatrix', 'RBAC Permissions Matrix')}</h3>
+              <span className="text-xs italic text-gray-500">{t('groupFormModal.rbacDesc', 'Role-Based Access Control')}</span>
+            </div>
+            
+            <div className="bg-[#1a1b20] border border-[#26272b] rounded-xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#26272b]">
+                    <th className="py-4 px-6 text-xs font-semibold text-gray-300">{t('groupFormModal.action', 'Action')}</th>
+                    <th className="py-4 px-6 text-xs font-semibold text-gray-300">{t('groupFormModal.description', 'Description')}</th>
+                    <th className="py-4 px-6 text-xs font-semibold text-gray-300 text-center">{t('groupFormModal.grant', 'Grant')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#26272b]">
+                  <tr className="hover:bg-[#1e1f25] transition-colors">
+                    <td className="py-4 px-6 text-sm text-gray-200">{t('groupFormModal.actionCreate', 'Create')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permCreateDesc', 'New Resources')}</td>
+                    <td className="py-4 px-6 text-center">
+                      <input type="checkbox" checked={permissions.create} onChange={() => handleTogglePermission('create')} className="w-4 h-4 rounded border-gray-600 bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-[#1e1f25] transition-colors">
+                    <td className="py-4 px-6 text-sm text-gray-200">{t('groupFormModal.actionRead', 'Read')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permReadDesc', 'Resource Data')}</td>
+                    <td className="py-4 px-6 text-center">
+                      <input 
+                        type="checkbox" 
+                        checked={permissions.read} 
+                        onChange={() => handleTogglePermission('read')} 
+                        disabled={user?.role !== 'Admin' && permissions.read}
+                        title={user?.role !== 'Admin' && permissions.read ? t('groupFormModal.readRequiredTitle', 'Quyền Read là bắt buộc') : ""}
+                        className="w-4 h-4 rounded border-gray-600 bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-[#1e1f25] transition-colors">
+                    <td className="py-4 px-6 text-sm text-gray-200">{t('groupFormModal.actionUpdate', 'Update')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permUpdateDesc', 'Edit Content')}</td>
+                    <td className="py-4 px-6 text-center">
+                      <input type="checkbox" checked={permissions.update} onChange={() => handleTogglePermission('update')} className="w-4 h-4 rounded border-gray-600 bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-[#1e1f25] transition-colors">
+                    <td className="py-4 px-6 text-sm text-gray-200">{t('groupFormModal.actionDelete', 'Delete')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permDeleteDesc', 'Remove Assets')}</td>
+                    <td className="py-4 px-6 text-center">
+                      <input type="checkbox" checked={permissions.delete} onChange={() => handleTogglePermission('delete')} className="w-4 h-4 rounded border-gray-600 bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          )}
+
+          <section>
+            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.membersManagement', 'Members Management')}</h3>
+              
+              <div className="relative mb-4">
+                <div className="flex items-center gap-3 bg-[#1e1f24] border border-[#26272b] rounded-xl px-4 py-3">
+                  <UserPlus size={18} className="text-gray-500" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    placeholder={t('groupFormModal.searchPlaceholder', 'Search by name or email...')} 
+                    className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
+                  />
+                </div>
+
+                {showSuggestions && searchQuery.trim() !== '' && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-[#1e1f24] border border-[#26272b] rounded-xl shadow-2xl max-h-48 overflow-y-auto z-10 custom-scrollbar">
+                    {filteredUsers.length > 0 ? (
+                      filteredUsers.map(user => (
+                        <div key={user.id} onClick={() => handleSelectUser(user)} className="flex flex-col px-4 py-2 hover:bg-[#2a2b30] cursor-pointer border-b border-[#26272b] last:border-0 transition-colors">
+                          <span className="text-sm font-medium text-gray-200">{user.full_name || t('groupFormModal.noName', 'No Name')}</span>
+                          <span className="text-xs text-gray-500">{user.email}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('groupFormModal.noUsersFound', 'Không tìm thấy người dùng phù hợp')}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {members.map(member => {
+                  const isCurrentUser = member.id === user?.id;
+                  const canRemove = user?.role === 'Admin' || !isCurrentUser;
+                  return (
+                    <div key={member.id} className="flex items-center gap-2 bg-[#1a233a] border border-[#2a3b63] rounded-full pl-1 pr-3 py-1">
+                      <img src={member.avatar} alt="avatar" className="w-5 h-5 rounded-full object-cover" />
+                      <span className="text-xs text-[#a5c6f7] font-medium">
+                        {member.name} {isCurrentUser ? t('groupFormModal.you', '(Bạn)') : ''}
+                      </span>
+                      {canRemove && (
+                        <button onClick={() => handleRemoveMember(member.id)} className="text-[#a5c6f7] hover:text-white ml-1">
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+        </div>
+
+        <div className="p-6 border-t border-[#26272b] flex items-center justify-end gap-4 shrink-0 bg-[#131417]">
+          <button 
+            onClick={onClose}
+            className="text-sm font-semibold text-gray-300 hover:text-white transition-colors px-4 py-2"
+          >
+            {t('groupFormModal.cancel', 'Cancel')}
+          </button>
+          <button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="bg-[#b5d6ff] hover:bg-[#9cc4f5] text-[#0b1c3f] px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50"
+          >
+            {isSubmitting ? t('groupFormModal.saving', 'Saving...') : (mode === 'create' ? t('groupFormModal.btnCreate', 'Initialize Group') : mode === 'members' ? t('groupFormModal.btnUpdateMembers', 'Update Members') : t('groupFormModal.btnUpdate', 'Update Group'))}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default GroupFormModal;

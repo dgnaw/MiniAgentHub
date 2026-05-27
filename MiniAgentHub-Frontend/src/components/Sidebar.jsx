@@ -10,6 +10,7 @@ function Sidebar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const role = useAuthStore((state) => state.role);
+  const permissions = useAuthStore((state) => state.permissions) || [];
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,7 +21,6 @@ function Sidebar() {
   const [isInGroup, setIsInGroup] = useState(false);
   const [sessions, setSessions] = useState([]);
 
-  // Fetch danh sách lịch sử chat
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -100,7 +100,7 @@ function Sidebar() {
             </div>
           )}
 
-          {(user?.role === 'Admin' || isInGroup) && (
+          {(user?.role === 'Admin' || isInGroup || permissions.includes('GROUP_R') || permissions.includes('GROUP_U')) && (
             <div 
               onClick={() => navigate('/groups')}
               className={getNavClass('/groups')}
