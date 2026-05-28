@@ -35,11 +35,6 @@ const checkPermission = (requiredPermission) => {
             // req.user đã được gán từ hàm authenticateToken chạy trước đó
             const roleId = req.user.role_id; 
 
-            // So sánh kiểu chuỗi (String) vì req.params.id luôn là string, còn req.user.id có thể là number
-            if (req.params.id && String(req.params.id) === String(req.user.id) && (requiredPermission === 'USER_R' || requiredPermission === 'USER_U')) {
-                return next();
-            }
-
             // TÍCH HỢP RBAC: Lấy quyền động từ Database cho Role
             let rolePermissionIds = [];
             if (roleId) {
@@ -68,6 +63,15 @@ const checkPermission = (requiredPermission) => {
             if (allPermissionIds.length > 0) {
                 const permissionsList = await Permission.findAll({ where: { id: allPermissionIds } });
                 userPermissions = permissionsList.map(p => p.permission_key);
+            }
+            
+            // Gắn mảng quyền vào req để Controller có thể dùng
+            req.userPermissions = userPermissions;
+
+            // So sánh kiểu chuỗi (String) vì req.params.id luôn là string, còn req.user.id có thể là number
+            // Cho phép user tự xem/sửa profile của chính mình mà không cần quyền Admin
+            if (req.params.id && String(req.params.id) === String(req.user.id) && (requiredPermission === 'USER_R' || requiredPermission === 'USER_U')) {
+                return next();
             }
 
             // Kiểm tra xem mảng quyền của user này có chứa quyền yêu cầu không

@@ -45,22 +45,23 @@ function Sidebar() {
         
         const userData = responseData.user || responseData;
 
-        // Đồng bộ quyền và Role mới nhất từ Backend vào Zustand để giao diện tự cập nhật
-        if (userData.permissions) {
-          useAuthStore.setState(state => {
-            const currentRoleFromServer = userData.Role?.name || userData.role || (userData.role_id === 1 ? 'Admin' : 'User');
-            const isPermsChanged = JSON.stringify(state.permissions) !== JSON.stringify(userData.permissions);
-            const isRoleChanged = state.user?.role !== currentRoleFromServer;
-            
-            if (isPermsChanged || isRoleChanged) {
-              return {
-                permissions: userData.permissions,
-                user: { ...state.user, role: currentRoleFromServer }
-              };
+        useAuthStore.setState(state => {
+          const currentRoleFromServer = userData.Role?.name || userData.role || (userData.role_id === 1 ? 'Admin' : 'User');
+          const isRoleChanged = state.user?.role !== currentRoleFromServer;
+          
+          if (isRoleChanged) {
+            // Nếu quyền bị thay đổi (vd: từ Admin xuống User), buộc đăng xuất để làm mới token và mảng permissions
+            if (state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
+               setTimeout(() => {
+                  alert(t('sidebar.roleChanged', 'Quyền hạn của bạn đã thay đổi. Hệ thống sẽ đăng xuất để cập nhật!'));
+                  logout();
+                  navigate('/login');
+               }, 300);
             }
-            return state;
-          });
-        }
+            return { user: { ...state.user, role: currentRoleFromServer } };
+          }
+          return state;
+        });
 
         const userGroups = userData.Groups || userData.groups || [];
         
@@ -118,7 +119,7 @@ function Sidebar() {
             </div>
           )}
 
-          {(user?.role === 'Admin' || isInGroup || permissions.includes('GROUP_R') || permissions.includes('GROUP_U')) && (
+          {(user?.role === 'Admin' || permissions.includes('GROUP_R') || permissions.includes('GROUP_U') || permissions.includes('GROUP_C') || permissions.includes('GROUP_D')) && (
             <div 
               onClick={() => navigate('/groups')}
               className={`${getNavClass('/groups')} shrink-0`}

@@ -6,7 +6,8 @@
     "users": "Người dùng",
     "history": "Lịch sử",
     "logoutConfirm": "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
-    "logoutTitle": "Đăng xuất"
+    "logoutTitle": "Đăng xuất",
+    "roleChanged": "Quyền hạn của bạn đã thay đổi. Hệ thống sẽ đăng xuất để cập nhật!"
   },
 
   "roles": {

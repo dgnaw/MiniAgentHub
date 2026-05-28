@@ -65,7 +65,18 @@ const userController = {
 
     updateUser: async (req, res) => {
         try {
-            const result = await userService.updateUser(req.params.id, req.body);
+            const updateData = { ...req.body };
+            
+            // Bảo mật: Nếu người dùng không có quyền USER_U thực sự (chỉ đang tự update profile cá nhân nhờ bypass của middleware)
+            // Tuyệt đối không cho phép đổi Role (Vai trò) và Group (Nhóm)
+            if (!req.userPermissions?.includes('USER_U')) {
+                delete updateData.role_id;
+                delete updateData.role_name;
+                delete updateData.role;
+                delete updateData.group_ids;
+            }
+
+            const result = await userService.updateUser(req.params.id, updateData);
             if (result.error) {
                 return res.status(result.status || 400).json({ message: result.error });
             }
