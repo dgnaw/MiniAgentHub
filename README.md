@@ -50,7 +50,7 @@ Dự án được chia làm 2 phân hệ chính:
 
 ### 1. Database Schema (Cấu trúc CSDL)
 
-![Database Schema](./assets/db-schema.png)
+![Database Schema](./assets/schema-db.png)
 
 ### 2. Sơ đồ luồng Flowise (Data Analyst)
 
