@@ -4,6 +4,7 @@ import useAuthStore from './store/authStore';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Setting';
 import GroupManagement from './pages/GroupManagement';
+import UserManagement from './pages/UserManagement';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -59,7 +60,20 @@ function App() {
             )
           } 
         />
+
+        <Route 
+          path="/users" 
+          element={
+            isAuthenticated ? (
+              <UserManagement />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
       </Routes>
+
+      
     </BrowserRouter>
   );
 }

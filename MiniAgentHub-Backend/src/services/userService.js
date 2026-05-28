@@ -5,20 +5,29 @@ const crypto = require('crypto');
 const { sendWelcomeEmail } = require('../utils/emailService');
 
 const userService = {
-    createUser: async ({ email, full_name, phone, address, role_id, group_ids }) => {
+    createUser: async ({ email, full_name, phone, address, role_id, role_name, group_ids }) => {
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
             return { error: 'User with this email already exists', status: 409 };
         }
         
-        if (role_id) {
-            const roleExist = await Role.findByPk(role_id);
+        let targetRoleId = role_id;
+        
+        if (role_name) {
+            const roleRecord = await Role.findOne({ where: { name: role_name } });
+            if (roleRecord) targetRoleId = roleRecord.id;
+        }
+        
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetRoleId);
+
+        if (targetRoleId && isValidUUID) {
+            const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
                 return { error: 'Role not found', status: 404 };
             }
         } else {
-            const defaultRole = await Role.findOne({ where: { name: 'User' }});
-            if (defaultRole) role_id = defaultRole.id;
+            const defaultRole = await Role.findOne({ where: { name: 'User' } });
+            if (defaultRole) targetRoleId = defaultRole.id;
         }
 
         const rawPassword = crypto.randomBytes(4).toString('hex');
@@ -29,7 +38,7 @@ const userService = {
             full_name,
             phone: phone || null,
             address: address || null,
-            role_id: role_id || null,
+            role_id: targetRoleId || null,
             password_hash
         });
 
@@ -102,19 +111,29 @@ const userService = {
             return { error: 'User not found', status: 404 };
         }
 
-        const { full_name, phone, address, role_id, is_active, group_ids } = updateData;
+        const { full_name, phone, address, role_id, role_name, role, is_active, group_ids } = updateData;
 
         if (full_name !== undefined) user.full_name = full_name.trim();
         if (phone !== undefined) user.phone = phone?.trim() || null;
         if (address !== undefined) user.address = address?.trim() || null;
         if (is_active !== undefined) user.is_active = is_active;
         
-        if (role_id !== undefined) {
-            const roleExist = await Role.findByPk(role_id);
+        let targetRoleId = role_id;
+        const targetRoleName = role_name || role;
+        
+        if (targetRoleName) {
+            const roleRecord = await Role.findOne({ where: { name: targetRoleName } });
+            if (roleRecord) targetRoleId = roleRecord.id;
+        }
+        
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetRoleId);
+        
+        if (targetRoleId !== undefined && isValidUUID) {
+            const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
                 return { error: 'Role not found', status: 404 };
             }
-            user.role_id = role_id;
+            user.role_id = targetRoleId;
         }
 
         await user.save();

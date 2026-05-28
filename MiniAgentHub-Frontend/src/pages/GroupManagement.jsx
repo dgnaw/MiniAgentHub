@@ -35,7 +35,24 @@ const GroupManagement = () => {
         const responseData = response.data || response;
         const userData = responseData.user || responseData;
         const userGroups = userData.Groups || userData.groups || [];
-        setGroups(userGroups);
+        
+        // Fetch thêm số lượng member cho mỗi nhóm vì API user không trả về member_count
+        const groupsWithCounts = await Promise.all(
+          userGroups.map(async (g) => {
+            try {
+              const detailRes = await axiosClient.get(`/groups/${g.id}`);
+              const detailData = detailRes.data || detailRes;
+              return {
+                ...g,
+                member_count: detailData.member_count || detailData.memberCount || detailData.members?.length || g.member_count || 0
+              };
+            } catch (err) {
+              return g;
+            }
+          })
+        );
+        
+        setGroups(groupsWithCounts);
       }
       setError('');
     } catch (err) {
@@ -120,16 +137,16 @@ const GroupManagement = () => {
           )}
         </div>
 
-        <div className="bg-[#1a1b20] border border-[#26272b] rounded-2xl overflow-hidden shadow-lg">
+        <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl overflow-hidden shadow-lg">
           
-          <div className="px-6 py-5 border-b border-[#26272b] flex items-center justify-between bg-[#1a1b20]">
-            <h2 className="text-xl font-semibold text-gray-100">{t('groupManagement.activeGroups', 'Active Groups')}</h2>
-            <div className="bg-[#2a2b30] text-gray-400 text-xs font-bold px-3 py-1 rounded-md tracking-widest">
+          <div className="px-6 py-5 border-b border-gray-200 dark:border-[#26272b] flex items-center justify-between bg-white dark:bg-[#1a1b20]">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('groupManagement.activeGroups', 'Active Groups')}</h2>
+            <div className="bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 text-xs font-bold px-3 py-1 rounded-md tracking-widest">
               {groups.length} {t('groupManagement.total', 'TOTAL')}
             </div>
           </div>
 
-          <div className="grid grid-cols-12 px-6 py-4 border-b border-[#26272b] bg-[#1a1b20]">
+          <div className="grid grid-cols-12 px-6 py-4 border-b border-gray-200 dark:border-[#26272b] bg-gray-50 dark:bg-[#1a1b20]">
             <div className="col-span-5 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">
               {t('groupManagement.groupName', 'Group Name')}
             </div>
@@ -141,7 +158,7 @@ const GroupManagement = () => {
             </div>
           </div>
 
-          <div className="divide-y divide-[#26272b]">
+          <div className="divide-y divide-gray-200 dark:divide-[#26272b]">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <Loader2 className="animate-spin mb-3 text-blue-500" size={28} />
@@ -160,34 +177,34 @@ const GroupManagement = () => {
               groups.map((group) => (
                 <div 
                   key={group.id} 
-                  className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[#1e1f25] transition-colors group"
+                  className="grid grid-cols-12 px-6 py-4 items-center hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors group"
                 >
-                  <div className="col-span-5 text-sm font-medium text-[#a5c6f7]">
+                  <div className="col-span-5 text-sm font-medium text-blue-600 dark:text-[#a5c6f7]">
                     {group.group_name || group.name || t('groupManagement.noName', 'Không có tên')}
                   </div>
                   
-                  <div className="col-span-4 text-sm text-gray-300">
+                  <div className="col-span-4 text-sm text-gray-700 dark:text-gray-300">
                     {group.member_count || group.memberCount || 0} {t('groupManagement.members', 'members')}
                   </div>
                   
-                  <div className="col-span-3 flex items-center justify-end gap-4 text-gray-400">
-                    <button className="hover:text-white transition-colors" title={t('groupManagement.tooltipInfo', 'Group Info')}>
+                  <div className="col-span-3 flex items-center justify-end gap-4 text-gray-500 dark:text-gray-400">
+                    <button className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipInfo', 'Group Info')}>
                       <Info size={18} />
                     </button>
                     
                     {(user?.role === 'Admin' || permissions.includes('GROUP_U')) && (
                       <>
-                        <button onClick={() => handleOpenMembersModal(group)} className="hover:text-blue-400 transition-colors" title={t('groupManagement.tooltipMembers', 'Manage Members')}>
+                      <button onClick={() => handleOpenMembersModal(group)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title={t('groupManagement.tooltipMembers', 'Manage Members')}>
                           <Users size={18} />
                         </button>
-                        <button onClick={() => handleOpenUpdateModal(group)} className="hover:text-white transition-colors" title={t('groupManagement.tooltipSettings', 'Edit Group / Permissions Settings')}>
+                      <button onClick={() => handleOpenUpdateModal(group)} className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipSettings', 'Edit Group / Permissions Settings')}>
                           <Settings size={18} />
                         </button>
                       </>
                     )}
 
                     {(user?.role === 'Admin' || permissions.includes('GROUP_D')) && (
-                      <button onClick={() => handleDeleteGroup(group.id)} className="hover:text-red-400 transition-colors" title={t('groupManagement.tooltipDelete', 'Delete Group')}>
+                    <button onClick={() => handleDeleteGroup(group.id)} className="hover:text-red-600 dark:hover:text-red-400 transition-colors" title={t('groupManagement.tooltipDelete', 'Delete Group')}>
                         <Trash2 size={18} />
                       </button>
                     )}

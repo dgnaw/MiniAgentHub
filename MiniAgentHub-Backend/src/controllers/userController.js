@@ -3,7 +3,7 @@ const userService = require('../services/userService');
 const userController = {
     createUser: async (req, res) => {
         try {
-            let { email, full_name, phone, address, role_id, group_ids } = req.body;
+            let { email, full_name, phone, address, role_id, role_name, role, group_ids } = req.body;
             
             email = email?.trim();
             full_name = full_name?.trim();
@@ -12,7 +12,9 @@ const userController = {
                 return res.status(400).json({ message: 'Email và Tên không được để trống' });
             }
 
-            const result = await userService.createUser({ email, full_name, phone, address, role_id, group_ids });
+            const targetRoleName = role_name || role;
+
+            const result = await userService.createUser({ email, full_name, phone, address, role_id, role_name: targetRoleName, group_ids });
             
             if (result.error) {
                 return res.status(result.status || 400).json({ message: result.error });
