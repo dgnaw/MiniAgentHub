@@ -56,6 +56,18 @@ Dự án được chia làm 2 phân hệ chính:
 
 ![Flowise Flow](./assets/flowise-flow.png)
 
+### 3. Quyết định Thiết kế CSDL (Design Decisions)
+
+- **Tách biệt `chat_sessions` và `chat_messages`:**
+  Thay vì gộp chung, việc chia thành 2 bảng (quan hệ 1-N) giúp tối ưu tốc độ tải giao diện (Sidebar chỉ cần query tiêu đề Session thay vì quét hàng ngàn tin nhắn), tránh lặp dữ liệu và giúp cô lập ngữ cảnh (Context) chính xác cho từng phiên chat của AI.
+- **Cấu trúc phân quyền (Fine-grained RBAC):**
+  Thay vì thiết kế đơn giản chỉ dùng 3 bảng (`Role`, `Group`, `GroupToUser`) đòi hỏi phải viết chết quyền hạn trong source code (hardcode), hệ thống sử dụng cấu trúc phân quyền hạt mịn với các bảng trung gian (`Permission`, `RolePermission`, `GroupPermission`). Điều này cho phép **cấu hình quyền động (Dynamic)** đến từng thao tác chi tiết (Create, Read, Update, Delete) trực tiếp từ Database/UI mà không cần sửa code hay deploy lại server.
+
+  *Ví dụ minh họa:*
+  - Bảng `Permission` định nghĩa sẵn các quyền rời rạc như: `USER_C` (Tạo User), `USER_R` (Xem User), `USER_D` (Xóa User).
+  - Vai trò (Role) **Admin** được map với cả 3 quyền trên, trong khi Role **User** chỉ có quyền `USER_R`.
+  - Nếu có yêu cầu: *"Cho phép nhóm **Trưởng phòng** được quyền xóa User"*. Bạn chỉ cần dùng giao diện UI gán quyền `USER_D` cho nhóm này (lưu xuống `GroupPermission`). Code backend `checkPermission('USER_D')` sẽ tự động cho phép người dùng thuộc nhóm Trưởng phòng thực hiện thao tác xóa mà bạn không cần phải sửa lại mã nguồn (như `if (role === 'Admin' || group === 'Trưởng phòng')`) hay khởi động lại server.
+
 ---
 
 ## � Cấu trúc thư mục
@@ -99,8 +111,17 @@ MiniAgentHub/
    npm install
    ```
 3. Cấu hình biến môi trường:
-   Tạo file `.env` từ `.env.example` (nếu có) và thiết lập các biến như `DB_URL`, `JWT_SECRET`, `FLOWISE_API_URL`, `GROQ_API_KEY`.
-4. Chạy server:
+   - Copy file `.env.example` và đổi tên thành `.env` (`cp .env.example .env`).
+   - Các cấu hình cơ bản (`PORT`, `DATABASE_URL`, `JWT_SECRET`) đã được thiết lập giả định để dự án có thể chạy được ngay. Hãy đảm bảo bạn có PostgreSQL và sửa lại `DATABASE_URL` cho khớp với máy của bạn.
+   - **Lưu ý:** Các key AI (`GROQ_API_KEY`, `FLOWISE_API_URL`) là **tùy chọn**. Nếu chưa có, bạn cứ để trống. Bạn vẫn có thể đăng nhập vào trải nghiệm UI bình thường, hệ thống chỉ yêu cầu key khi bạn bắt đầu Chat.
+4. Khởi tạo dữ liệu mặc định (Seeding):
+   ```bash
+   npm run seed
+   ```
+   *Lệnh này sẽ tự động tạo tài khoản quản trị hệ thống mặc định:*
+   - **Email:** `admin@agenthub.com`
+   - **Mật khẩu:** `Admin@123`
+5. Chạy server:
    ```bash
    npm run dev
    ```
@@ -115,11 +136,13 @@ MiniAgentHub/
    ```bash
    npm install
    ```
-3. Khởi chạy giao diện (Vite):
+3. Cấu hình biến môi trường:
+   - Copy file `.env.example` và đổi tên thành `.env`.
+   - Mặc định biến `VITE_API_URL=http://localhost:3000/api` đã được cấu hình sẵn để gọi xuống Backend nội bộ.
+4. Khởi chạy giao diện (Vite):
    ```bash
    npm run dev
    ```
-   *Lưu ý: Đảm bảo có file `.env` chứa `VITE_API_URL` trỏ về địa chỉ server Backend.*
 
 ---
 
