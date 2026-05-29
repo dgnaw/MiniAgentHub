@@ -13,23 +13,21 @@ const Dashboard = () => {
   useThemeStore();
   const user = useAuthStore((state) => state.user);
   const { t } = useTranslation();
-  const { id: sessionId } = useParams(); // Lấy ID phiên từ URL
+  const { id: sessionId } = useParams(); 
   const navigate = useNavigate();
 
-  // State quản lý chat
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('Llama 3'); // Trạng thái lưu model đang chọn
-  const [showModelDropdown, setShowModelDropdown] = useState(false); // Trạng thái mở menu model
+  const [selectedModel, setSelectedModel] = useState('Llama 3'); 
+  const [showModelDropdown, setShowModelDropdown] = useState(false); 
+  const [isFlowiseAvailable, setIsFlowiseAvailable] = useState(true);
   const messagesEndRef = useRef(null);
 
-  // Tự động cuộn xuống cuối khi có tin nhắn mới
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load tin nhắn cũ khi URL thay đổi (click từ sidebar)
   useEffect(() => {
     if (sessionId) {
       const fetchMessages = async () => {
@@ -43,7 +41,6 @@ const Dashboard = () => {
       };
       fetchMessages();
     } else {
-      // Nếu ở trang chủ (/), làm rỗng màn hình để bắt đầu chat mới
       setMessages([]);
     }
   }, [sessionId]);
@@ -58,19 +55,79 @@ const Dashboard = () => {
     setIsLoading(true);
 
     try {
-      // Gọi API gửi message tới Backend
-      const response = await axiosClient.post('/chat', { 
-        message: userMessage.content,
-        sessionId: sessionId, // Truyền thêm ID phiên nếu đã có
-        model: selectedModel  // Truyền Model do người dùng chọn lên Server
+      const token = localStorage.getItem('agentHub_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          sessionId: sessionId,
+          model: selectedModel
+        })
       });
       
-      const aiMessage = { role: 'ai', content: response.message };
-      setMessages((prev) => [...prev, aiMessage]);
+      if (!response.ok) {
+        throw new Error('Lỗi kết nối máy chủ');
+      }
 
-      // Nếu vừa tạo tin nhắn ở phiên mới, tự động đổi URL của trình duyệt
-      if (response.sessionId && !sessionId) {
-        navigate(`/chat/${response.sessionId}`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let aiResponseText = '';
+      let buffer = '';
+      let newSessionId = null;
+      let isAiMessageAdded = false; 
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '').trim();
+            if (dataStr === '[DONE]') {
+              if (!isAiMessageAdded) setIsLoading(false);
+              break;
+            }
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.sessionId) {
+                newSessionId = parsed.sessionId;
+              }
+            if (parsed.flowiseUnavailable) {
+              setIsFlowiseAvailable(false);
+              setSelectedModel('Llama 3');
+            }
+              if (parsed.chunk) {
+                if (!isAiMessageAdded) {
+                  setIsLoading(false);
+                  setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
+                  isAiMessageAdded = true;
+                }
+
+                aiResponseText += parsed.chunk;
+                setMessages((prev) => {
+                  const newMsgs = [...prev];
+                  if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+                    newMsgs[newMsgs.length - 1].content = aiResponseText;
+                  }
+                  return newMsgs;
+                });
+              }
+            } catch (e) {
+            }
+          }
+        }
+      }
+
+      if (newSessionId && !sessionId) {
+        navigate(`/chat/${newSessionId}`);
       }
     } catch (error) {
       console.error("Lỗi khi chat:", error);
@@ -110,7 +167,15 @@ const Dashboard = () => {
                   <div className="font-medium text-blue-600 dark:text-blue-400 mb-0.5">Llama 3</div>
                   <div className="text-xs text-gray-500">Trò chuyện đa năng (qua Groq)</div>
                 </div>
-                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333]" onClick={() => { setSelectedModel('Data Analyst'); setShowModelDropdown(false); }}>
+                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333]" onClick={() => { 
+                  if (!isFlowiseAvailable) {
+                    alert(t('dashboard.flowiseUnavailable', 'Hệ thống phân tích dữ liệu đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!'));
+                    setShowModelDropdown(false);
+                    return;
+                  }
+                  setSelectedModel('Data Analyst'); 
+                  setShowModelDropdown(false); 
+                }}>
                   <div className="font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">Data Analyst</div>
                   <div className="text-xs text-gray-500">Phân tích dữ liệu (qua Flowise)</div>
                 </div>
@@ -193,10 +258,16 @@ const Dashboard = () => {
               ))}
               {isLoading && (
                 <div className="flex flex-col items-start">
-                  <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-2">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                  <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-3">
+                    <Sparkles size={16} className="text-blue-500 animate-pulse" />
+                    <span className="text-sm font-medium text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse">
+                      {selectedModel === 'Data Analyst' ? t('dashboard.analyzing', 'Đang phân tích dữ liệu chuyên sâu') : t('dashboard.thinking', 'Đang tạo câu trả lời')}
+                    </span>
+                    <div className="flex items-center gap-1 ml-1 mt-1">
+                      <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce"></span>
+                      <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                      <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                    </div>
                   </div>
                 </div>
               )}

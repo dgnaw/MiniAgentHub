@@ -43,7 +43,8 @@ const groupController = {
     // Update a group
     updateGroup: async (req, res) => {
         try {
-            const result = await groupService.updateGroup(req.params.id, req.body);
+            // Truyền thêm mảng quyền của user hiện tại xuống service để chặn leo thang đặc quyền
+            const result = await groupService.updateGroup(req.params.id, req.body, req.userPermissions);
             if (result.error) {
                 return res.status(result.status || 400).json({ message: result.error });
             }

@@ -7,7 +7,12 @@
     "history": "Lịch sử",
     "logoutConfirm": "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
     "logoutTitle": "Đăng xuất",
-    "roleChanged": "Quyền hạn của bạn đã thay đổi. Hệ thống sẽ đăng xuất để cập nhật!"
+    "roleChanged": "Quyền hạn của bạn đã thay đổi. Hệ thống sẽ đăng xuất để cập nhật!",
+    "rename": "Đổi tên",
+    "delete": "Xóa",
+    "deleteSessionConfirm": "Bạn có chắc chắn muốn xóa cuộc trò chuyện này?",
+    "deleteSessionError": "Xóa thất bại.",
+    "renameSessionError": "Đổi tên thất bại."
   },
 
   "roles": {
@@ -33,7 +38,8 @@
     "card2Title": "Xem xét và tối ưu hóa mã React của tôi",
     "card2Desc": "Sửa lỗi hiệu suất hoặc tái cấu trúc thành phần",
     "promptPlaceholder": "Nhập yêu cầu tại đây...",
-    "footerNote": "Neural Hub có thể hiển thị thông tin không chính xác, vì vậy hãy kiểm tra kỹ các câu trả lời."
+    "footerNote": "Neural Hub có thể hiển thị thông tin không chính xác, vì vậy hãy kiểm tra kỹ các câu trả lời.",
+    "flowiseUnavailable": "Hệ thống phân tích dữ liệu (Flowise) đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!"
   },
 
   "theme": {
@@ -64,7 +70,9 @@
     "clearChatHistoryConfirm": "Bạn có chắc muốn xóa hết lịch sử trò chuyện này không? Quá trình này không thể hoàn tác.",
     "clear": "Xóa",
     "signOut": "Đăng xuất",
-    "signOutDescription": "Kết thúc phiên hiện tại của bạn và đăng xuất khỏi giao diện một cách an toàn."
+    "signOutDescription": "Kết thúc phiên hiện tại của bạn và đăng xuất khỏi giao diện một cách an toàn.",
+    "english": "Tiếng Anh (US)",
+    "vietnamese": "Tiếng Việt"
   },
 
   "groupManagement": {

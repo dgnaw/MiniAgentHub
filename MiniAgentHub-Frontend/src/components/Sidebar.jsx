@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
-import { MessageSquare, Settings, Users, User, LogOut } from 'lucide-react';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
@@ -20,6 +20,16 @@ function Sidebar() {
 
   const [isInGroup, setIsInGroup] = useState(false);
   const [sessions, setSessions] = useState([]);
+
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenuId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -50,7 +60,6 @@ function Sidebar() {
           const isRoleChanged = state.user?.role !== currentRoleFromServer;
           
           if (isRoleChanged) {
-            // Nếu quyền bị thay đổi (vd: từ Admin xuống User), buộc đăng xuất để làm mới token và mảng permissions
             if (state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
                setTimeout(() => {
                   alert(t('sidebar.roleChanged', 'Quyền hạn của bạn đã thay đổi. Hệ thống sẽ đăng xuất để cập nhật!'));
@@ -78,7 +87,6 @@ function Sidebar() {
     if (user?.id) {
       checkUserGroups();
     }
-    // SỬA LỖI TẠI ĐÂY: Thêm location.pathname vào dependency để trigger chạy lại mỗi khi chuyển tab
   }, [user, location.pathname]);
 
   const handleLogout = () => {
@@ -93,6 +101,48 @@ function Sidebar() {
     return isActive 
       ? "flex items-center gap-3 w-full px-4 py-3 bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400 rounded-lg cursor-pointer transition-colors"
       : "flex items-center gap-3 w-full px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] hover:text-gray-900 dark:hover:text-gray-200 rounded-lg cursor-pointer transition-colors";
+  };
+
+  const handleDeleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+    setActiveMenuId(null);
+    if (window.confirm(t('sidebar.deleteSessionConfirm', 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này?'))) {
+      try {
+        await axiosClient.delete(`/chat-sessions/${sessionId}`);
+        setSessions(prev => prev.filter(s => s.id !== sessionId));
+        if (location.pathname === `/chat/${sessionId}`) {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Lỗi xóa session:', error);
+        alert(t('sidebar.deleteSessionError', 'Xóa thất bại.'));
+      }
+    }
+  };
+
+  const handleStartEdit = (e, session) => {
+    e.stopPropagation();
+    setActiveMenuId(null);
+    setEditingSessionId(session.id);
+    setEditTitle(session.title);
+  };
+
+  const handleSaveEdit = async (e, sessionId) => {
+    e.stopPropagation();
+    if (!editTitle.trim()) return;
+    try {
+      await axiosClient.put(`/chat-sessions/${sessionId}`, { title: editTitle.trim() });
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: editTitle.trim() } : s));
+      setEditingSessionId(null);
+    } catch (error) {
+      console.error('Lỗi đổi tên:', error);
+      alert(t('sidebar.renameSessionError', 'Đổi tên thất bại.'));
+    }
+  };
+
+  const handleCancelEdit = (e) => {
+    e.stopPropagation();
+    setEditingSessionId(null);
   };
 
   return (
@@ -147,11 +197,64 @@ function Sidebar() {
                   <div 
                     key={session.id}
                     onClick={() => navigate(`/chat/${session.id}`)}
-                    className={getNavClass(`/chat/${session.id}`)}
+                    className={`relative group ${getNavClass(`/chat/${session.id}`)}`}
                     title={session.title}
                   >
                     <MessageSquare size={16} className="shrink-0 text-gray-400" />
-                    <span className="font-medium text-sm truncate">{session.title}</span>
+                    
+                    {editingSessionId === session.id ? (
+                      <div className="flex items-center gap-2 flex-1 w-full" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={e => setEditTitle(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleSaveEdit(e, session.id);
+                            if (e.key === 'Escape') handleCancelEdit(e);
+                          }}
+                          className="flex-1 bg-white dark:bg-[#131417] text-sm text-gray-900 dark:text-white px-2 py-1 rounded outline-none border border-blue-500 w-full min-w-0"
+                          autoFocus
+                        />
+                        <button onClick={e => handleSaveEdit(e, session.id)} className="text-green-500 hover:text-green-600 shrink-0"><Check size={16}/></button>
+                        <button onClick={e => handleCancelEdit(e)} className="text-red-500 hover:text-red-600 shrink-0"><X size={16}/></button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="font-medium text-sm truncate flex-1">{session.title}</span>
+                        
+                        <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(activeMenuId === session.id ? null : session.id);
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded"
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+                        </div>
+                        
+                        {activeMenuId === session.id && (
+                          <div 
+                            className="absolute right-4 top-10 w-32 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-lg shadow-xl py-1 z-50"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <button 
+                              onClick={(e) => handleStartEdit(e, session)}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
+                            >
+                              <Pencil size={14} /> {t('sidebar.rename', 'Đổi tên')}
+                            </button>
+                            <button 
+                              onClick={(e) => handleDeleteSession(e, session.id)}
+                              className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                            >
+                              <Trash2 size={14} /> {t('sidebar.delete', 'Xóa')}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

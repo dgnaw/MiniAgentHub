@@ -13,59 +13,78 @@ const aiController = {
                 return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi (message).' });
             }
 
-            // 1. Quản lý Session: Nếu là lần chat đầu tiên (không có sessionId) thì tạo phiên mới
             let currentSessionId = sessionId;
             if (!currentSessionId) {
                 const title = message.substring(0, 30) + (message.length > 30 ? "..." : ""); 
                 const newSession = await ChatSession.create({ user_id: userId, title: title });
                 currentSessionId = newSession.id;
             } else {
-                // Cập nhật lại thời gian của cuộc trò chuyện để nó nổi lên đầu danh sách
                 await ChatSession.update({ updated_at: new Date() }, { where: { id: currentSessionId } });
             }
 
-            // 2. Lưu tin nhắn của User vào Database
             await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: message });
 
-            let aiResponse = "";
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            
+            res.write(`data: ${JSON.stringify({ sessionId: currentSessionId })}\n\n`);
 
-            // TÍCH HỢP FLOWISE: Kiểm tra model mà user đã chọn
+            let aiResponse = "";
+            let flowiseFailed = false;
+
             if (model === "Data Analyst") {
-                // Dùng Axios bắn API sang Flowise
                 const flowiseUrl = process.env.FLOWISE_API_URL || 'https://cloud.flowiseai.com/api/v1/prediction/67f836bc-a994-45ce-98f7-2c64aef4f72d';
                 
                 try {
                     const flowiseRes = await axios.post(flowiseUrl, {
                         question: message,
                         overrideConfig: {
-                            sessionId: currentSessionId // Truyền sessionId để Flowise nhớ ngữ cảnh chat cũ
+                            sessionId: currentSessionId 
                         }
                     });
                     aiResponse = flowiseRes.data.text || flowiseRes.data;
                 
-                    // Kiểm tra nếu response trả về là HTML (do cấu hình sai link API)
                     if (typeof aiResponse === 'string' && (aiResponse.trim().startsWith('<!DOCTYPE') || aiResponse.trim().startsWith('<html') || aiResponse.includes('<link rel="preconnect"'))) {
-                        aiResponse = "⚠️ **Lỗi cấu hình:** Kết nối tới Flowise bị sai đường dẫn API. Hệ thống đang trả về giao diện HTML thay vì dữ liệu. Vui lòng kiểm tra lại `FLOWISE_API_URL`.";
+                        flowiseFailed = true;
+                        aiResponse = "";
+                    } else {
+                        res.write(`data: ${JSON.stringify({ chunk: aiResponse })}\n\n`);
                     }
                 } catch (error) {
                     console.error('Lỗi khi gọi API Flowise:', error.response?.data || error.message);
-                    aiResponse = `⚠️ **Lỗi từ Flowise:** Máy chủ phân tích dữ liệu đang gặp sự cố (Lỗi 500). \n\n**Chi tiết lỗi:** \`${error.response?.data?.message || JSON.stringify(error.response?.data) || error.message}\``;
+                    flowiseFailed = true;
+                    aiResponse = "";
                 }
-            } else {
-                // Mặc định gọi Llama 3 qua Groq
-                aiResponse = await aiService.chatWithAI(message);
+            }
+            
+            if (model !== "Data Analyst" || flowiseFailed) {
+                if (flowiseFailed) {
+                    res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
+                }
+                const stream = await aiService.chatWithAIStream(message);
+                for await (const chunk of stream) {
+                    const content = chunk.choices[0]?.delta?.content || "";
+                    if (content) {
+                        aiResponse += content;
+                        res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+                    }
+                }
             }
 
-            // 3. Lưu tin nhắn của AI vào Database
             await ChatMessage.create({ session_id: currentSessionId, role: 'ai', content: aiResponse });
 
-            return res.status(200).json({
-                message: aiResponse,
-                sessionId: currentSessionId // Trả mã session về cho React
-            });
+            res.write(`data: [DONE]\n\n`);
+            res.end();
         } catch (error) {
             console.error('Lỗi tại aiController.chat:', error);
-            return res.status(500).json({ message: 'Lỗi server khi xử lý yêu cầu AI.' });
+            if (!res.headersSent) {
+                return res.status(500).json({ message: 'Lỗi server khi xử lý yêu cầu AI.' });
+            } else {
+                res.write(`data: ${JSON.stringify({ chunk: '\n\nĐã xảy ra lỗi trong quá trình xử lý.' })}\n\n`);
+                res.write(`data: [DONE]\n\n`);
+                res.end();
+            }
         }
     },
     
@@ -108,6 +127,50 @@ const aiController = {
         } catch (error) {
             console.error('Lỗi tại aiController.deleteAllSessions:', error);
             return res.status(500).json({ message: 'Lỗi server khi xóa lịch sử chat.' });
+        }
+    },
+
+    deleteSession: async (req, res) => {
+        try {
+            const sessionId = req.params.id;
+            const userId = req.user.id;
+            
+            const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
+            if (!session) {
+                return res.status(404).json({ message: 'Không tìm thấy phiên trò chuyện.' });
+            }
+
+            await ChatMessage.destroy({ where: { session_id: sessionId } });
+            await ChatSession.destroy({ where: { id: sessionId } });
+            
+            return res.status(200).json({ message: 'Đã xóa phiên trò chuyện.' });
+        } catch (error) {
+            console.error('Lỗi tại aiController.deleteSession:', error);
+            return res.status(500).json({ message: 'Lỗi server khi xóa phiên trò chuyện.' });
+        }
+    },
+
+    renameSession: async (req, res) => {
+        try {
+            const sessionId = req.params.id;
+            const userId = req.user.id;
+            const { title } = req.body;
+
+            if (!title || !title.trim()) {
+                return res.status(400).json({ message: 'Tiêu đề không được để trống.' });
+            }
+
+            const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
+            if (!session) {
+                return res.status(404).json({ message: 'Không tìm thấy phiên trò chuyện.' });
+            }
+
+            await ChatSession.update({ title: title.trim() }, { where: { id: sessionId }, silent: true });
+            
+            return res.status(200).json({ message: 'Đã đổi tên phiên trò chuyện.', title: title.trim() });
+        } catch (error) {
+            console.error('Lỗi tại aiController.renameSession:', error);
+            return res.status(500).json({ message: 'Lỗi server khi đổi tên phiên trò chuyện.' });
         }
     }
 };
