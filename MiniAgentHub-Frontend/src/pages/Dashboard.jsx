@@ -70,7 +70,7 @@ const Dashboard = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Lỗi kết nối máy chủ');
+        throw new Error('Server connection error');
       }
 
       const reader = response.body.getReader();
@@ -131,7 +131,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Lỗi khi chat:", error);
-      const errorMessage = { role: 'ai', content: 'Xin lỗi, đã có lỗi xảy ra khi kết nối với máy chủ AI.' };
+      const errorMessage = { role: 'ai', content: t('dashboard.errorConnect', 'Sorry, an error occurred while connecting to the AI server.') };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -165,11 +165,11 @@ const Dashboard = () => {
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg overflow-hidden z-10">
                 <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors" onClick={() => { setSelectedModel('Llama 3'); setShowModelDropdown(false); }}>
                   <div className="font-medium text-blue-600 dark:text-blue-400 mb-0.5">Llama 3</div>
-                  <div className="text-xs text-gray-500">Trò chuyện đa năng (qua Groq)</div>
+                  <div className="text-xs text-gray-500">{t('dashboard.modelLlamaDesc', 'General chat (via Groq)')}</div>
                 </div>
                 <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333]" onClick={() => { 
                   if (!isFlowiseAvailable) {
-                    alert(t('dashboard.flowiseUnavailable', 'Hệ thống phân tích dữ liệu đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!'));
+                    alert(t('dashboard.flowiseUnavailable', 'Data analysis system is busy or out of requests. Please try again later!'));
                     setShowModelDropdown(false);
                     return;
                   }
@@ -177,7 +177,7 @@ const Dashboard = () => {
                   setShowModelDropdown(false); 
                 }}>
                   <div className="font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">Data Analyst</div>
-                  <div className="text-xs text-gray-500">Phân tích dữ liệu (qua Flowise)</div>
+                  <div className="text-xs text-gray-500">{t('dashboard.modelDataDesc', 'Data analysis (via Flowise)')}</div>
                 </div>
               </div>
             )}
@@ -261,7 +261,7 @@ const Dashboard = () => {
                   <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-3">
                     <Sparkles size={16} className="text-blue-500 animate-pulse" />
                     <span className="text-sm font-medium text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse">
-                      {selectedModel === 'Data Analyst' ? t('dashboard.analyzing', 'Đang phân tích dữ liệu chuyên sâu') : t('dashboard.thinking', 'Đang tạo câu trả lời')}
+                      {selectedModel === 'Data Analyst' ? t('dashboard.analyzing', 'Analyzing data deeply') : t('dashboard.thinking', 'Generating response')}
                     </span>
                     <div className="flex items-center gap-1 ml-1 mt-1">
                       <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce"></span>

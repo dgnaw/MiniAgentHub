@@ -42,9 +42,6 @@ function Login() {
     <div className="min-h-screen bg-darkBg text-white flex flex-col items-center justify-center relative px-4">
       <div className="absolute top-0 w-full flex justify-between items-center p-6">
         <h1 className="text-xl font-bold tracking-wider">Agent Hub</h1>
-        <button className="flex items-center text-sm text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft size={16} className="mr-2" /> Back to site
-        </button>
       </div>
 
       <div className="bg-darkCard w-full max-w-md p-8 rounded-2xl border border-gray-800 shadow-2xl">

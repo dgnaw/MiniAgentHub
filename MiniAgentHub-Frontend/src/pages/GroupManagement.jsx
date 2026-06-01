@@ -96,6 +96,12 @@ const GroupManagement = () => {
     setIsModalOpen(true);
   };
 
+  const handleOpenInfoModal = (group) => {
+    setModalMode('info');
+    setSelectedGroup(group);
+    setIsModalOpen(true);
+  };
+
   const handleSaveGroup = async (formData) => {
     try {
       if (modalMode === 'create') {
@@ -188,7 +194,7 @@ const GroupManagement = () => {
                   </div>
                   
                   <div className="col-span-3 flex items-center justify-end gap-4 text-gray-500 dark:text-gray-400">
-                    <button className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipInfo', 'Group Info')}>
+                    <button onClick={() => handleOpenInfoModal(group)} className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipInfo', 'Group Info')}>
                       <Info size={18} />
                     </button>
                     

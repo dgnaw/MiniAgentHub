@@ -27,7 +27,12 @@
     "placeholderNewPassword": "Nhập mật khẩu mới",
     "newPasswordConfirm": "Xác thực mật khẩu",
     "placeholderNewPasswordConfirm": "Xác thực mật khẩu mới",
-    "updatePassword": "Cập nhật mật khẩu"
+    "updatePassword": "Cập nhật mật khẩu",
+    "errorLength": "Mật khẩu mới phải có ít nhất 6 ký tự.",
+    "errorMatch": "Mật khẩu xác nhận không khớp.",
+    "success": "Đổi mật khẩu thành công!",
+    "errorChange": "Lỗi khi đổi mật khẩu.",
+    "saving": "Đang lưu..."
   },
 
   "dashboard": {
@@ -39,7 +44,12 @@
     "card2Desc": "Sửa lỗi hiệu suất hoặc tái cấu trúc thành phần",
     "promptPlaceholder": "Nhập yêu cầu tại đây...",
     "footerNote": "Neural Hub có thể hiển thị thông tin không chính xác, vì vậy hãy kiểm tra kỹ các câu trả lời.",
-    "flowiseUnavailable": "Hệ thống phân tích dữ liệu (Flowise) đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!"
+    "flowiseUnavailable": "Hệ thống phân tích dữ liệu (Flowise) đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!",
+    "errorConnect": "Xin lỗi, đã có lỗi xảy ra khi kết nối với máy chủ AI.",
+    "analyzing": "Đang phân tích dữ liệu chuyên sâu",
+    "thinking": "Đang tạo câu trả lời",
+    "modelLlamaDesc": "Trò chuyện đa năng (qua Groq)",
+    "modelDataDesc": "Phân tích dữ liệu (qua Flowise)"
   },
 
   "theme": {
@@ -55,6 +65,14 @@
     "save": "Lưu",
     "cancel": "Hủy",
     "notUpdated": "Chưa cập nhật",
+    "clearSuccess": "Đã xóa lịch sử trò chuyện thành công!",
+    "clearError": "Có lỗi xảy ra khi xóa lịch sử chat.",
+    "updatePhoneError": "Lỗi khi cập nhật số điện thoại.",
+    "updateAddressError": "Lỗi khi cập nhật địa chỉ.",
+    "phonePlaceholder": "Nhập số điện thoại...",
+    "invalidPhone": "Số điện thoại không hợp lệ (chỉ gồm 10-15 chữ số).",
+    "addressPlaceholder": "Nhập địa chỉ...",
+    "saving": "Đang lưu...",
     "personalization": "Cá nhân hóa",
     "visualStyle": "Giao diện",
     "interfaceTheme": "Chủ đề giao diện",
@@ -102,8 +120,10 @@
     "createTitle": "Tạo nhóm mới",
     "updateTitle": "Cập nhật nhóm",
     "membersTitle": "Quản lý thành viên",
+    "infoTitle": "Thông tin nhóm",
     "createDesc": "Xác định danh tính và kiểm soát quyền truy cập cho không gian làm việc mới của bạn.",
     "updateDesc": "Sửa đổi danh tính và kiểm soát quyền truy cập cho nhóm này.",
+    "infoDesc": "Xem và cập nhật thông tin chi tiết của nhóm.",
     "membersDesc": "Thêm hoặc xóa thành viên khỏi nhóm này.",
     "identity": "DANH TÍNH",
     "groupNameLabel": "Tên nhóm",
@@ -111,6 +131,8 @@
     "targetEntity": "Đối tượng mục tiêu",
     "users": "Người dùng",
     "groups": "Nhóm",
+    "descriptionLabel": "Mô tả",
+    "descriptionPlaceholder": "Nhập mô tả cho nhóm...",
     "rbacMatrix": "Ma trận Quyền (RBAC)",
     "rbacDesc": "Kiểm soát truy cập dựa trên vai trò",
     "action": "Hành động",
@@ -134,6 +156,7 @@
     "btnCreate": "Khởi tạo nhóm",
     "btnUpdate": "Cập nhật nhóm",
     "btnUpdateMembers": "Cập nhật thành viên",
+    "btnUpdateInfo": "Cập nhật thông tin",
     "alertNoName": "Vui lòng nhập tên nhóm!",
     "alertReadRequired": "Bạn không thể tắt quyền Read. Quyền này là bắt buộc để bạn có thể tiếp tục nhìn thấy và quản lý nhóm!",
     "alertSelfRemove": "Bạn không thể tự xóa chính mình khỏi nhóm để tránh việc mất quyền truy cập!",

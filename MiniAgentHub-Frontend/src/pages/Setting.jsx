@@ -36,11 +36,11 @@ const Settings = () => {
     if (window.confirm(t('settings.clearChatHistoryConfirm'))) {
       try {
         await axiosClient.delete('/chat-sessions');
-        alert('Đã xóa lịch sử trò chuyện thành công!');
+        alert(t('settings.clearSuccess', 'Chat history cleared successfully!'));
         window.location.reload(); 
       } catch (error) {
         console.error('Lỗi khi xóa lịch sử:', error);
-        alert('Có lỗi xảy ra khi xóa lịch sử chat.');
+        alert(t('settings.clearError', 'Error clearing chat history.'));
       }
     }
   };
@@ -55,14 +55,22 @@ const Settings = () => {
 
   const handleUpdatePhone = async () => {
     if (!user?.id) return;
+
+    const trimmedPhone = phoneInput.trim();
+    // Validate: Cho phép bỏ trống, nhưng nếu đã nhập thì phải là số, dài 10-15 ký tự, có thể chứa dấu + ở đầu
+    if (trimmedPhone !== '' && !/^\+?[0-9]{10}$/.test(trimmedPhone)) {
+      alert(t('settings.invalidPhone', 'Invalid phone number (10 digits only).'));
+      return;
+    }
+
     setIsSavingPhone(true);
     try {
-      await axiosClient.put(`/users/${user.id}`, { phone: phoneInput });
-      updateUser({ phone: phoneInput }); 
+      await axiosClient.put(`/users/${user.id}`, { phone: trimmedPhone });
+      updateUser({ phone: trimmedPhone }); 
       setIsEditingPhone(false);
     } catch (error) {
       console.error(error);
-      alert('Lỗi khi cập nhật số điện thoại.');
+      alert(t('settings.updatePhoneError', 'Error updating phone number.'));
     } finally {
       setIsSavingPhone(false);
     }
@@ -77,7 +85,7 @@ const Settings = () => {
       setIsEditingAddress(false);
     } catch (error) {
       console.error(error);
-      alert('Lỗi khi cập nhật địa chỉ.');
+      alert(t('settings.updateAddressError', 'Error updating address.'));
     } finally {
       setIsSavingAddress(false);
     }
@@ -111,10 +119,10 @@ const Settings = () => {
                       value={phoneInput} 
                       onChange={(e) => setPhoneInput(e.target.value)}
                       className="mt-1.5 w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-md px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                      placeholder="Nhập số điện thoại..."
+                      placeholder={t('settings.phonePlaceholder', 'Enter phone number...')}
                     />
                   ) : (
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated')}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated', 'Not updated')}</p>
                   )}
                 </div>
               </div>
@@ -122,7 +130,7 @@ const Settings = () => {
                 {isEditingPhone ? (
                   <>
                     <button onClick={handleUpdatePhone} disabled={isSavingPhone} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
-                      {isSavingPhone ? 'Saving...' : t('settings.save')}
+                      {isSavingPhone ? t('settings.saving', 'Saving...') : t('settings.save')}
                     </button>
                     <button onClick={() => { setIsEditingPhone(false); setPhoneInput(user?.phone || ''); }} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                       {t('settings.cancel')}
@@ -149,10 +157,10 @@ const Settings = () => {
                       value={addressInput} 
                       onChange={(e) => setAddressInput(e.target.value)}
                       className="mt-1.5 w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-md px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                      placeholder="Nhập địa chỉ..."
+                      placeholder={t('settings.addressPlaceholder', 'Enter address...')}
                     />
                   ) : (
-                    <p className="text-xs text-gray-500 mt-0.5">{user?.address || 'Chưa cập nhật'}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{user?.address || t('settings.notUpdated', 'Not updated')}</p>
                   )}
                 </div>
               </div>
@@ -160,7 +168,7 @@ const Settings = () => {
                 {isEditingAddress ? (
                   <>
                     <button onClick={handleUpdateAddress} disabled={isSavingAddress} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
-                      {isSavingAddress ? 'Saving...' : t('settings.save')}
+                      {isSavingAddress ? t('settings.saving', 'Saving...') : t('settings.save')}
                     </button>
                     <button onClick={() => { setIsEditingAddress(false); setAddressInput(user?.address || ''); }} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                       {t('settings.cancel')}

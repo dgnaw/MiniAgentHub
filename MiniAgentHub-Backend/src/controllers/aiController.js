@@ -78,10 +78,16 @@ const aiController = {
             res.end();
         } catch (error) {
             console.error('Lỗi tại aiController.chat:', error);
+
+            let errorMessage = '\n\nĐã xảy ra lỗi trong quá trình xử lý.';
+            if (error.status === 401 || (error.message && error.message.includes('Invalid API Key'))) {
+                errorMessage = '\n\nLỗi hệ thống: API Key của hệ thống AI (Groq) không hợp lệ hoặc chưa được cấu hình. Vui lòng kiểm tra lại file .env của backend.';
+            }
+
             if (!res.headersSent) {
                 return res.status(500).json({ message: 'Lỗi server khi xử lý yêu cầu AI.' });
             } else {
-                res.write(`data: ${JSON.stringify({ chunk: '\n\nĐã xảy ra lỗi trong quá trình xử lý.' })}\n\n`);
+                res.write(`data: ${JSON.stringify({ chunk: errorMessage })}\n\n`);
                 res.write(`data: [DONE]\n\n`);
                 res.end();
             }

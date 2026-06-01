@@ -19,24 +19,24 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     setPasswordSuccess('');
 
     if (newPassword.length < 6) {
-      setPasswordError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      setPasswordError(t('change-password-modal.errorLength', 'New password must be at least 6 characters.'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Mật khẩu xác nhận không khớp.');
+      setPasswordError(t('change-password-modal.errorMatch', 'Passwords do not match.'));
       return;
     }
 
     setIsSavingPassword(true);
     try {
       const res = await axiosClient.put('/users/change-password', { new_password: newPassword });
-      setPasswordSuccess(res.message || 'Đổi mật khẩu thành công!');
+      setPasswordSuccess(res.message || t('change-password-modal.success', 'Password changed successfully!'));
       setTimeout(() => {
         handleClose();
       }, 2000);
     } catch (error) {
       console.error(error);
-      setPasswordError(error.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+      setPasswordError(error.response?.data?.message || t('change-password-modal.errorChange', 'Error changing password.'));
     } finally {
       setIsSavingPassword(false);
     }
@@ -96,7 +96,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
             disabled={isSavingPassword}
             className="w-full bg-[#006ecf] hover:bg-[#005bb1] text-white font-semibold py-2.5 rounded-lg mt-4 transition-colors disabled:opacity-50"
           >
-            {isSavingPassword ? 'Saving...' : ''}{t('change-password-modal.updatePassword')}
+            {isSavingPassword ? t('change-password-modal.saving', 'Saving...') : ''}{t('change-password-modal.updatePassword')}
           </button>
         </form>
       </div>

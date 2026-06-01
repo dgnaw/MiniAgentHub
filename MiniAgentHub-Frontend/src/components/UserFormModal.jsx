@@ -184,25 +184,6 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('userFormModal.roleSelection', 'Role Selection')}</label>
-            <div className="flex bg-gray-50 dark:bg-[#131417] p-1 rounded-xl border border-gray-200 dark:border-[#26272b]">
-              {['Admin', 'User'].map((r) => (
-                <button 
-                  key={r}
-                  onClick={() => !isReadOnly && setRole(r)}
-                  disabled={isReadOnly}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                    role === r 
-                      ? 'bg-white dark:bg-[#1a1b20] text-gray-900 dark:text-white border border-gray-200 dark:border-[#333] shadow-sm' 
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                >
-                  {t(`roles.${r}`, r)}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="p-6 pt-2 flex items-center justify-end gap-3">

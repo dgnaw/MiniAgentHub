@@ -62,7 +62,7 @@ function Sidebar() {
           if (isRoleChanged) {
             if (state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
                setTimeout(() => {
-                  alert(t('sidebar.roleChanged', 'Quyền hạn của bạn đã thay đổi. Hệ thống sẽ đăng xuất để cập nhật!'));
+                  alert(t('sidebar.roleChanged', 'Your permissions have changed. The system will log you out to update!'));
                   logout();
                   navigate('/login');
                }, 300);
@@ -90,7 +90,7 @@ function Sidebar() {
   }, [user, location.pathname]);
 
   const handleLogout = () => {
-    if (window.confirm(t('sidebar.logoutConfirm'))) {
+    if (window.confirm(t('sidebar.logoutConfirm', 'Are you sure you want to log out?'))) {
       logout(); 
       navigate('/login'); 
     }
@@ -106,7 +106,7 @@ function Sidebar() {
   const handleDeleteSession = async (e, sessionId) => {
     e.stopPropagation();
     setActiveMenuId(null);
-    if (window.confirm(t('sidebar.deleteSessionConfirm', 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này?'))) {
+    if (window.confirm(t('sidebar.deleteSessionConfirm', 'Are you sure you want to delete this chat session?'))) {
       try {
         await axiosClient.delete(`/chat-sessions/${sessionId}`);
         setSessions(prev => prev.filter(s => s.id !== sessionId));
@@ -115,7 +115,7 @@ function Sidebar() {
         }
       } catch (error) {
         console.error('Lỗi xóa session:', error);
-        alert(t('sidebar.deleteSessionError', 'Xóa thất bại.'));
+        alert(t('sidebar.deleteSessionError', 'Failed to delete.'));
       }
     }
   };
@@ -136,7 +136,7 @@ function Sidebar() {
       setEditingSessionId(null);
     } catch (error) {
       console.error('Lỗi đổi tên:', error);
-      alert(t('sidebar.renameSessionError', 'Đổi tên thất bại.'));
+      alert(t('sidebar.renameSessionError', 'Failed to rename.'));
     }
   };
 
@@ -156,7 +156,7 @@ function Sidebar() {
             className={`${getNavClass('/')} shrink-0`}
           >
             <MessageSquare size={20} />
-            <span className="font-medium text-sm">{t('sidebar.chat')}</span>
+            <span className="font-medium text-sm">{t('sidebar.chat', 'Chat')}</span>
           </div>
 
           {(user?.role === 'Admin' || permissions.includes('USER_R') || permissions.includes('USER_U')) && (
@@ -165,7 +165,7 @@ function Sidebar() {
               className={`${getNavClass('/users')} shrink-0`}
             >
               <User size={20} />
-              <span className="font-medium text-sm">{t('sidebar.users')}</span>
+              <span className="font-medium text-sm">{t('sidebar.users', 'Users')}</span>
             </div>
           )}
 
@@ -175,7 +175,7 @@ function Sidebar() {
               className={`${getNavClass('/groups')} shrink-0`}
             >
               <Users size={20} />
-              <span className="font-medium text-sm">{t('sidebar.group')}</span>
+              <span className="font-medium text-sm">{t('sidebar.group', 'Groups')}</span>
             </div>
           )}
 
@@ -184,13 +184,13 @@ function Sidebar() {
             className={`${getNavClass('/settings')} shrink-0`}
           >
             <Settings size={20} />
-            <span className="font-medium text-sm">{t('sidebar.setting')}</span>
+            <span className="font-medium text-sm">{t('sidebar.setting', 'Settings')}</span>
           </div>
 
           {sessions.length > 0 && (
             <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 flex flex-col flex-1 min-h-0">
               <div className="pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0">
-                {t('sidebar.history')}
+                {t('sidebar.history', 'History')}
               </div>
               <div className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1">
                 {sessions.map((session) => (
@@ -243,13 +243,13 @@ function Sidebar() {
                               onClick={(e) => handleStartEdit(e, session)}
                               className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
                             >
-                              <Pencil size={14} /> {t('sidebar.rename', 'Đổi tên')}
+                              <Pencil size={14} /> {t('sidebar.rename', 'Rename')}
                             </button>
                             <button 
                               onClick={(e) => handleDeleteSession(e, session.id)}
                               className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                             >
-                              <Trash2 size={14} /> {t('sidebar.delete', 'Xóa')}
+                              <Trash2 size={14} /> {t('sidebar.delete', 'Delete')}
                             </button>
                           </div>
                         )}
@@ -283,7 +283,7 @@ function Sidebar() {
           <button 
             onClick={handleLogout}
             className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors"
-            title={t('sidebar.logoutTitle')}
+            title={t('sidebar.logoutTitle', 'Log out')}
           >
             <LogOut size={18} />
           </button>

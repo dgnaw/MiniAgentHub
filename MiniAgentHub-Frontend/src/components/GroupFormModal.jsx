@@ -6,9 +6,11 @@ import { useTranslation } from 'react-i18next';
 
 const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData = null }) => {
   const user = useAuthStore((state) => state.user);
+  const userPermissions = useAuthStore((state) => state.permissions) || [];
   const { t } = useTranslation();
   const [groupName, setGroupName] = useState('');
   const [entityType, setEntityType] = useState(initialData?.entityType || 'users');
+  const [description, setDescription] = useState('');
   
   const [permissions, setPermissions] = useState({
     create: initialData?.permissions?.create || false,
@@ -16,6 +18,8 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
     update: initialData?.permissions?.update || false,
     delete: initialData?.permissions?.delete || false,
   });
+
+  const canUpdate = user?.role === 'Admin' || userPermissions.includes('GROUP_U');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [members, setMembers] = useState([]);
@@ -27,6 +31,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
   useEffect(() => {
     if (isOpen) {
       setGroupName(initialData?.group_name || initialData?.name || '');
+      setDescription(initialData?.description || '');
       setEntityType(initialData?.entityType || 'users');
       setPermissions({
         create: initialData?.permissions?.create || false,
@@ -35,7 +40,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
         delete: initialData?.permissions?.delete || false,
       });
 
-      if ((mode === 'update' || mode === 'members') && initialData?.id) {
+      if ((mode === 'update' || mode === 'members' || mode === 'info') && initialData?.id) {
         const fetchMembers = async () => {
           try {
             const res = await axiosClient.get(`/groups/${initialData.id}`);
@@ -90,7 +95,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   const handleTogglePermission = (key) => {
     if (user?.role !== 'Admin' && key === 'read' && permissions.read) {
-      alert(t('groupFormModal.alertReadRequired', 'Bạn không thể tắt quyền Read. Quyền này là bắt buộc để bạn có thể tiếp tục nhìn thấy và quản lý nhóm!'));
+      alert(t('groupFormModal.alertReadRequired', 'You cannot disable Read permission. This is required to see and manage the group!'));
       return;
     }
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -98,7 +103,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   const handleRemoveMember = (id) => {
     if (user?.role !== 'Admin' && id === user?.id) {
-      alert(t('groupFormModal.alertSelfRemove', 'Bạn không thể tự xóa chính mình khỏi nhóm để tránh việc mất quyền truy cập!'));
+      alert(t('groupFormModal.alertSelfRemove', 'You cannot remove yourself from the group to avoid losing access!'));
       return;
     }
     setMembers(members.filter(m => m.id !== id));
@@ -106,7 +111,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   const handleSubmit = async () => {
     if (mode !== 'members' && !groupName.trim()) {
-      alert(t('groupFormModal.alertNoName', 'Vui lòng nhập tên nhóm!'));
+      alert(t('groupFormModal.alertNoName', 'Please enter a group name!'));
       return;
     }
     
@@ -119,6 +124,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
       } else {
         await onSave({
           name: groupName,
+          description: description,
           entityType: entityType,
           userIds: members.map(m => m.id),
           permissions: permissions
@@ -144,24 +150,55 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             <X size={24} />
           </button>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {mode === 'create' ? t('groupFormModal.createTitle', 'Create New Group') : mode === 'members' ? t('groupFormModal.membersTitle', 'Manage Members') : t('groupFormModal.updateTitle', 'Update Group')}
+            {mode === 'create' ? t('groupFormModal.createTitle', 'Create New Group') : mode === 'members' ? t('groupFormModal.membersTitle', 'Manage Members') : mode === 'info' ? t('groupFormModal.infoTitle', 'Group Info') : t('groupFormModal.updateTitle', 'Update Group')}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             {mode === 'create' 
               ? t('groupFormModal.createDesc', 'Define identity and access control for your new workspace.') 
               : mode === 'members'
                 ? t('groupFormModal.membersDesc', 'Add or remove members from this group.')
-                : t('groupFormModal.updateDesc', 'Modify identity and access control for this group.')}
+                : mode === 'info'
+                  ? t('groupFormModal.infoDesc', 'View and update group details.')
+                  : t('groupFormModal.updateDesc', 'Modify identity and access control for this group.')}
           </p>
         </div>
 
         <div className="px-8 pb-8 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
           
-          {mode !== 'members' && (
+          {mode === 'info' && (
+            <section>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.groupNameLabel', 'Group Name')}</label>
+                  <input 
+                    type="text" 
+                    value={groupName}
+                    readOnly
+                    className="w-full bg-gray-50 dark:bg-[#1e1f24] border border-gray-300 dark:border-[#26272b] rounded-xl px-4 py-3 text-sm text-gray-500 dark:text-gray-400 outline-none transition-colors cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.descriptionLabel', 'Description')}</label>
+                  <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    readOnly={!canUpdate}
+                    rows={4}
+                    placeholder={t('groupFormModal.descriptionPlaceholder', 'Enter group description...')}
+                    className={`w-full bg-white dark:bg-[#1e1f24] border border-gray-300 dark:border-transparent focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white outline-none transition-colors resize-none ${
+                      !canUpdate && 'bg-gray-50 dark:bg-[#1e1f24] !border-gray-300 dark:!border-[#26272b] text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    }`}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+          
+          {mode !== 'members' && mode !== 'info' && (
           <section>
             <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.identity', 'Identity')}</h3>
             <div className="grid grid-cols-2 gap-6">
-              <div>
+              <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.groupNameLabel', 'Group Name')}</label>
                 <input 
                   type="text" 
@@ -172,7 +209,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                 />
               </div>
 
-              <div>
+              <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.targetEntity', 'Target Entity')}</label>
                 <div className="flex bg-gray-50 dark:bg-[#1a1b20] p-1 rounded-xl border border-gray-200 dark:border-[#26272b]">
                   <button 
@@ -201,7 +238,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
           </section>
           )}
 
-          {mode !== 'members' && (
+          {mode !== 'members' && mode !== 'info' && (
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">{t('groupFormModal.rbacMatrix', 'RBAC Permissions Matrix')}</h3>
@@ -259,7 +296,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
           </section>
           )}
 
-          {mode !== 'update' && (
+          {mode !== 'update' && mode !== 'info' && (
             <section>
             <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.membersManagement', 'Members Management')}</h3>
               
@@ -289,7 +326,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('groupFormModal.noUsersFound', 'Không tìm thấy người dùng phù hợp')}</div>
+                      <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('groupFormModal.noUsersFound', 'No users found')}</div>
                     )}
                   </div>
                 )}
@@ -303,7 +340,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                     <div key={member.id} className="flex items-center gap-2 bg-blue-50 dark:bg-[#1a233a] border border-blue-200 dark:border-[#2a3b63] rounded-full pl-1 pr-3 py-1">
                       <img src={member.avatar} alt="avatar" className="w-5 h-5 rounded-full object-cover" />
                       <span className="text-xs text-blue-700 dark:text-[#a5c6f7] font-medium">
-                        {member.name} {isCurrentUser ? t('groupFormModal.you', '(Bạn)') : ''}
+                        {member.name} {isCurrentUser ? t('groupFormModal.you', '(You)') : ''}
                       </span>
                       {canRemove && (
                         <button onClick={() => handleRemoveMember(member.id)} className="text-blue-600 dark:text-[#a5c6f7] hover:text-blue-800 dark:hover:text-white ml-1">
@@ -324,15 +361,17 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             onClick={onClose}
             className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors px-4 py-2"
           >
-            {t('groupFormModal.cancel', 'Cancel')}
+            {mode === 'info' && !canUpdate ? t('userFormModal.close', 'Close') : t('groupFormModal.cancel', 'Cancel')}
           </button>
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-[#b5d6ff] hover:bg-[#9cc4f5] text-[#0b1c3f] px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50"
-          >
-            {isSubmitting ? t('groupFormModal.saving', 'Saving...') : (mode === 'create' ? t('groupFormModal.btnCreate', 'Initialize Group') : mode === 'members' ? t('groupFormModal.btnUpdateMembers', 'Update Members') : t('groupFormModal.btnUpdate', 'Update Group'))}
-          </button>
+          {(mode !== 'info' || canUpdate) && (
+            <button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-[#b5d6ff] hover:bg-[#9cc4f5] text-[#0b1c3f] px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50"
+            >
+              {isSubmitting ? t('groupFormModal.saving', 'Saving...') : (mode === 'create' ? t('groupFormModal.btnCreate', 'Initialize Group') : mode === 'members' ? t('groupFormModal.btnUpdateMembers', 'Update Members') : mode === 'info' ? t('groupFormModal.btnUpdateInfo', 'Update Info') : t('groupFormModal.btnUpdate', 'Update Group'))}
+            </button>
+          )}
         </div>
 
       </div>
