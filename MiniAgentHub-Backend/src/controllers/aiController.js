@@ -15,7 +15,16 @@ const aiController = {
 
             let currentSessionId = sessionId;
             if (!currentSessionId) {
-                const title = message.substring(0, 30) + (message.length > 30 ? "..." : ""); 
+                let title = message.substring(0, 30) + (message.length > 30 ? "..." : ""); 
+                
+                try {
+                    const aiTitle = await aiService.generateTitle(message);
+                    if (aiTitle) {
+                        title = aiTitle;
+                    }
+                } catch (error) {
+                }
+
                 const newSession = await ChatSession.create({ user_id: userId, title: title });
                 currentSessionId = newSession.id;
             } else {
@@ -34,7 +43,7 @@ const aiController = {
             let flowiseFailed = false;
 
             if (model === "Data Analyst") {
-                const flowiseUrl = process.env.FLOWISE_API_URL || 'https://cloud.flowiseai.com/api/v1/prediction/67f836bc-a994-45ce-98f7-2c64aef4f72d';
+                const flowiseUrl = process.env.FLOWISE_API_URL;
                 
                 try {
                     const flowiseRes = await axios.post(flowiseUrl, {

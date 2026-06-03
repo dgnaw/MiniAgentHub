@@ -23,6 +23,7 @@ const Dashboard = () => {
   const [showModelDropdown, setShowModelDropdown] = useState(false); 
   const [isFlowiseAvailable, setIsFlowiseAvailable] = useState(true);
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,6 +53,9 @@ const Dashboard = () => {
     const userMessage = { role: 'user', content: textToSend.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset chiều cao khung chat sau khi gửi
+    }
     setIsLoading(true);
 
     try {
@@ -73,8 +77,8 @@ const Dashboard = () => {
         throw new Error('Server connection error');
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
+      const reader = response.body.getReader(); // đọc dữ liệu -> trả về -> chunks
+      const decoder = new TextDecoder('utf-8'); // dữ liệu -> dạng nhị phân
       let aiResponseText = '';
       let buffer = '';
       let newSessionId = null;
@@ -84,6 +88,7 @@ const Dashboard = () => {
         const { value, done } = await reader.read();
         if (done) break;
 
+        // Xử lý nối dữ liệu nếu bị cắt trong quá trình stream
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop();
@@ -139,7 +144,8 @@ const Dashboard = () => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSend();
     }
   };
@@ -277,22 +283,27 @@ const Dashboard = () => {
         )}
 
         <div className="absolute bottom-0 w-full p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
-          <div className="w-full max-w-3xl relative flex items-center bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-full p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
+          <div className="w-full max-w-3xl relative flex items-end bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
             
-            <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+            <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors shrink-0">
               <Plus size={22} />
             </button>
 
-            <input 
-              type="text" 
+            <textarea 
+              ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
               onKeyDown={handleKeyDown}
+              rows={1}
               placeholder={t('dashboard.promptPlaceholder')} 
-              className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 px-2 text-base"
+              className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 px-2 py-3 text-base resize-none overflow-y-auto max-h-[200px] custom-scrollbar"
             />
 
-            <div className="flex items-center gap-2 pr-1">
+            <div className="flex items-center gap-2 pr-1 shrink-0 pb-0.5">
               <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
                 <Paperclip size={20} />
               </button>
