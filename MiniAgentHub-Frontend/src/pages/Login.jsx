@@ -5,11 +5,14 @@ import { Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
+import ThemeToggle from '../components/ThemeToggle';
+import useThemeStore from '../store/themeStore';
 
 function Login() {
   const navigate = useNavigate();
   const setLoginData = useAuthStore((state) => state.setLoginData);
   const { t } = useTranslation();
+  useThemeStore(); 
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,18 +44,21 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-darkBg text-white flex flex-col items-center justify-center relative px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white flex flex-col items-center justify-center relative px-4 transition-colors duration-300">
       <div className="absolute top-0 w-full flex justify-between items-center p-6">
-        <h1 className="text-xl font-bold tracking-wider">Agent Hub</h1>
+        <h1 className="text-xl font-bold tracking-wider text-gray-900 dark:text-white">Agent Hub</h1>
+        <div className="w-40">
+          <ThemeToggle />
+        </div>
       </div>
 
-      <div className="bg-darkCard w-full max-w-md p-8 rounded-2xl border border-gray-800 shadow-2xl">
+      <div className="bg-white dark:bg-[#1a1b20] w-full max-w-md p-8 rounded-2xl border border-gray-200 dark:border-[#26272b] shadow-2xl transition-colors duration-300">
         <div className="mb-8">
           <p className="text-blue-500 text-xs font-semibold tracking-widest mb-2 uppercase">
             {t('login.secureAccess', 'Secure Access')}
           </p>
           <h2 className="text-3xl font-bold mb-2">{t('login.title', 'Log In')}</h2>
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             {t('login.description', 'Welcome back to Agent Hub. Enter your credentials to access your dashboard.')}
           </p>
         </div>
@@ -60,7 +66,7 @@ function Login() {
         <form onSubmit={handleLogin} className="space-y-5">
           {/* Email Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               {t('login.emailLabel', 'Email Address')}
             </label>
             <input
@@ -69,12 +75,12 @@ function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('login.emailPlaceholder', 'name@company.com')}
               required
-              className="w-full bg-[#1A1A1A] border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               {t('login.passwordLabel', 'Password')}
             </label>
             <div className="relative">
@@ -84,19 +90,19 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.passwordPlaceholder', 'Enter your password')}
                 required
-                className="w-full bg-[#1A1A1A] border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
 
           <button
             type="submit"
