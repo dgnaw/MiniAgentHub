@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import GroupFormModal from '../components/GroupFormModal';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 
 const GroupManagement = () => {
   const user = useAuthStore((state) => state.user);
@@ -72,9 +73,10 @@ const GroupManagement = () => {
     try {
       await axiosClient.delete(`/groups/${id}`);
       setGroups((prev) => prev.filter((g) => g.id !== id));
+      toast.success(t('groupManagement.deleteSuccess', 'Xóa nhóm thành công!'));
     } catch (err) {
       console.error('Lỗi khi xóa nhóm:', err);
-      alert(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError', 'Xóa nhóm thất bại. Vui lòng thử lại sau.'));
+      toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError', 'Xóa nhóm thất bại. Vui lòng thử lại sau.'));
     }
   };
 
@@ -106,13 +108,14 @@ const GroupManagement = () => {
     try {
       if (modalMode === 'create') {
         await axiosClient.post('/groups', formData);
+        toast.success(t('groupManagement.createSuccess', 'Tạo nhóm thành công!'));
       } else {
         await axiosClient.put(`/groups/${selectedGroup.id}`, formData);
+        toast.success(t('groupManagement.updateSuccess', 'Cập nhật nhóm thành công!'));
       }
       setIsModalOpen(false);
       fetchGroups(); 
     } catch (err) {
-      alert(err.response?.data?.message || t('groupManagement.saveError', 'Có lỗi xảy ra khi lưu nhóm.'));
       throw err; 
     }
   };
@@ -190,7 +193,7 @@ const GroupManagement = () => {
                   </div>
                   
                   <div className="col-span-4 text-sm text-gray-700 dark:text-gray-300">
-                    {group.member_count || group.memberCount || 0} {t('groupManagement.members', 'members')}
+                    {group.member_count || group.memberCount || group.members?.length || 0} {t('groupManagement.members', 'members')}
                   </div>
                   
                   <div className="col-span-3 flex items-center justify-end gap-4 text-gray-500 dark:text-gray-400">

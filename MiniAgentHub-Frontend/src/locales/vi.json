@@ -209,6 +209,7 @@
     "alertSelectGroup": "Vui lòng chọn một nhóm!",
     "addUsersSuccess": "Thêm người dùng vào nhóm thành công!",
     "addUsersError": "Có lỗi xảy ra khi thêm vào nhóm.",
+    "alertSelfDelete": "Bạn không thể tự xóa chính tài khoản của mình!",
     "selectedCount": "{{count}} Đã chọn",
     "groupsCountBadge": "NHÓM",
     "modalAddGroupTitle": "Thêm {{count}} người dùng vào nhóm",

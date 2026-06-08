@@ -5,11 +5,14 @@ import Dashboard from './pages/Dashboard';
 import Settings from './pages/Setting';
 import GroupManagement from './pages/GroupManagement';
 import UserManagement from './pages/UserManagement';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
+    <>
+    <Toaster position="top-right" reverseOrder={false} />
     <BrowserRouter>
       <Routes>
         <Route 
@@ -73,8 +76,8 @@ function App() {
         />
       </Routes>
 
-      
     </BrowserRouter>
+    </>
   );
 }
 

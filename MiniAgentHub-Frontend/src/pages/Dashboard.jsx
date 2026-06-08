@@ -8,6 +8,7 @@ import axiosClient from '../services/axiosClient';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   useThemeStore();
@@ -236,13 +237,13 @@ const Dashboard = () => {
                 </div>
               <div className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333] ${!isFlowiseConfigured ? 'opacity-60' : ''}`} onClick={() => { 
                 if (!isFlowiseConfigured) {
-                  setLocalError('Hệ thống chưa được cấu hình URL cho Flowise. Vui lòng liên hệ Admin.');
+                  setLocalError('Hệ thống chưa được cấu hình URL cho Flowise. Vui lòng cấu hình để sử dụng tính năng này.');
                   setTimeout(() => setLocalError(''), 5000);
                   setShowModelDropdown(false);
                   return;
                 }
                   if (!isFlowiseAvailable) {
-                    alert(t('dashboard.flowiseUnavailable', 'Data analysis system is busy or out of requests. Please try again later!'));
+                    toast.error(t('dashboard.flowiseUnavailable', 'Data analysis system is busy or out of requests. Please try again later!'));
                     setShowModelDropdown(false);
                     return;
                   }

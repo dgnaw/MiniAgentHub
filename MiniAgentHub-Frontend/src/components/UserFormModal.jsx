@@ -3,6 +3,7 @@ import { X, UserPlus, UserCog } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 
 const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialData = null }) => {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
   const [role, setRole] = useState('User');
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const [allGroups, setAllGroups] = useState([]);
   const [searchGroup, setSearchGroup] = useState('');
@@ -37,11 +39,13 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
   useEffect(() => {
     if (isOpen && initialData && mode === 'update') {
+      setFormError('');
       setFullName(initialData.full_name || initialData.name || '');
       setEmail(initialData.email || '');
       setRole(initialData.role_id === 1 || initialData.Role?.name === 'Admin' || initialData.role === 'Admin' ? 'Admin' : 'User');
       setSelectedGroups(initialData.Groups ? initialData.Groups.map(g => ({ id: g.id, name: g.name })) : []);
     } else if (isOpen && mode === 'create') {
+      setFormError('');
       setFullName('');
       setEmail('');
       setRole('User');
@@ -69,8 +73,9 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
   );
 
   const handleSubmit = async () => {
+    setFormError('');
     if (!fullName.trim() || !email.trim()) {
-      alert(t('userFormModal.alertNoNameEmail', 'Please enter full name and email!'));
+      setFormError(t('userFormModal.alertNoNameEmail', 'Vui lòng nhập tên và email!'));
       return;
     }
 
@@ -86,15 +91,17 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
       if (mode === 'create') {
         await axiosClient.post('/users', payload);
+        toast.success(t('userFormModal.createSuccess', 'Tạo người dùng thành công!'));
       } else {
         await axiosClient.put(`/users/${initialData.id}`, payload);
+        toast.success(t('userFormModal.updateSuccess', 'Cập nhật người dùng thành công!'));
       }
 
       if (onSuccess) onSuccess(); 
       onClose(); 
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || t('userFormModal.alertSaveError', 'There been an error saving the user.'));
+      setFormError(error.response?.data?.message || t('userFormModal.alertSaveError', 'Có lỗi xảy ra khi lưu người dùng!'));
     } finally {
       setIsSubmitting(false);
     }
@@ -116,26 +123,30 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
         <div className="p-6 space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('userFormModal.fullName', 'Full Name')}</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+              {t('userFormModal.fullName', 'Full Name')} <span className="text-red-500">*</span>
+            </label>
             <input 
               type="text" 
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => { setFullName(e.target.value); setFormError(''); }}
               placeholder={mode === 'create' ? t('userFormModal.fullNamePlaceholder', 'Enter full name') : ""}
               disabled={isReadOnly}
-              className="w-full bg-white dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors"
+              className={`w-full bg-white dark:bg-[#131417] border ${formError && !fullName.trim() ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('userFormModal.emailLabel', 'Email Address')}</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+              {t('userFormModal.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
+            </label>
             <input 
               type="email" 
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setFormError(''); }}
               placeholder={mode === 'create' ? t('userFormModal.emailPlaceholder', 'name@company.com') : ""}
               disabled={isReadOnly}
-              className="w-full bg-white dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors"
+              className={`w-full bg-white dark:bg-[#131417] border ${formError && !email.trim() ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
             />
           </div>
 
@@ -184,6 +195,10 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
             </div>
           </div>
 
+        </div>
+        
+        <div className="px-6 py-2">
+          {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
         </div>
 
         <div className="p-6 pt-2 flex items-center justify-end gap-3">

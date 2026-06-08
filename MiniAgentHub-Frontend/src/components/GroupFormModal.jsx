@@ -11,6 +11,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
   const [groupName, setGroupName] = useState('');
   const [entityType, setEntityType] = useState(initialData?.entityType || 'users');
   const [description, setDescription] = useState('');
+  const [formError, setFormError] = useState('');
   
   const [permissions, setPermissions] = useState({
     create: initialData?.permissions?.create || false,
@@ -30,6 +31,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   useEffect(() => {
     if (isOpen) {
+      setFormError('');
       setGroupName(initialData?.group_name || initialData?.name || '');
       setDescription(initialData?.description || '');
       setEntityType(initialData?.entityType || 'users');
@@ -95,23 +97,26 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   const handleTogglePermission = (key) => {
     if (user?.role !== 'Admin' && key === 'read' && permissions.read) {
-      alert(t('groupFormModal.alertReadRequired', 'You cannot disable Read permission. This is required to see and manage the group!'));
+      setFormError(t('groupFormModal.alertReadRequired', 'You cannot disable Read permission. This is required to see and manage the group!'));
       return;
     }
+    setFormError('');
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleRemoveMember = (id) => {
     if (user?.role !== 'Admin' && id === user?.id) {
-      alert(t('groupFormModal.alertSelfRemove', 'You cannot remove yourself from the group to avoid losing access!'));
+      setFormError(t('groupFormModal.alertSelfRemove', 'You cannot remove yourself from the group to avoid losing access!'));
       return;
     }
+    setFormError('');
     setMembers(members.filter(m => m.id !== id));
   };
 
   const handleSubmit = async () => {
+    setFormError('');
     if (mode !== 'members' && !groupName.trim()) {
-      alert(t('groupFormModal.alertNoName', 'Please enter a group name!'));
+      setFormError(t('groupFormModal.alertNoName', 'Vui lòng nhập tên nhóm!'));
       return;
     }
     
@@ -132,6 +137,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
       }
     } catch (error) {
       console.error('Lỗi khi lưu modal:', error);
+      setFormError(error.response?.data?.message || t('groupManagement.saveError', 'Có lỗi xảy ra khi lưu nhóm.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -199,13 +205,15 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.identity', 'Identity')}</h3>
             <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.groupNameLabel', 'Group Name')}</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  {t('groupFormModal.groupNameLabel', 'Group Name')} <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="text" 
                   value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
+                  onChange={(e) => { setGroupName(e.target.value); setFormError(''); }}
                   placeholder={mode === 'create' ? t('groupFormModal.groupNamePlaceholder', 'e.g. Quantum Research Team') : ""}
-                  className="w-full bg-white dark:bg-[#1e1f24] border border-gray-300 dark:border-transparent focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors"
+                  className={`w-full bg-white dark:bg-[#1e1f24] border ${formError && !groupName.trim() ? 'border-red-500' : 'border-gray-300 dark:border-transparent focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
                 />
               </div>
 
@@ -354,6 +362,10 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             </section>
           )}
 
+        </div>
+
+        <div className="px-8 pb-4">
+          {formError && <p className="text-red-500 text-sm font-medium">{formError}</p>}
         </div>
 
         <div className="p-6 border-t border-gray-200 dark:border-[#26272b] flex items-center justify-end gap-4 shrink-0 bg-gray-50 dark:bg-[#131417]">

@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 
 function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -62,7 +63,7 @@ function Sidebar() {
           if (isRoleChanged) {
             if (state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
                setTimeout(() => {
-                  alert(t('sidebar.roleChanged', 'Your permissions have changed. The system will log you out to update!'));
+                  toast.error(t('sidebar.roleChanged', 'Your permissions have changed. The system will log you out to update!'));
                   logout();
                   navigate('/login');
                }, 300);
@@ -110,12 +111,13 @@ function Sidebar() {
       try {
         await axiosClient.delete(`/chat-sessions/${sessionId}`);
         setSessions(prev => prev.filter(s => s.id !== sessionId));
+        toast.success(t('sidebar.deleteSessionSuccess', 'Xóa phiên trò chuyện thành công!'));
         if (location.pathname === `/chat/${sessionId}`) {
           navigate('/');
         }
       } catch (error) {
         console.error('Lỗi xóa session:', error);
-        alert(t('sidebar.deleteSessionError', 'Failed to delete.'));
+        toast.error(t('sidebar.deleteSessionError', 'Failed to delete.'));
       }
     }
   };
@@ -134,9 +136,10 @@ function Sidebar() {
       await axiosClient.put(`/chat-sessions/${sessionId}`, { title: editTitle.trim() });
       setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: editTitle.trim() } : s));
       setEditingSessionId(null);
+      toast.success(t('sidebar.renameSessionSuccess', 'Đổi tên phiên trò chuyện thành công!'));
     } catch (error) {
       console.error('Lỗi đổi tên:', error);
-      alert(t('sidebar.renameSessionError', 'Failed to rename.'));
+      toast.error(t('sidebar.renameSessionError', 'Failed to rename.'));
     }
   };
 

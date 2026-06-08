@@ -18,6 +18,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from '../components/LanguageToggle';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import toast from 'react-hot-toast';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
@@ -36,11 +37,11 @@ const Settings = () => {
     if (window.confirm(t('settings.clearChatHistoryConfirm'))) {
       try {
         await axiosClient.delete('/chat-sessions');
-        alert(t('settings.clearSuccess', 'Chat history cleared successfully!'));
-        window.location.reload(); 
+        toast.success(t('settings.clearSuccess', 'Chat history cleared successfully!'));
+        setTimeout(() => window.location.reload(), 1000); 
       } catch (error) {
         console.error('Lỗi khi xóa lịch sử:', error);
-        alert(t('settings.clearError', 'Error clearing chat history.'));
+        toast.error(t('settings.clearError', 'Error clearing chat history.'));
       }
     }
   };
@@ -59,7 +60,7 @@ const Settings = () => {
     const trimmedPhone = phoneInput.trim();
     // Validate: Cho phép bỏ trống, nhưng nếu đã nhập thì phải là số, dài 10-15 ký tự, có thể chứa dấu + ở đầu
     if (trimmedPhone !== '' && !/^\+?[0-9]{10}$/.test(trimmedPhone)) {
-      alert(t('settings.invalidPhone', 'Invalid phone number (10 digits only).'));
+      toast.error(t('settings.invalidPhone', 'Invalid phone number (10 digits only).'));
       return;
     }
 
@@ -68,9 +69,10 @@ const Settings = () => {
       await axiosClient.put(`/users/${user.id}`, { phone: trimmedPhone });
       updateUser({ phone: trimmedPhone }); 
       setIsEditingPhone(false);
+      toast.success(t('settings.save', 'Lưu thành công'));
     } catch (error) {
       console.error(error);
-      alert(t('settings.updatePhoneError', 'Error updating phone number.'));
+      toast.error(t('settings.updatePhoneError', 'Error updating phone number.'));
     } finally {
       setIsSavingPhone(false);
     }
@@ -83,9 +85,10 @@ const Settings = () => {
       await axiosClient.put(`/users/${user.id}`, { address: addressInput });
       updateUser({ address: addressInput });
       setIsEditingAddress(false);
+      toast.success(t('settings.save', 'Lưu thành công'));
     } catch (error) {
       console.error(error);
-      alert(t('settings.updateAddressError', 'Error updating address.'));
+      toast.error(t('settings.updateAddressError', 'Error updating address.'));
     } finally {
       setIsSavingAddress(false);
     }

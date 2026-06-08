@@ -5,6 +5,7 @@ import axiosClient from '../services/axiosClient';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/Sidebar';
 import useAuthStore from '../store/authStore';
+import toast from 'react-hot-toast';
 
 const UserManagement = () => {
   const { t } = useTranslation();
@@ -21,6 +22,7 @@ const UserManagement = () => {
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [allGroups, setAllGroups] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [addGroupError, setAddGroupError] = useState('');
 
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: 'create', data: null });
 
@@ -34,7 +36,7 @@ const UserManagement = () => {
       console.error('Lỗi khi tải danh sách users:', err);
       
       if (err.response?.status === 403) {
-        alert(t('userManagement.forbidden', 'Quyền truy cập của bạn đã bị thay đổi! Hệ thống sẽ tự động điều hướng về trang chủ.'));
+        toast.error(t('userManagement.forbidden', 'Quyền truy cập của bạn đã bị thay đổi! Hệ thống sẽ tự động điều hướng về trang chủ.'));
         window.location.href = '/'; 
       } else {
         setError(t('userManagement.errorLoad', 'Không thể tải danh sách người dùng.'));
@@ -49,12 +51,17 @@ const UserManagement = () => {
   }, []);
 
   const handleDeleteUser = async (id) => {
+    if (id === user?.id) {
+      toast.error(t('userManagement.alertSelfDelete', 'Bạn không thể tự xóa chính tài khoản của mình!'));
+      return;
+    }
     if (!window.confirm(t('userManagement.deleteConfirm', 'Bạn có chắc chắn muốn xóa người dùng này?'))) return;
     try {
       await axiosClient.delete(`/users/${id}`);
       setUsers(users.filter(u => u.id !== id));
+      toast.success(t('userManagement.deleteSuccess', 'Xóa người dùng thành công!'));
     } catch (err) {
-      alert(err.response?.data?.message || t('userManagement.deleteError', 'Xóa thất bại.'));
+      toast.error(err.response?.data?.message || t('userManagement.deleteError', 'Xóa thất bại.'));
     }
   };
 
@@ -65,7 +72,7 @@ const UserManagement = () => {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const newIds = displayedUsers.map(u => u.id);
+      const newIds = displayedUsers.filter(u => u.id !== user?.id).map(u => u.id);
       setSelectedUserIds(prev => [...new Set([...prev, ...newIds])]);
     } else {
       const displayedIds = displayedUsers.map(u => u.id);
@@ -81,6 +88,10 @@ const UserManagement = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedUserIds.length === 0) return;
+    if (selectedUserIds.includes(user?.id)) {
+      toast.error(t('userManagement.alertSelfDelete', 'Bạn không thể tự xóa chính tài khoản của mình!'));
+      return;
+    }
     if (!window.confirm(t('userManagement.deleteMultipleConfirm', { count: selectedUserIds.length }))) return;
     
     try {
@@ -88,9 +99,10 @@ const UserManagement = () => {
       await Promise.all(selectedUserIds.map(id => axiosClient.delete(`/users/${id}`)));
       setUsers(users.filter(u => !selectedUserIds.includes(u.id)));
       setSelectedUserIds([]);
+      toast.success(t('userManagement.deleteMultipleSuccess', 'Đã xóa các người dùng được chọn!'));
     } catch (err) {
       console.error('Lỗi khi xóa nhiều users:', err);
-      alert(t('userManagement.deleteMultipleError', 'Có lỗi xảy ra khi xóa một số người dùng.'));
+      toast.error(t('userManagement.deleteMultipleError', 'Có lỗi xảy ra khi xóa một số người dùng.'));
       fetchUsers();
     } finally {
       setIsLoading(false);
@@ -99,19 +111,21 @@ const UserManagement = () => {
 
   const handleOpenAddGroupModal = async () => {
     if (selectedUserIds.length === 0) return;
+    setAddGroupError('');
     try {
       const res = await axiosClient.get('/groups');
       setAllGroups(Array.isArray(res) ? res : (res.data || []));
       setIsAddGroupModalOpen(true);
     } catch (err) {
       console.error('Lỗi lấy danh sách nhóm:', err);
-      alert(t('userManagement.errorLoadGroups', 'Không thể tải danh sách nhóm.'));
+      toast.error(t('userManagement.errorLoadGroups', 'Không thể tải danh sách nhóm.'));
     }
   };
 
   const handleAddSelectedToGroup = async () => {
+    setAddGroupError('');
     if (!selectedGroupId) {
-      alert(t('userManagement.alertSelectGroup', 'Vui lòng chọn một nhóm!'));
+      setAddGroupError(t('userManagement.alertSelectGroup', 'Vui lòng chọn một nhóm!'));
       return;
     }
     try {
@@ -120,10 +134,10 @@ const UserManagement = () => {
       setSelectedUserIds([]);
       setSelectedGroupId('');
       fetchUsers(); 
-      alert(t('userManagement.addUsersSuccess', 'Thêm người dùng vào nhóm thành công!'));
+      toast.success(t('userManagement.addUsersSuccess', 'Thêm người dùng vào nhóm thành công!'));
     } catch (err) {
       console.error('Lỗi thêm vào nhóm:', err);
-      alert(t('userManagement.addUsersError', 'Có lỗi xảy ra khi thêm vào nhóm.') + ' ' + (err.response?.data?.message || ''));
+      setAddGroupError(t('userManagement.addUsersError', 'Có lỗi xảy ra khi thêm vào nhóm.') + ' ' + (err.response?.data?.message || ''));
     }
   };
 
@@ -226,55 +240,59 @@ const UserManagement = () => {
             ) : users.length === 0 ? (
               <div className="text-center py-12 text-gray-500 text-sm tracking-wide">{t('userManagement.emptyUser', 'Chưa có người dùng nào.')}</div>
             ) : (
-            displayedUsers.map((user) => (
-              <div key={user.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors group">
+            displayedUsers.map((u) => {
+              const isCurrentUser = u.id === user?.id;
+              return (
+              <div key={u.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors group">
                 
                 <div className="col-span-4 flex items-center gap-4">
                   <input 
                     type="checkbox" 
-                    checked={selectedUserIds.includes(user.id)}
-                    onChange={() => handleSelectUser(user.id)}
-                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] accent-blue-500 cursor-pointer" 
+                    checked={selectedUserIds.includes(u.id)}
+                    onChange={() => handleSelectUser(u.id)}
+                    disabled={isCurrentUser}
+                    className={`w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-blue-500 ${isCurrentUser ? 'bg-gray-200 opacity-50 cursor-not-allowed' : 'bg-gray-50 dark:bg-[#2a2b30] cursor-pointer'}`} 
                   />
-                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-[#2a2b30] text-gray-700 dark:text-gray-300 flex items-center justify-center text-xs font-bold">
-                    {getInitials(user.full_name, user.email)}
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-[#2a2b30] text-gray-700 dark:text-gray-300 flex items-center justify-center text-xs font-bold shrink-0">
+                    {getInitials(u.full_name, u.email)}
                   </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-200 cursor-pointer hover:text-blue-600 dark:hover:text-white" onClick={() => handleOpenUpdate(user)}>
-                    {user.full_name || t('userManagement.noName', 'No Name')}
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-200 cursor-pointer hover:text-blue-600 dark:hover:text-white truncate" onClick={() => handleOpenUpdate(u)}>
+                    {u.full_name || t('userManagement.noName', 'No Name')} {isCurrentUser && <span className="text-blue-500 text-xs font-normal ml-1">(Bạn)</span>}
                   </span>
                 </div>
                 
-                <div className="col-span-3 text-sm text-gray-500 dark:text-gray-400">
-                  {user.email}
+                <div className="col-span-3 text-sm text-gray-500 dark:text-gray-400 truncate pr-2">
+                  {u.email}
                 </div>
 
                 <div className="col-span-2">
                   <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border ${
-                    (user.role_id === 1 || user.Role?.name === 'Admin')
+                    (u.role_id === 1 || u.Role?.name === 'Admin')
                       ? 'bg-blue-50 dark:bg-[#1e2b4d] text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20' 
                       : 'bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30'
                   }`}>
-                    {(user.role_id === 1 || user.Role?.name === 'Admin') ? t('roles.Admin', 'ADMIN').toUpperCase() : t('roles.User', 'USER').toUpperCase()}
+                    {(u.role_id === 1 || u.Role?.name === 'Admin') ? t('roles.Admin', 'ADMIN').toUpperCase() : t('roles.User', 'USER').toUpperCase()}
                   </span>
                 </div>
 
                 <div className="col-span-2">
                   <span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30">
-                    {user.Groups?.length || 0} {t('userManagement.groupsCountBadge', 'NHÓM')}
+                    {u.Groups?.length || 0} {t('userManagement.groupsCountBadge', 'NHÓM')}
                   </span>
                 </div>
                 
                 <div className="col-span-1 flex items-center justify-end gap-3 text-gray-400 dark:text-gray-500">
-                  <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(user)} title={t('userManagement.tooltipView', 'View Details')}><Eye size={16} /></button>
+                  <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipView', 'View Details')}><Eye size={16} /></button>
                   {(user?.role === 'Admin' || permissions.includes('USER_U')) && (
-                    <button className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('userManagement.tooltipReset', 'Reset Password')}><RefreshCw size={16} /></button>
+                    <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipReset', 'Reset Password')}><RefreshCw size={16} /></button>
                   )}
-                  {(user?.role === 'Admin' || permissions.includes('USER_D')) && (
-                    <button className="hover:text-red-600 dark:hover:text-red-400 transition-colors" onClick={() => handleDeleteUser(user.id)} title={t('userManagement.tooltipDelete', 'Delete User')}><Trash2 size={16} /></button>
+                  {(user?.role === 'Admin' || permissions.includes('USER_D')) && !isCurrentUser && (
+                    <button className="hover:text-red-600 dark:hover:text-red-400 transition-colors" onClick={() => handleDeleteUser(u.id)} title={t('userManagement.tooltipDelete', 'Delete User')}><Trash2 size={16} /></button>
                   )}
                 </div>
               </div>
-            )))}
+            );
+          }))}
           </div>
 
           <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-[#26272b] bg-white dark:bg-[#1a1b20]">
@@ -332,17 +350,23 @@ const UserManagement = () => {
               </button>
             </div>
             <div className="p-6">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('userManagement.selectTargetGroup', 'Chọn nhóm đích')}</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                {t('userManagement.selectTargetGroup', 'Chọn nhóm đích')} <span className="text-red-500">*</span>
+              </label>
               <select 
                 value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="w-full bg-white dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white outline-none"
+                onChange={(e) => {
+                  setSelectedGroupId(e.target.value);
+                  if (e.target.value) setAddGroupError('');
+                }}
+                className={`w-full bg-white dark:bg-[#131417] border ${addGroupError ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white outline-none transition-colors`}
               >
                 <option value="">{t('userManagement.placeholderSelectGroup', '-- Chọn nhóm --')}</option>
                 {allGroups.map(g => (
                   <option key={g.id} value={g.id}>{g.name || g.group_name} ({g.member_count || g.memberCount || g.members?.length || 0} {t('userManagement.members', 'thành viên')})</option>
                 ))}
               </select>
+              {addGroupError && <p className="text-red-500 text-sm mt-2">{addGroupError}</p>}
             </div>
             <div className="p-6 pt-0 flex justify-end gap-3">
               <button onClick={() => setIsAddGroupModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] rounded-xl transition-colors">

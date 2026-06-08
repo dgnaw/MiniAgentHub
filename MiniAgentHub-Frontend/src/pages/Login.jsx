@@ -67,7 +67,7 @@ function Login() {
           {/* Email Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              {t('login.emailLabel', 'Email Address')}
+              {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
@@ -75,13 +75,13 @@ function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('login.emailPlaceholder', 'name@company.com')}
               required
-              className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className={`w-full bg-gray-50 dark:bg-[#131417] border ${error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors`}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              {t('login.passwordLabel', 'Password')}
+              {t('login.passwordLabel', 'Password')} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <input
@@ -90,7 +90,7 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.passwordPlaceholder', 'Enter your password')}
                 required
-                className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                className={`w-full bg-gray-50 dark:bg-[#131417] border ${error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors`}
               />
               <button
                 type="button"
