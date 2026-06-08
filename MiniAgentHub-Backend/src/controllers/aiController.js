@@ -4,6 +4,10 @@ const ChatMessage = require('../models/chatMessage');
 
 const aiController = {
     chat: async (req, res) => {
+        let currentSessionId = null;
+        let isNewSession = false;
+        let userMessageRecord = null;
+
         try {
             const { message, sessionId, model, isPing } = req.body;
 
@@ -19,9 +23,7 @@ const aiController = {
                 return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi (message).' });
             }
 
-            let currentSessionId = sessionId;
-            let isNewSession = false;
-            let userMessageRecord = null;
+            currentSessionId = sessionId;
             
             if (!currentSessionId) {
                 let title = message.substring(0, 30) + (message.length > 30 ? "..." : ""); 
