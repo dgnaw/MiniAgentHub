@@ -113,6 +113,7 @@ MiniAgentHub/
 3. Cấu hình biến môi trường:
    - Copy file `.env.example` và đổi tên thành `.env` (`cp .env.example .env`).
    - Các cấu hình cơ bản (`PORT`, `DATABASE_URL`, `JWT_SECRET`) đã được thiết lập giả định để dự án có thể chạy được ngay. Hãy đảm bảo bạn có PostgreSQL và sửa lại `DATABASE_URL` cho khớp với máy của bạn.
+   - **Cấu hình Email SMTP (Cần thiết để gửi mật khẩu cho User mới):** Cấu hình `EMAIL_USER` (ví dụ: email Gmail của bạn) và `EMAIL_PASS`. **Lưu ý quan trọng:** `EMAIL_PASS` bắt buộc phải là **Mật khẩu ứng dụng (App Password)** gồm 16 ký tự do Google sinh ra, KHÔNG được sử dụng mật khẩu đăng nhập thông thường. *(Xem hướng dẫn chi tiết cách lấy mật khẩu này ở phần Lưu ý cuối trang)*.
    - **Lưu ý:** Các key AI (`GROQ_API_KEY`, `FLOWISE_API_URL`) là **tùy chọn**. Nếu chưa có, bạn cứ để trống. Bạn vẫn có thể đăng nhập vào trải nghiệm UI bình thường, hệ thống chỉ yêu cầu key khi bạn bắt đầu Chat.
 4. Khởi tạo CSDL và các Bảng (Quan trọng khi chạy lần đầu):
    - Mở công cụ quản lý Database (như pgAdmin, DBeaver) và tạo một Database trống. Đảm bảo tên Database khớp với cấu hình trong chuỗi `DATABASE_URL`.
@@ -156,3 +157,11 @@ MiniAgentHub/
 
 ## Lưu ý
 - Trong quá trình sử dụng Flowise cho mô hình "Data Analyst", hãy chắc chắn rằng địa chỉ `FLOWISE_API_URL` được cấu hình trỏ đúng đến REST API Endpoint thay vì URL giao diện HTML.
+- **Lỗi "Không nhận API Key" dù đã cấu hình trong `.env`:** Node.js chỉ đọc file `.env` một lần khi khởi động. Nếu bạn vừa thêm hoặc sửa `GROQ_API_KEY` (hoặc bất kỳ key nào khác), bạn **bắt buộc phải khởi động lại Backend** (tắt bằng `Ctrl + C` và chạy lại `npm run dev`) để hệ thống nhận cấu hình mới. Đồng thời, hãy kiểm tra xem API Key của bạn có vô tình bị dư khoảng trắng hoặc dấu ngoặc kép ở đầu/cuối hay không.
+- **Hướng dẫn lấy Mật khẩu ứng dụng (App Password) Gmail:**
+  1. Truy cập tài khoản Google của bạn tại: https://myaccount.google.com/
+  2. Chọn mục **Bảo mật (Security)** ở menu bên trái.
+  3. Kéo xuống phần "Cách bạn đăng nhập vào Google", đảm bảo tính năng **Xác minh 2 bước (2-Step Verification)** đã được **Bật**.
+  4. Nhập từ khóa "Mật khẩu ứng dụng" (hoặc "App passwords") vào thanh tìm kiếm ở đầu trang tài khoản Google và chọn kết quả tương ứng.
+  5. Đặt tên cho ứng dụng (Ví dụ: `AgentHub Backend`) và nhấn nút **Tạo (Create)**.
+  6. Copy chuỗi 16 chữ cái màu vàng (viết liền, bỏ qua các dấu cách) và dán vào giá trị `EMAIL_PASS` trong file `.env`.
