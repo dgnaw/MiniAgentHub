@@ -4,10 +4,12 @@ import { Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
+import { useTranslation } from 'react-i18next';
 
 function Login() {
   const navigate = useNavigate();
   const setLoginData = useAuthStore((state) => state.setLoginData);
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +34,7 @@ function Login() {
       navigate('/');
       
     } catch (err) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại!');
+      setError(err.response?.data?.message || t('login.loginFailed', 'Đăng nhập thất bại. Vui lòng kiểm tra lại!'));
     } finally {
       setIsLoading(false);
     }
@@ -47,11 +49,11 @@ function Login() {
       <div className="bg-darkCard w-full max-w-md p-8 rounded-2xl border border-gray-800 shadow-2xl">
         <div className="mb-8">
           <p className="text-blue-500 text-xs font-semibold tracking-widest mb-2 uppercase">
-            Secure Access
+            {t('login.secureAccess', 'Secure Access')}
           </p>
-          <h2 className="text-3xl font-bold mb-2">Log In</h2>
+          <h2 className="text-3xl font-bold mb-2">{t('login.title', 'Log In')}</h2>
           <p className="text-gray-400 text-sm">
-            Welcome back to Agent Hub. Enter your credentials to access your dashboard.
+            {t('login.description', 'Welcome back to Agent Hub. Enter your credentials to access your dashboard.')}
           </p>
         </div>
 
@@ -59,13 +61,13 @@ function Login() {
           {/* Email Input */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Email Address
+              {t('login.emailLabel', 'Email Address')}
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
+              placeholder={t('login.emailPlaceholder', 'name@company.com')}
               required
               className="w-full bg-[#1A1A1A] border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             />
@@ -73,14 +75,14 @@ function Login() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Password
+              {t('login.passwordLabel', 'Password')}
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder={t('login.passwordPlaceholder', 'Enter your password')}
                 required
                 className="w-full bg-[#1A1A1A] border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               />
@@ -101,17 +103,17 @@ function Login() {
             disabled={isLoading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg mt-4 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Đang xác thực...' : 'Continue to Dashboard'}
+            {isLoading ? t('login.authenticating', 'Đang xác thực...') : t('login.submitBtn', 'Continue to Dashboard')}
           </button>
         </form>
       </div>
 
       <div className="flex gap-6 mt-8 text-xs text-gray-500 uppercase tracking-widest font-medium">
         <span className="flex items-center gap-2">
-          <ShieldCheck size={14} /> End-to-End Encrypted
+          <ShieldCheck size={14} /> {t('login.encrypted', 'End-to-End Encrypted')}
         </span>
         <span className="flex items-center gap-2">
-          <ShieldCheck size={14} /> ISO 27001 Certified
+          <ShieldCheck size={14} /> {t('login.certified', 'ISO 27001 Certified')}
         </span>
       </div>
     </div>

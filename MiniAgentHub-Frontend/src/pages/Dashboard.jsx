@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { ChevronDown, Sparkles, Code, Plus, Paperclip, Send } from 'lucide-react';
+import { ChevronDown, Sparkles, Code, Plus, Paperclip, Send, AlertCircle } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,9 @@ const Dashboard = () => {
   const [selectedModel, setSelectedModel] = useState('Llama 3'); 
   const [showModelDropdown, setShowModelDropdown] = useState(false); 
   const [isFlowiseAvailable, setIsFlowiseAvailable] = useState(true);
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(() => {
+    return localStorage.getItem('agentHub_apiKeyMissing') === 'true';
+  });
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -110,6 +113,14 @@ const Dashboard = () => {
               setSelectedModel('Llama 3');
             }
               if (parsed.chunk) {
+                if (parsed.chunk.includes('API Key của hệ thống AI (Groq) không hợp lệ')) {
+                  setIsApiKeyMissing(true);
+                  localStorage.setItem('agentHub_apiKeyMissing', 'true');
+                } else if (!parsed.chunk.includes('Lỗi hệ thống')) {
+                  setIsApiKeyMissing(false);
+                  localStorage.removeItem('agentHub_apiKeyMissing');
+                }
+
                 if (!isAiMessageAdded) {
                   setIsLoading(false);
                   setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
@@ -157,8 +168,18 @@ const Dashboard = () => {
 
       <main className="flex-1 flex flex-col relative">
         
-        <header className="flex justify-end p-6">
-          <div className="relative">
+        <header className="flex justify-between items-center p-6">
+          {isApiKeyMissing ? (
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-500/10 px-4 py-2 rounded-lg border border-red-200 dark:border-red-500/20">
+              <AlertCircle size={18} />
+              <span className="text-sm font-medium">Hệ thống chưa được cấu hình API Key. Vui lòng liên hệ Admin.</span>
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {!isApiKeyMissing && (
+            <div className="relative">
             <button 
               onClick={() => setShowModelDropdown(!showModelDropdown)}
               className="flex items-center gap-2 bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] hover:bg-gray-100 dark:hover:bg-[#2a2b30] text-gray-700 dark:text-gray-300 shadow-sm dark:shadow-none px-4 py-2 rounded-full text-sm font-medium transition-colors"
@@ -187,7 +208,8 @@ const Dashboard = () => {
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          )}
         </header>
 
         {messages.length === 0 ? (
@@ -199,11 +221,12 @@ const Dashboard = () => {
               <p className="text-gray-500 dark:text-gray-400 text-lg">{t('dashboard.subtitle')}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
-              <div 
-                onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
-                className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
-              >
+            {!isApiKeyMissing && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+                <div 
+                  onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
+                  className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
+                >
                 <Sparkles className="text-blue-500 dark:text-blue-400 mb-4" size={24} />
                 <h3 className="text-gray-800 dark:text-gray-200 font-semibold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-white transition-colors">
                   {t('dashboard.card1Title')}
@@ -221,7 +244,8 @@ const Dashboard = () => {
                 </h3>
                 <p className="text-gray-500 text-sm">{t('dashboard.card2Desc')}</p>
               </div>
-            </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6">

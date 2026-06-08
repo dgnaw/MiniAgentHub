@@ -24,6 +24,11 @@ const authenticateToken = (req, res, next) => {
 const checkPermission = (requiredPermission) => {
     return async (req, res, next) => {
         try {
+            // Bypass cho Admin: Mặc định Admin có toàn quyền, không cần tra cứu Permission
+            if (req.user.role === 'Admin' || req.user.role_name === 'Admin' || req.user.role_id === 1) {
+                return next();
+            }
+
             const roleId = req.user.role_id; 
 
             let rolePermissionIds = [];
