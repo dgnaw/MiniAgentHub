@@ -1,7 +1,6 @@
 const aiService = require('../services/aiService');
 const ChatSession = require('../models/chatSession');
 const ChatMessage = require('../models/chatMessage');
-const axios = require('axios');
 
 const aiController = {
     chat: async (req, res) => {
@@ -43,27 +42,12 @@ const aiController = {
             let flowiseFailed = false;
 
             if (model === "Data Analyst") {
-                const flowiseUrl = process.env.FLOWISE_API_URL;
-                
-                try {
-                    const flowiseRes = await axios.post(flowiseUrl, {
-                        question: message,
-                        overrideConfig: {
-                            sessionId: currentSessionId 
-                        }
-                    });
-                    aiResponse = flowiseRes.data.text || flowiseRes.data;
-                
-                    if (typeof aiResponse === 'string' && (aiResponse.trim().startsWith('<!DOCTYPE') || aiResponse.trim().startsWith('<html') || aiResponse.includes('<link rel="preconnect"'))) {
-                        flowiseFailed = true;
-                        aiResponse = "";
-                    } else {
-                        res.write(`data: ${JSON.stringify({ chunk: aiResponse })}\n\n`);
-                    }
-                } catch (error) {
-                    console.error('Lỗi khi gọi API Flowise:', error.response?.data || error.message);
-                    flowiseFailed = true;
-                    aiResponse = "";
+                const flowiseResult = await aiService.chatWithFlowise(message, currentSessionId);
+                aiResponse = flowiseResult.response;
+                flowiseFailed = flowiseResult.failed;
+
+                if (!flowiseFailed) {
+                    res.write(`data: ${JSON.stringify({ chunk: aiResponse })}\n\n`);
                 }
             }
             

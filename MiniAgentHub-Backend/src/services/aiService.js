@@ -1,4 +1,5 @@
 const Groq = require('groq-sdk');
+const axios = require('axios');
 
 const client = new Groq({
     apiKey: process.env.GROQ_API_KEY
@@ -37,6 +38,29 @@ const aiService = {
         } catch (error) {
             console.error("Lỗi khi tạo tiêu đề bằng Groq SDK:", error.message);
             return null; 
+        }
+    },
+
+    chatWithFlowise: async (message, sessionId) => {
+        const flowiseUrl = process.env.FLOWISE_API_URL;
+        try {
+            const flowiseRes = await axios.post(flowiseUrl, {
+                question: message,
+                overrideConfig: {
+                    sessionId: sessionId 
+                }
+            });
+            let aiResponse = flowiseRes.data.text || flowiseRes.data;
+            let flowiseFailed = false;
+
+            if (typeof aiResponse === 'string' && (aiResponse.trim().startsWith('<!DOCTYPE') || aiResponse.trim().startsWith('<html') || aiResponse.includes('<link rel="preconnect"'))) {
+                flowiseFailed = true;
+                aiResponse = "";
+            }
+            return { response: aiResponse, failed: flowiseFailed };
+        } catch (error) {
+            console.error('Lỗi khi gọi API Flowise:', error.response?.data || error.message);
+            return { response: "", failed: true };
         }
     }
 };
