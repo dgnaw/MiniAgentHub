@@ -217,7 +217,7 @@ const Dashboard = () => {
 
       <main className="flex-1 flex flex-col relative">
         
-        <header className="flex justify-end p-6">
+        <header className="flex justify-end p-4 pt-16 md:p-6 md:pt-6">
 
           {!isApiKeyMissing && (
             <div className="relative">
@@ -264,8 +264,8 @@ const Dashboard = () => {
 
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-8 pb-32">
-            <div className="text-center mb-12">
-              <h2 className="text-5xl font-bold mb-4 text-blue-600 dark:text-[#d1e5fb]">
+            <div className="text-center mb-8 md:mb-12 px-4 md:px-0">
+              <h2 className="text-3xl md:text-5xl font-bold mb-3 md:mb-4 text-blue-600 dark:text-[#d1e5fb]">
                 {t('dashboard.greeting', { name: user?.full_name || 'User' })}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-lg">{t('dashboard.subtitle')}</p>
@@ -362,7 +362,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        <div className="absolute bottom-0 w-full p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
+        <div className="absolute bottom-0 w-full p-4 md:p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
           {localError && (
             <div className="mb-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg border border-red-200 dark:border-red-500/20 text-sm flex items-center gap-2 shadow-sm animate-pulse">
               <AlertCircle size={16} />

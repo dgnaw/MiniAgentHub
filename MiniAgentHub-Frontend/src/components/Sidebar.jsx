@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
-import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X } from 'lucide-react';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
@@ -25,6 +25,7 @@ function Sidebar() {
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
@@ -149,13 +150,34 @@ function Sidebar() {
   };
 
   return (
-    <div className="w-80 bg-white dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col text-gray-900 dark:text-white">
+    <>
+      {/* Mobile Top Header Bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white/90 dark:bg-[#131417]/90 backdrop-blur-md border-b border-gray-200 dark:border-[#26272b] z-30 flex items-center justify-between px-4 shadow-sm">
+        <div className="flex items-center">
+          <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] rounded-lg transition-colors">
+            <Menu size={22} />
+          </button>
+          <span className="font-bold text-gray-900 dark:text-white ml-2 tracking-wide">Agent Hub</span>
+        </div>
+      </div>
+
+      {/* Overlay tối mờ khi mở Sidebar trên Mobile */}
+      {isMobileOpen && (
+        <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMobileOpen(false)} />
+      )}
+
+      <div className={`fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 w-80 bg-white dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col text-gray-900 dark:text-white shrink-0`}>
       <div className="p-6 flex-1 flex flex-col min-h-0">
-        <h2 className="text-xl font-bold mb-8 text-gray-900 dark:text-white tracking-wide shrink-0">Agent Hub</h2>
+        <div className="flex items-center justify-between mb-8 shrink-0">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-wide">Agent Hub</h2>
+          <button className="md:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" onClick={() => setIsMobileOpen(false)}>
+            <X size={20} />
+          </button>
+        </div>
         
         <nav className="space-y-1 flex flex-col flex-1 min-h-0">
           <div 
-            onClick={() => navigate('/')}
+            onClick={() => { navigate('/'); setIsMobileOpen(false); }}
             className={`${getNavClass('/')} shrink-0`}
           >
             <MessageSquare size={20} />
@@ -164,7 +186,7 @@ function Sidebar() {
 
           {(user?.role === 'Admin' || permissions.includes('USER_R') || permissions.includes('USER_U')) && (
             <div 
-              onClick={() => navigate('/users')}
+              onClick={() => { navigate('/users'); setIsMobileOpen(false); }}
               className={`${getNavClass('/users')} shrink-0`}
             >
               <User size={20} />
@@ -174,7 +196,7 @@ function Sidebar() {
 
           {(user?.role === 'Admin' || permissions.includes('GROUP_R') || permissions.includes('GROUP_U') || permissions.includes('GROUP_C') || permissions.includes('GROUP_D')) && (
             <div 
-              onClick={() => navigate('/groups')}
+              onClick={() => { navigate('/groups'); setIsMobileOpen(false); }}
               className={`${getNavClass('/groups')} shrink-0`}
             >
               <Users size={20} />
@@ -183,7 +205,7 @@ function Sidebar() {
           )}
 
           <div 
-            onClick={() => navigate('/settings')}
+            onClick={() => { navigate('/settings'); setIsMobileOpen(false); }}
             className={`${getNavClass('/settings')} shrink-0`}
           >
             <Settings size={20} />
@@ -199,7 +221,7 @@ function Sidebar() {
                 {sessions.map((session) => (
                   <div 
                     key={session.id}
-                    onClick={() => navigate(`/chat/${session.id}`)}
+                    onClick={() => { navigate(`/chat/${session.id}`); setIsMobileOpen(false); }}
                     className={`relative group ${getNavClass(`/chat/${session.id}`)}`}
                     title={session.title}
                   >
@@ -292,7 +314,8 @@ function Sidebar() {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

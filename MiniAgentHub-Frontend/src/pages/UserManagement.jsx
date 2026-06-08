@@ -154,20 +154,20 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden">
+    <div className="flex h-[100dvh] bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden">
         <Sidebar />
-      <div className="flex-1 p-10 overflow-y-auto">
+      <div className="flex-1 p-4 pt-20 md:p-10 overflow-y-auto min-w-0">
       <div className="max-w-6xl mx-auto">
         
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="max-w-xl">
-            <h1 className="text-4xl font-bold mb-3 text-gray-900 dark:text-white">{t('userManagement.title', 'User Management')}</h1>
+            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3 text-gray-900 dark:text-white">{t('userManagement.title', 'User Management')}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
               {t('userManagement.description', 'Orchestrate your intelligence network. Manage system permissions, roles, and collaborative groups across the Mini AgentHub ecosystem.')}
             </p>
           </div>
           
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
             <button className="flex items-center gap-2 bg-white dark:bg-[#1a1b20] hover:bg-gray-50 dark:hover:bg-[#26272b] border border-gray-200 dark:border-[#26272b] text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors">
               <Filter size={16} /> {t('userManagement.filter', 'Filter')}
             </button>
@@ -182,9 +182,9 @@ const UserManagement = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl overflow-hidden shadow-lg flex flex-col">
+        <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl shadow-lg flex flex-col overflow-hidden w-full">
           
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-[#26272b] flex items-center justify-between bg-white dark:bg-[#1a1b20]">
+          <div className="px-4 md:px-6 py-4 border-b border-gray-200 dark:border-[#26272b] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1a1b20]">
             <div className="flex items-center gap-4">
                <input 
                  type="checkbox" 
@@ -196,7 +196,7 @@ const UserManagement = () => {
                  {selectedUserIds.length > 0 ? t('userManagement.selectedCount', '{{count}} Đã chọn', { count: selectedUserIds.length }) : `${users.length} ${t('userManagement.usersTotal', 'Users Total')}`}
                </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
               {(user?.role === 'Admin' || permissions.includes('USER_U')) && (
                 <button 
                   onClick={handleOpenAddGroupModal}
@@ -218,8 +218,11 @@ const UserManagement = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-12 px-6 py-4 border-b border-gray-200 dark:border-[#26272b] bg-gray-50 dark:bg-[#1a1b20] items-center">
-            <div className="col-span-4 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase pl-8">{t('userManagement.colName', 'Name')}</div>
+          <div className="w-full overflow-x-auto custom-scrollbar">
+            <div className="min-w-full md:min-w-[900px]">
+          {/* --- Table Header (Desktop Only) --- */}
+          <div className="hidden md:grid grid-cols-12 px-4 md:px-6 py-4 border-b border-gray-200 dark:border-[#26272b] bg-gray-50 dark:bg-[#1a1b20] items-center">
+            <div className="col-span-4 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase pl-[60px]">{t('userManagement.colName', 'Name')}</div>
             <div className="col-span-3 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">{t('userManagement.colEmail', 'Email')}</div>
             <div className="col-span-2 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">{t('userManagement.colRole', 'Role')}</div>
             <div className="col-span-2 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">{t('userManagement.colGroups', 'Nhóm')}</div>
@@ -243,45 +246,62 @@ const UserManagement = () => {
             displayedUsers.map((u) => {
               const isCurrentUser = u.id === user?.id;
               return (
-              <div key={u.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors group">
+              <div key={u.id} className="block md:grid md:grid-cols-12 px-4 py-4 md:px-6 items-center hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors group">
                 
-                <div className="col-span-4 flex items-center gap-4">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedUserIds.includes(u.id)}
-                    onChange={() => handleSelectUser(u.id)}
-                    disabled={isCurrentUser}
-                    className={`w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-blue-500 ${isCurrentUser ? 'bg-gray-200 opacity-50 cursor-not-allowed' : 'bg-gray-50 dark:bg-[#2a2b30] cursor-pointer'}`} 
-                  />
-                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-[#2a2b30] text-gray-700 dark:text-gray-300 flex items-center justify-center text-xs font-bold shrink-0">
-                    {getInitials(u.full_name, u.email)}
+                <div className="md:col-span-4 flex items-center justify-between md:justify-start gap-4">
+                  <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedUserIds.includes(u.id)}
+                      onChange={() => handleSelectUser(u.id)}
+                      disabled={isCurrentUser}
+                      className={`w-4 h-4 shrink-0 rounded border-gray-300 dark:border-gray-600 accent-blue-500 ${isCurrentUser ? 'bg-gray-200 opacity-50 cursor-not-allowed' : 'bg-gray-50 dark:bg-[#2a2b30] cursor-pointer'}`} 
+                    />
+                    <div className="w-8 h-8 shrink-0 rounded-full bg-gray-200 dark:bg-[#2a2b30] text-gray-700 dark:text-gray-300 flex items-center justify-center text-xs font-bold">
+                      {getInitials(u.full_name, u.email)}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-200 cursor-pointer hover:text-blue-600 dark:hover:text-white truncate" onClick={() => handleOpenUpdate(u)}>
+                      {u.full_name || t('userManagement.noName', 'No Name')} {isCurrentUser && <span className="text-blue-500 text-xs font-normal ml-1 shrink-0">(Bạn)</span>}
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-200 cursor-pointer hover:text-blue-600 dark:hover:text-white truncate" onClick={() => handleOpenUpdate(u)}>
-                    {u.full_name || t('userManagement.noName', 'No Name')} {isCurrentUser && <span className="text-blue-500 text-xs font-normal ml-1">(Bạn)</span>}
-                  </span>
+                  
+                  {/* --- Mobile Actions --- */}
+                  <div className="md:hidden flex items-center justify-end gap-2 text-gray-400 dark:text-gray-500 shrink-0">
+                    <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipView', 'View Details')}><Eye size={16} /></button>
+                    {(user?.role === 'Admin' || permissions.includes('USER_U')) && (
+                      <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipReset', 'Reset Password')}><RefreshCw size={16} /></button>
+                    )}
+                    {(user?.role === 'Admin' || permissions.includes('USER_D')) && !isCurrentUser && (
+                      <button className="hover:text-red-600 dark:hover:text-red-400 transition-colors" onClick={() => handleDeleteUser(u.id)} title={t('userManagement.tooltipDelete', 'Delete User')}><Trash2 size={16} /></button>
+                    )}
+                  </div>
                 </div>
                 
-                <div className="col-span-3 text-sm text-gray-500 dark:text-gray-400 truncate pr-2">
-                  {u.email}
+                {/* --- Mobile Details --- */}
+                <div className="md:hidden grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-3 pl-12">
+                  <div className="text-gray-500">{t('userManagement.colEmail', 'Email')}</div>
+                  <div className="text-gray-800 dark:text-gray-300 truncate text-right">{u.email}</div>
+
+                  <div className="text-gray-500">{t('userManagement.colRole', 'Role')}</div>
+                  <div className="text-right">
+                    <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border ${(u.role_id === 1 || u.Role?.name === 'Admin') ? 'bg-blue-50 dark:bg-[#1e2b4d] text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20' : 'bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30'}`}>
+                      {(u.role_id === 1 || u.Role?.name === 'Admin') ? t('roles.Admin', 'ADMIN').toUpperCase() : t('roles.User', 'USER').toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="text-gray-500">{t('userManagement.colGroups', 'Nhóm')}</div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30">
+                      {u.Groups?.length || 0} {t('userManagement.groupsCountBadge', 'NHÓM')}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="col-span-2">
-                  <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border ${
-                    (u.role_id === 1 || u.Role?.name === 'Admin')
-                      ? 'bg-blue-50 dark:bg-[#1e2b4d] text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20' 
-                      : 'bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30'
-                  }`}>
-                    {(u.role_id === 1 || u.Role?.name === 'Admin') ? t('roles.Admin', 'ADMIN').toUpperCase() : t('roles.User', 'USER').toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="col-span-2">
-                  <span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30">
-                    {u.Groups?.length || 0} {t('userManagement.groupsCountBadge', 'NHÓM')}
-                  </span>
-                </div>
-                
-                <div className="col-span-1 flex items-center justify-end gap-3 text-gray-400 dark:text-gray-500">
+                {/* --- Desktop Columns --- */}
+                <div className="hidden md:block md:col-span-3 text-sm text-gray-500 dark:text-gray-400 truncate pr-2">{u.email}</div>
+                <div className="hidden md:block md:col-span-2"><span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border ${(u.role_id === 1 || u.Role?.name === 'Admin') ? 'bg-blue-50 dark:bg-[#1e2b4d] text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20' : 'bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30'}`}>{(u.role_id === 1 || u.Role?.name === 'Admin') ? t('roles.Admin', 'ADMIN').toUpperCase() : t('roles.User', 'USER').toUpperCase()}</span></div>
+                <div className="hidden md:block md:col-span-2"><span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full border bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600/30">{u.Groups?.length || 0} {t('userManagement.groupsCountBadge', 'NHÓM')}</span></div>
+                <div className="hidden md:flex md:col-span-1 items-center justify-end gap-3 text-gray-400 dark:text-gray-500">
                   <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipView', 'View Details')}><Eye size={16} /></button>
                   {(user?.role === 'Admin' || permissions.includes('USER_U')) && (
                     <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipReset', 'Reset Password')}><RefreshCw size={16} /></button>
@@ -294,8 +314,10 @@ const UserManagement = () => {
             );
           }))}
           </div>
+            </div>
+          </div>
 
-          <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-[#26272b] bg-white dark:bg-[#1a1b20]">
+          <div className="px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-[#26272b] bg-white dark:bg-[#1a1b20]">
             <span className="text-sm text-gray-500 dark:text-gray-400">{t('userManagement.totalUsers', 'Total Users: {{count}}', { count: users.length })}</span>
             
             {hasPagination && (

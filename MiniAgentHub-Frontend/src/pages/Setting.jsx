@@ -97,9 +97,9 @@ const Settings = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden">
+    <div className="flex h-[100dvh] bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden">
       <Sidebar />
-      <div className="flex-1 p-8 overflow-y-auto">
+      <div className="flex-1 p-4 pt-20 md:p-8 overflow-y-auto min-w-0">
         <div className="max-w-4xl mx-auto space-y-10">
         
         <section className="space-y-4">
@@ -109,8 +109,8 @@ const Settings = () => {
           </div>
 
           <div className="space-y-3">
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex items-center justify-between shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4 w-full">
+            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
+              <div className="flex items-center gap-4 w-full sm:flex-1">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400 shrink-0">
                   <Phone size={18} />
                 </div>
@@ -129,7 +129,7 @@ const Settings = () => {
                   )}
                 </div>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2 shrink-0 w-full sm:w-auto justify-end mt-2 sm:mt-0">
                 {isEditingPhone ? (
                   <>
                     <button onClick={handleUpdatePhone} disabled={isSavingPhone} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
@@ -147,8 +147,8 @@ const Settings = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex items-center justify-between shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4 w-full">
+            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
+              <div className="flex items-center gap-4 w-full sm:flex-1">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400 shrink-0">
                   <MapPin size={18} />
                 </div>
@@ -167,7 +167,7 @@ const Settings = () => {
                   )}
                 </div>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2 shrink-0 w-full sm:w-auto justify-end mt-2 sm:mt-0">
                 {isEditingAddress ? (
                   <>
                     <button onClick={handleUpdateAddress} disabled={isSavingAddress} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
@@ -228,8 +228,8 @@ const Settings = () => {
 
           <div className="space-y-3">
             {/* Password & Security Row */}
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex items-center justify-between shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4">
+            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400">
                   <Key size={18} />
                 </div>
@@ -238,14 +238,14 @@ const Settings = () => {
                   <p className="text-xs text-gray-500 mt-0.5">{t('settings.passwordDescription')}</p>
                 </div>
               </div>
-              <button onClick={() => setIsPasswordModalOpen(true)} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+              <button onClick={() => setIsPasswordModalOpen(true)} className="w-full sm:w-auto bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-colors mt-2 sm:mt-0">
                 {t('settings.update')}
               </button>
             </div>
 
             {/* Clear Chat History Row */}
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex items-center justify-between shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4">
+            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-[#281a1a] flex items-center justify-center text-red-500 dark:text-red-400">
                   <Trash2 size={18} />
                 </div>
@@ -256,15 +256,15 @@ const Settings = () => {
               </div>
               <button 
                 onClick={handleClearHistory}
-                className="bg-transparent hover:bg-red-50 dark:hover:bg-red-950 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-900/60 hover:border-red-500 px-6 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                className="w-full sm:w-auto bg-transparent hover:bg-red-50 dark:hover:bg-red-950 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-900/60 hover:border-red-500 px-6 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all mt-2 sm:mt-0"
               >
                 {t('settings.clear')}
               </button>
             </div>
 
             {/* Sign Out Row */}
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex items-center justify-between shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4">
+            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-[#222328] flex items-center justify-center text-gray-600 dark:text-gray-400">
                   <LogOut size={18} />
                 </div>
@@ -275,7 +275,7 @@ const Settings = () => {
               </div>
               <button 
                 onClick={handleSignOut}
-                className="bg-gray-100 dark:bg-[#26272b] hover:bg-gray-200 dark:hover:bg-[#33353b] text-gray-700 dark:text-gray-300 px-4 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 dark:border-[#3a3b40] transition-colors"
+                className="w-full sm:w-auto bg-gray-100 dark:bg-[#26272b] hover:bg-gray-200 dark:hover:bg-[#33353b] text-gray-700 dark:text-gray-300 px-4 py-2 sm:py-1.5 rounded-lg text-xs font-semibold border border-gray-200 dark:border-[#3a3b40] transition-colors mt-2 sm:mt-0"
               >
                 {t('settings.signOut')}
               </button>
