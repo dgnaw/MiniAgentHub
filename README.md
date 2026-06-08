@@ -114,14 +114,22 @@ MiniAgentHub/
    - Copy file `.env.example` và đổi tên thành `.env` (`cp .env.example .env`).
    - Các cấu hình cơ bản (`PORT`, `DATABASE_URL`, `JWT_SECRET`) đã được thiết lập giả định để dự án có thể chạy được ngay. Hãy đảm bảo bạn có PostgreSQL và sửa lại `DATABASE_URL` cho khớp với máy của bạn.
    - **Lưu ý:** Các key AI (`GROQ_API_KEY`, `FLOWISE_API_URL`) là **tùy chọn**. Nếu chưa có, bạn cứ để trống. Bạn vẫn có thể đăng nhập vào trải nghiệm UI bình thường, hệ thống chỉ yêu cầu key khi bạn bắt đầu Chat.
-4. Khởi tạo dữ liệu mặc định (Seeding):
+4. Khởi tạo CSDL và các Bảng (Quan trọng khi chạy lần đầu):
+   - Mở công cụ quản lý Database (như pgAdmin, DBeaver) và tạo một Database trống. Đảm bảo tên Database khớp với cấu hình trong chuỗi `DATABASE_URL`.
+   - Khởi chạy server lần đầu tiên để ORM (Sequelize) tự động nạp và tạo các bảng vào Database:
+     ```bash
+     npm run dev
+     ```
+   - Đợi đến khi terminal báo chạy thành công và kết nối Database ổn định, nhấn tổ hợp phím `Ctrl + C` để tắt server.
+5. Khởi tạo dữ liệu mặc định (Seeding):
+   - Tiếp tục chạy lệnh dưới đây để hệ thống nạp sẵn các phân quyền mặc định và tài khoản Admin:
    ```bash
    npm run seed
    ```
    *Lệnh này sẽ tự động tạo tài khoản quản trị hệ thống mặc định:*
    - **Email:** `admin@agenthub.com`
    - **Mật khẩu:** `Admin@123`
-5. Chạy server:
+6. Chạy server chính thức:
    ```bash
    npm run dev
    ```
