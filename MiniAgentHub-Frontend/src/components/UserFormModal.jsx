@@ -70,7 +70,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
   const handleSubmit = async () => {
     if (!fullName.trim() || !email.trim()) {
-      alert(t('userFormModal.alertNoNameEmail', 'Vui lòng nhập tên và email!'));
+      alert(t('userFormModal.alertNoNameEmail', 'Please enter full name and email!'));
       return;
     }
 
@@ -94,7 +94,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
       onClose(); 
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || t('userFormModal.alertSaveError', 'Có lỗi xảy ra khi lưu người dùng!'));
+      alert(error.response?.data?.message || t('userFormModal.alertSaveError', 'There been an error saving the user.'));
     } finally {
       setIsSubmitting(false);
     }
