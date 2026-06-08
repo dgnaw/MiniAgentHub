@@ -5,7 +5,14 @@ const ChatMessage = require('../models/chatMessage');
 const aiController = {
     chat: async (req, res) => {
         try {
-            const { message, sessionId, model } = req.body;
+            const { message, sessionId, model, isPing } = req.body;
+
+            if (isPing) {
+                const groqReady = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== '');
+                const flowiseReady = !!(process.env.FLOWISE_API_URL && process.env.FLOWISE_API_URL.trim() !== '');
+                return res.status(200).json({ ready: groqReady, flowiseReady: flowiseReady });
+            }
+
             const userId = req.user.id;
 
             if (!message) {
@@ -13,6 +20,9 @@ const aiController = {
             }
 
             let currentSessionId = sessionId;
+            let isNewSession = false;
+            let userMessageRecord = null;
+            
             if (!currentSessionId) {
                 let title = message.substring(0, 30) + (message.length > 30 ? "..." : ""); 
                 
@@ -26,11 +36,12 @@ const aiController = {
 
                 const newSession = await ChatSession.create({ user_id: userId, title: title });
                 currentSessionId = newSession.id;
+                isNewSession = true;
             } else {
                 await ChatSession.update({ updated_at: new Date() }, { where: { id: currentSessionId } });
             }
 
-            await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: message });
+            userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: message });
 
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
@@ -71,6 +82,15 @@ const aiController = {
             res.end();
         } catch (error) {
             console.error('Lỗi tại aiController.chat:', error);
+
+            try {
+                if (userMessageRecord) await ChatMessage.destroy({ where: { id: userMessageRecord.id } });
+                if (isNewSession && currentSessionId) {
+                    await ChatSession.destroy({ where: { id: currentSessionId } });
+                }
+            } catch (cleanupError) {
+                console.error('Lỗi khi dọn dẹp DB:', cleanupError);
+            }
 
             let errorMessage = '\n\nĐã xảy ra lỗi trong quá trình xử lý.';
             if (error.status === 401 || (error.message && error.message.includes('Invalid API Key'))) {

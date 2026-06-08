@@ -22,9 +22,9 @@ const Dashboard = () => {
   const [selectedModel, setSelectedModel] = useState('Llama 3'); 
   const [showModelDropdown, setShowModelDropdown] = useState(false); 
   const [isFlowiseAvailable, setIsFlowiseAvailable] = useState(true);
-  const [isApiKeyMissing, setIsApiKeyMissing] = useState(() => {
-    return localStorage.getItem('agentHub_apiKeyMissing') === 'true';
-  });
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+  const [isFlowiseConfigured, setIsFlowiseConfigured] = useState(true);
+  const [localError, setLocalError] = useState('');
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -49,6 +49,37 @@ const Dashboard = () => {
     }
   }, [sessionId]);
 
+  // Ping kiểm tra trạng thái API Key khi vừa vào trang
+  useEffect(() => {
+    const checkApiKeyStatus = async () => {
+      try {
+        const token = localStorage.getItem('agentHub_token');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ message: "ping", isPing: true })
+        });
+        const data = await response.json();
+        if (data.ready === false) {
+          setIsApiKeyMissing(true);
+        } else {
+          setIsApiKeyMissing(false);
+        }
+        if (data.flowiseReady === false) {
+          setIsFlowiseConfigured(false);
+          setSelectedModel((prev) => prev === 'Data Analyst' ? 'Llama 3' : prev);
+        } else {
+          setIsFlowiseConfigured(true);
+        }
+      } catch (error) {
+      }
+    };
+    checkApiKeyStatus();
+  }, []);
+
   const handleSend = async (customMessage) => {
     const textToSend = typeof customMessage === 'string' ? customMessage : input;
     if (!textToSend.trim() || isLoading) return;
@@ -60,6 +91,7 @@ const Dashboard = () => {
       textareaRef.current.style.height = 'auto'; // Reset chiều cao khung chat sau khi gửi
     }
     setIsLoading(true);
+    setLocalError('');
 
     try {
       const token = localStorage.getItem('agentHub_token');
@@ -113,28 +145,44 @@ const Dashboard = () => {
               setSelectedModel('Llama 3');
             }
               if (parsed.chunk) {
-                if (parsed.chunk.includes('API Key của hệ thống AI (Groq) không hợp lệ')) {
+                if (parsed.chunk.includes('API Key của hệ thống AI (Groq) không hợp lệ') || parsed.chunk.includes('Lỗi hệ thống: API Key')) {
                   setIsApiKeyMissing(true);
-                  localStorage.setItem('agentHub_apiKeyMissing', 'true');
+                  setLocalError('Vui lòng cung cấp đầy đủ API Key để sử dụng chat');
+                  setTimeout(() => setLocalError(''), 5000); // Ẩn lỗi sau 5s
+                  
+                  setMessages((prev) => {
+                    const newMsgs = [...prev];
+                    if (isAiMessageAdded) newMsgs.pop(); // Xóa tin nhắn AI bị lỗi
+                    if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'user') {
+                      newMsgs.pop(); // Xóa luôn tin nhắn câu hỏi của User khỏi màn hình
+                    }
+                    return newMsgs;
+                  });
+                  setInput(textToSend.trim()); // Trả lại text vào ô input để người dùng không mất công gõ lại
+                  
+                  setIsLoading(false);
+                  newSessionId = null; // Chặn việc tự động chuyển trang sang URL session lỗi
+                  break; // Dừng xử lý luồng stream ngay lập tức
                 } else if (!parsed.chunk.includes('Lỗi hệ thống')) {
                   setIsApiKeyMissing(false);
-                  localStorage.removeItem('agentHub_apiKeyMissing');
                 }
 
-                if (!isAiMessageAdded) {
+                if (!isAiMessageAdded && !parsed.chunk.includes('API Key của hệ thống AI')) {
                   setIsLoading(false);
                   setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
                   isAiMessageAdded = true;
                 }
 
-                aiResponseText += parsed.chunk;
-                setMessages((prev) => {
-                  const newMsgs = [...prev];
-                  if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
-                    newMsgs[newMsgs.length - 1].content = aiResponseText;
-                  }
-                  return newMsgs;
-                });
+                if (isAiMessageAdded) {
+                  aiResponseText += parsed.chunk;
+                  setMessages((prev) => {
+                    const newMsgs = [...prev];
+                    if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+                      newMsgs[newMsgs.length - 1].content = aiResponseText;
+                    }
+                    return newMsgs;
+                  });
+                }
               }
             } catch (e) {
             }
@@ -168,15 +216,7 @@ const Dashboard = () => {
 
       <main className="flex-1 flex flex-col relative">
         
-        <header className="flex justify-between items-center p-6">
-          {isApiKeyMissing ? (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-500/10 px-4 py-2 rounded-lg border border-red-200 dark:border-red-500/20">
-              <AlertCircle size={18} />
-              <span className="text-sm font-medium">Hệ thống chưa được cấu hình API Key. Vui lòng liên hệ Admin.</span>
-            </div>
-          ) : (
-            <div />
-          )}
+        <header className="flex justify-end p-6">
 
           {!isApiKeyMissing && (
             <div className="relative">
@@ -194,7 +234,13 @@ const Dashboard = () => {
                   <div className="font-medium text-blue-600 dark:text-blue-400 mb-0.5">Llama 3</div>
                   <div className="text-xs text-gray-500">{t('dashboard.modelLlamaDesc', 'General chat (via Groq)')}</div>
                 </div>
-                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333]" onClick={() => { 
+              <div className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333] ${!isFlowiseConfigured ? 'opacity-60' : ''}`} onClick={() => { 
+                if (!isFlowiseConfigured) {
+                  setLocalError('Hệ thống chưa được cấu hình URL cho Flowise. Vui lòng liên hệ Admin.');
+                  setTimeout(() => setLocalError(''), 5000);
+                  setShowModelDropdown(false);
+                  return;
+                }
                   if (!isFlowiseAvailable) {
                     alert(t('dashboard.flowiseUnavailable', 'Data analysis system is busy or out of requests. Please try again later!'));
                     setShowModelDropdown(false);
@@ -203,7 +249,10 @@ const Dashboard = () => {
                   setSelectedModel('Data Analyst'); 
                   setShowModelDropdown(false); 
                 }}>
-                  <div className="font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">Data Analyst</div>
+                <div className="font-medium text-emerald-600 dark:text-emerald-400 mb-0.5 flex items-center gap-2">
+                  Data Analyst
+                  {!isFlowiseConfigured && <span className="text-red-500 text-[10px] px-1.5 py-0.5 bg-red-50 dark:bg-red-500/10 rounded-full border border-red-100 dark:border-red-500/20 leading-none">Chưa cấu hình</span>}
+                </div>
                   <div className="text-xs text-gray-500">{t('dashboard.modelDataDesc', 'Data analysis (via Flowise)')}</div>
                 </div>
               </div>
@@ -221,7 +270,13 @@ const Dashboard = () => {
               <p className="text-gray-500 dark:text-gray-400 text-lg">{t('dashboard.subtitle')}</p>
             </div>
 
-            {!isApiKeyMissing && (
+            {isApiKeyMissing ? (
+              <div className="w-full max-w-3xl text-center p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-200 dark:border-red-500/20">
+                <AlertCircle className="mx-auto text-red-500 mb-3" size={32} />
+                <h3 className="text-red-700 dark:text-red-400 font-medium text-lg mb-2">Hệ thống chưa sẵn sàng</h3>
+                <p className="text-red-600 dark:text-red-300">Vui lòng cung cấp đầy đủ API Key để sử dụng chat</p>
+              </div>
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
                 <div 
                   onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
@@ -307,6 +362,12 @@ const Dashboard = () => {
         )}
 
         <div className="absolute bottom-0 w-full p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
+          {localError && (
+            <div className="mb-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg border border-red-200 dark:border-red-500/20 text-sm flex items-center gap-2 shadow-sm animate-pulse">
+              <AlertCircle size={16} />
+              {localError}
+            </div>
+          )}
           <div className="w-full max-w-3xl relative flex items-end bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
             
             <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors shrink-0">
