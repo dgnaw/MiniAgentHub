@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { ChevronDown, Sparkles, Code, Plus, Paperclip, Send, AlertCircle } from 'lucide-react';
+import { ChevronDown, Sparkles, Code, Plus, Paperclip, Send, AlertCircle, X, Copy, Check, Eye, Pencil } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,66 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import toast from 'react-hot-toast';
+
+const PreBlock = ({ children, ...props }) => {
+  const [copied, setCopied] = useState(false);
+  
+  let textContent = '';
+  let language = '';
+
+  // Bóc tách text và tên ngôn ngữ từ props của thẻ <code> bên trong
+  if (React.isValidElement(children)) {
+    if (children.props.children) {
+      const childData = children.props.children;
+      if (Array.isArray(childData)) {
+        textContent = childData.join('');
+      } else {
+        textContent = String(childData);
+      }
+      textContent = textContent.replace(/\n$/, ''); // Bỏ dấu xuống dòng thừa ở cuối
+    }
+    
+    if (children.props.className) {
+      const match = /language-(\w+)/.exec(children.props.className || '');
+      if (match) {
+        language = match[1];
+      }
+    }
+  }
+
+  const handleCopy = () => {
+    if (!textContent) return;
+    navigator.clipboard.writeText(textContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Tắt hiệu ứng Copied sau 2 giây
+  };
+
+  return (
+    <div className="relative group my-4 rounded-xl overflow-hidden shadow-sm bg-[#1e1e1e] border border-gray-200 dark:border-[#333]">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-[#444] select-none">
+        <span className="text-xs font-mono text-gray-400 font-semibold uppercase tracking-wider">{language || 'code'}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-gray-400 hover:text-gray-100 transition-colors"
+          title="Copy code"
+        >
+          {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+          <span className="text-xs">{copied ? 'Copied!' : 'Copy'}</span>
+        </button>
+      </div>
+      <pre className="p-4 overflow-x-auto text-[13px] font-mono text-gray-300 m-0" {...props}>
+        {children}
+      </pre>
+    </div>
+  );
+};
+
+const getBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
 
 const Dashboard = () => {
   useThemeStore();
@@ -26,8 +86,13 @@ const Dashboard = () => {
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const [isFlowiseConfigured, setIsFlowiseConfigured] = useState(true);
   const [localError, setLocalError] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fullScreenImage, setFullScreenImage] = useState(null);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editInput, setEditInput] = useState('');
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -81,33 +146,67 @@ const Dashboard = () => {
     checkApiKeyStatus();
   }, []);
 
-  const handleSend = async (customMessage) => {
+  const handleSend = async (customMessage, isEdit = false, editIdx = null) => {
     const textToSend = typeof customMessage === 'string' ? customMessage : input;
-    if (!textToSend.trim() || isLoading) return;
+    if ((!textToSend.trim() && !selectedFile) || isLoading) return;
 
-    const userMessage = { role: 'user', content: textToSend.trim() };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'; // Reset chiều cao khung chat sau khi gửi
+    let finalContent = textToSend.trim();
+    if (selectedFile && !isEdit) {
+      const safeName = selectedFile.name.replace(/[\\]/g, '_'); // Lọc ký tự đặc biệt để không vỡ cấu trúc regex
+      if (selectedFile.type.startsWith('image/')) {
+        const base64 = await getBase64(selectedFile);
+        finalContent = finalContent 
+          ? `![${safeName}](${base64})\n\n${finalContent}` 
+          : `![${safeName}](${base64})`;
+      } else {
+        finalContent = finalContent 
+          ? `[📎 File đính kèm: ${safeName}]\n\n${finalContent}` 
+          : `[📎 File đính kèm: ${safeName}]`;
+      }
+    }
+
+    const userMessage = { role: 'user', content: finalContent };
+    if (isEdit) {
+      setMessages((prev) => [...prev.slice(0, editIdx), userMessage]);
+      setEditingIndex(null);
+    } else {
+      setMessages((prev) => [...prev, userMessage]);
+      setInput('');
+      setSelectedFile(null);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'; // Reset chiều cao khung chat sau khi gửi
+      }
     }
     setIsLoading(true);
     setLocalError('');
 
     try {
       const token = localStorage.getItem('agentHub_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
+      
+      let fetchOptions = {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+        headers: { 'Authorization': `Bearer ${token}` }
+      };
+
+      if (selectedFile && !isEdit) {
+        const formData = new FormData();
+        const messageToSend = userMessage.content.replace(/!\[(.*?)\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[🖼️ Hình ảnh đính kèm: $1]');
+        formData.append('message', messageToSend);
+        formData.append('sessionId', sessionId || '');
+        formData.append('model', selectedModel);
+        formData.append('file', selectedFile);
+        fetchOptions.body = formData;
+      } else {
+        fetchOptions.headers['Content-Type'] = 'application/json';
+        fetchOptions.body = JSON.stringify({
           message: userMessage.content,
           sessionId: sessionId,
-          model: selectedModel
-        })
-      });
+          model: selectedModel,
+          ...(isEdit && { editIndex: editIdx })
+        });
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, fetchOptions);
       
       if (!response.ok) {
         throw new Error('Server connection error');
@@ -307,39 +406,138 @@ const Dashboard = () => {
           <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6">
             <div className="max-w-3xl w-full mx-auto flex flex-col space-y-6">
               {messages.map((msg, index) => (
-                <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed ${
-                    msg.role === 'user' 
-                      ? 'bg-blue-600 text-white rounded-br-sm' 
-                      : 'bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm'
-                  }`}>
-                    {msg.role === 'user' ? (
-                      <span className="whitespace-pre-wrap">{msg.content}</span>
+                <div key={index} className={`flex flex-col w-full group ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  {msg.role === 'user' ? (
+                      editingIndex === index ? (
+                        <div className="flex flex-col items-end w-full gap-2 my-2">
+                          <div className="w-full max-w-[85%] md:max-w-[75%] bg-white dark:bg-[#1e1f24] border border-blue-500 rounded-2xl p-3 shadow-sm">
+                            <textarea 
+                              value={editInput}
+                              onChange={(e) => {
+                                setEditInput(e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = `${e.target.scrollHeight}px`;
+                              }}
+                              className="w-full bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 text-[15px] resize-none overflow-y-auto max-h-[200px] custom-scrollbar"
+                              rows={1}
+                              autoFocus
+                              onFocus={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = `${e.target.scrollHeight}px`;
+                              }}
+                            />
+                            <div className="flex justify-end gap-2 mt-3">
+                              <button onClick={() => setEditingIndex(null)} className="px-4 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2b30] rounded-lg transition-colors">Hủy</button>
+                              <button onClick={() => handleSend(editInput, true, index)} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Gửi lại</button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                      (() => {
+                        // Tìm và bóc tách đoạn text đính kèm file ra khỏi nội dung
+                        const content = msg.content || '';
+                        const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
+                        const fileMatches = [...content.matchAll(fileRegex)];
+                        
+                        // Tìm và bóc tách hình ảnh base64
+                        const imgRegex = /!\[(.*?)\]\((data:image\/[^;]+;base64,[^\)]+)\)/g;
+                        const imgMatches = [...content.matchAll(imgRegex)];
+                        
+                        const contentText = content.replace(fileRegex, '').replace(imgRegex, '').trim();
+                        
+                        return (
+                          <div className="flex flex-col items-end w-full">
+                            <div className="flex flex-col items-end gap-2 max-w-[85%] md:max-w-[75%]">
+                            {imgMatches.map((match, i) => (
+                              <div key={`img-${i}`} className="relative group inline-block">
+                                <img 
+                                  src={match[2]} 
+                                  alt={match[1]} 
+                                  className="max-h-64 w-auto rounded-2xl object-contain shadow-sm cursor-zoom-in" 
+                                  onClick={() => setFullScreenImage(match[2])}
+                                />
+                              </div>
+                            ))}
+                            {(contentText || fileMatches.length > 0) && (
+                              <div className="rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-blue-600 text-white rounded-br-sm">
+                                {fileMatches.map((match, i) => (
+                                  <div key={i} className={`bg-white/20 dark:bg-black/20 text-white rounded-xl p-2 flex items-center gap-3 w-fit shadow-sm border border-white/10 ${contentText ? 'mb-2.5' : ''}`}>
+                                    <div className="p-1.5 bg-white/20 rounded-lg">
+                                      <Paperclip size={16} />
+                                    </div>
+                                    <span className="text-sm font-medium truncate max-w-[200px]">{match[1]}</span>
+                                  </div>
+                                ))}
+                                {contentText && <span className="whitespace-pre-wrap">{contentText}</span>}
+                              </div>
+                            )}
+                            </div>
+                            <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 mr-2">
+                              <button 
+                                onClick={() => {
+                                  if (!contentText) return;
+                                  navigator.clipboard.writeText(contentText);
+                                  toast.success('Đã copy tin nhắn!');
+                                }} 
+                                className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                              >
+                                <Copy size={13} /> Copy
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (!contentText) return;
+                                  setEditInput(contentText);
+                                  setEditingIndex(index);
+                                }} 
+                                className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                              >
+                                <Pencil size={13} /> Edit
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()
+                      )
                     ) : (
-                      <ReactMarkdown
-                        rehypePlugins={[rehypeRaw]}
-                        components={{
-                          p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
-                          li: ({node, ...props}) => <li {...props} />,
-                          strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
-                          pre: ({node, ...props}) => <pre className="bg-[#1e1e1e] text-gray-300 rounded-lg p-4 overflow-x-auto my-3 text-[13px] font-mono border border-gray-700 shadow-sm" {...props} />,
-                          code: ({node, inline, ...props}) => 
-                            inline 
-                              ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} /> 
-                              : <code {...props} />,
-                          a: ({node, ...props}) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                          table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" {...props} /></div>,
-                          thead: ({node, ...props}) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
-                          th: ({node, ...props}) => <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider" {...props} />,
-                          td: ({node, ...props}) => <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props} />
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
+                      <div className="flex flex-col items-start w-full">
+                        <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm">
+                        <ReactMarkdown
+                          rehypePlugins={[rehypeRaw]}
+                          components={{
+                            p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
+                            li: ({node, ...props}) => <li {...props} />,
+                            strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                            pre: PreBlock,
+                            code: ({node, inline, ...props}) => 
+                              inline 
+                                ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} /> 
+                                : <code {...props} />,
+                            a: ({node, ...props}) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                            table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" {...props} /></div>,
+                            thead: ({node, ...props}) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
+                            th: ({node, ...props}) => <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider" {...props} />,
+                            td: ({node, ...props}) => <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props} />
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                        </div>
+                        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 ml-2">
+                          <button 
+                            onClick={() => {
+                              if (!msg.content) return;
+                              navigator.clipboard.writeText(msg.content);
+                              toast.success('Đã copy phản hồi!');
+                            }} 
+                            className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          >
+                            <Copy size={13} /> Copy
+                          </button>
+                        </div>
+                      </div>
                     )}
-                  </div>
                 </div>
               ))}
               {isLoading && (
@@ -369,8 +567,41 @@ const Dashboard = () => {
               {localError}
             </div>
           )}
-          <div className="w-full max-w-3xl relative flex items-end bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
+          
+          <div className="w-full max-w-3xl relative flex flex-col bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
             
+            {selectedFile && (
+              <div className="px-2 pt-2 pb-1 flex items-center">
+                {selectedFile.type.startsWith('image/') ? (
+                  <div className="relative group">
+                    <img 
+                      src={URL.createObjectURL(selectedFile)} 
+                      alt="preview" 
+                      className="h-16 w-auto max-w-[200px] object-cover rounded-lg border border-gray-200 dark:border-[#333] shadow-sm cursor-zoom-in"
+                      onClick={() => setFullScreenImage(URL.createObjectURL(selectedFile))}
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center cursor-zoom-in pointer-events-none">
+                      <Eye className="text-white drop-shadow-md" size={20} />
+                    </div>
+                    <button onClick={() => setSelectedFile(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md transition-colors z-10">
+                      <X size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-gray-100 dark:bg-[#2a2b30] border border-gray-200 dark:border-[#333] text-gray-700 dark:text-gray-300 px-3 py-2 rounded-xl text-sm flex items-center gap-2 shadow-sm">
+                    <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                      <Paperclip size={14} />
+                    </div>
+                    <span className="truncate max-w-[150px] md:max-w-[250px] font-medium">{selectedFile.name}</span>
+                    <button onClick={() => setSelectedFile(null)} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-[#3a3b40] rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-end w-full">
             <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors shrink-0">
               <Plus size={22} />
             </button>
@@ -390,17 +621,27 @@ const Dashboard = () => {
             />
 
             <div className="flex items-center gap-2 pr-1 shrink-0 pb-0.5">
-              <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={(e) => { if (e.target.files[0]) setSelectedFile(e.target.files[0]); }} 
+                className="hidden" 
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+              >
                 <Paperclip size={20} />
               </button>
               
               <button 
                 onClick={() => handleSend()}
-                disabled={!input.trim() || isLoading}
+                disabled={(!input.trim() && !selectedFile) || isLoading}
                 className={`bg-[#3b82f6] hover:bg-[#2563eb] text-white p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <Send size={20} className="ml-1" /> {/* Thêm ml-1 để icon send căn giữa đẹp hơn */}
               </button>
+            </div>
             </div>
           </div>
 
@@ -409,6 +650,27 @@ const Dashboard = () => {
           </p>
         </div>
       </main>
+
+      {/* Ảnh toàn màn hình */}
+      {fullScreenImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setFullScreenImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
+            onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}
+          >
+            <X size={24} />
+          </button>
+          <img 
+            src={fullScreenImage} 
+            alt="Full screen" 
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl cursor-default animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

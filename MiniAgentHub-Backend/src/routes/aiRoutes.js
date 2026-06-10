@@ -3,7 +3,10 @@ const router = express.Router();
 const aiController = require('../controllers/aiController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-router.post('/chat', authenticateToken, aiController.chat);
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' }); // Khởi tạo thư mục chứa file tạm
+
+router.post('/chat', authenticateToken, upload.single('file'), aiController.chat);
 router.get('/chat-sessions', authenticateToken, aiController.getSessions);
 router.get('/chat-sessions/:id/messages', authenticateToken, aiController.getSessionMessages);
 router.delete('/chat-sessions', authenticateToken, aiController.deleteAllSessions);

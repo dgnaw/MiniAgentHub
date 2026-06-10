@@ -6,6 +6,7 @@ import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import ConfirmModal from './ConfirmModal';
 
 function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -26,6 +27,7 @@ function Sidebar() {
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, type: '', data: null });
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
@@ -92,10 +94,7 @@ function Sidebar() {
   }, [user, location.pathname]);
 
   const handleLogout = () => {
-    if (window.confirm(t('sidebar.logoutConfirm', 'Are you sure you want to log out?'))) {
-      logout(); 
-      navigate('/login'); 
-    }
+    setConfirmConfig({ isOpen: true, type: 'logout', data: null });
   };
 
   const getNavClass = (path) => {
@@ -108,7 +107,15 @@ function Sidebar() {
   const handleDeleteSession = async (e, sessionId) => {
     e.stopPropagation();
     setActiveMenuId(null);
-    if (window.confirm(t('sidebar.deleteSessionConfirm', 'Are you sure you want to delete this chat session?'))) {
+    setConfirmConfig({ isOpen: true, type: 'deleteSession', data: sessionId });
+  };
+
+  const executeConfirm = async () => {
+    if (confirmConfig.type === 'logout') {
+      logout(); 
+      navigate('/login'); 
+    } else if (confirmConfig.type === 'deleteSession') {
+      const sessionId = confirmConfig.data;
       try {
         await axiosClient.delete(`/chat-sessions/${sessionId}`);
         setSessions(prev => prev.filter(s => s.id !== sessionId));
@@ -315,6 +322,15 @@ function Sidebar() {
         </div>
       )}
       </div>
+      
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ isOpen: false, type: '', data: null })}
+        onConfirm={executeConfirm}
+        title={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Log out') : t('sidebar.delete', 'Delete')}
+        message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm', 'Are you sure you want to log out?') : t('sidebar.deleteSessionConfirm', 'Are you sure you want to delete this chat session?')}
+        confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Log out') : t('sidebar.delete', 'Delete')}
+      />
     </>
   );
 }

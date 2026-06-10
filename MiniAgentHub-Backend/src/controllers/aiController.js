@@ -1,6 +1,13 @@
 const aiService = require('../services/aiService');
 const ChatSession = require('../models/chatSession');
 const ChatMessage = require('../models/chatMessage');
+const fs = require('fs');
+
+// Hàm gỡ bỏ hình ảnh Base64 khổng lồ ra khỏi văn bản trước khi đưa cho AI đọc
+const cleanBase64Images = (text) => {
+    if (!text) return text;
+    return text.replace(/!\[(.*?)\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[🖼️ Hình ảnh đính kèm: $1]');
+};
 
 const aiController = {
     chat: async (req, res) => {
@@ -10,6 +17,7 @@ const aiController = {
 
         try {
             const { message, sessionId, model, isPing } = req.body;
+            const file = req.file;
 
             if (isPing) {
                 const groqReady = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== '');
@@ -20,16 +28,62 @@ const aiController = {
             const userId = req.user.id;
 
             if (!message) {
-                return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi (message).' });
+                if (!file) {
+                    return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi hoặc file đính kèm.' });
+                }
+            }
+
+            let cleanMessage = cleanBase64Images(message) || '';
+            let processedMessage = cleanMessage;
+            let flowiseUploads = [];
+            let messageToSave = message; // Chuỗi sẽ được lưu vào DB
+
+            if (file) {
+                try {
+                    let base64Data = null;
+                    if (file.mimetype.startsWith('image/')) {
+                        const fileData = fs.readFileSync(file.path);
+                        base64Data = fileData.toString('base64');
+                        // Phục hồi lại định dạng base64 từ file vật lý để lưu DB (cho frontend hiển thị)
+                        messageToSave = message.replace(
+                            /\[🖼️ Hình ảnh đính kèm: (.*?)\]/g, 
+                            `!$1`
+                        );
+                    }
+
+                    if (model === "Data Analyst") {
+                        if (!base64Data) {
+                            const fileData = fs.readFileSync(file.path);
+                            base64Data = fileData.toString('base64');
+                        }
+                        flowiseUploads.push({
+                            data: `data:${file.mimetype};base64,${base64Data}`,
+                            type: 'file',
+                            name: file.originalname,
+                            mime: file.mimetype
+                        });
+                        fs.unlinkSync(file.path); // Dọn dẹp file tạm
+                    } else {
+                        const fileContent = await aiService.extractFileContent(file);
+                        processedMessage = `Người dùng đã đính kèm một file có nội dung như sau:\n\n"""\n${fileContent}\n"""\n\nDựa vào file trên, hãy trả lời: ${cleanMessage}`;
+                    }
+                } catch (err) {
+                    console.error("Lỗi xử lý file đính kèm:", err);
+                    if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+                        return res.status(400).json({ message: 'Chỉ hỗ trợ file dạng Text, CSV, JSON hoặc PDF.' });
+                    }
+                    return res.status(500).json({ message: 'Lỗi đọc file. Có thể thư viện pdf-parse bị lỗi hoặc file bị hỏng.' });
+                }
             }
 
             currentSessionId = sessionId;
             
             if (!currentSessionId) {
-                let title = message.substring(0, 30) + (message.length > 30 ? "..." : ""); 
+                let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : ""); 
                 
                 try {
-                    const aiTitle = await aiService.generateTitle(message);
+                    const aiTitle = await aiService.generateTitle(cleanMessage);
                     if (aiTitle) {
                         title = aiTitle;
                     }
@@ -43,7 +97,29 @@ const aiController = {
                 await ChatSession.update({ updated_at: new Date() }, { where: { id: currentSessionId } });
             }
 
-            userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: message });
+            const parsedEditIndex = req.body.editIndex !== undefined ? parseInt(req.body.editIndex, 10) : undefined;
+
+            if (parsedEditIndex !== undefined && !isNaN(parsedEditIndex) && currentSessionId && !isNewSession) {
+                const pastMsgs = await ChatMessage.findAll({
+                    where: { session_id: currentSessionId },
+                    order: [['created_at', 'ASC']]
+                });
+                
+                if (pastMsgs[parsedEditIndex] && pastMsgs[parsedEditIndex].role === 'user') {
+                    const msgToEdit = pastMsgs[parsedEditIndex];
+                    await ChatMessage.update({ content: messageToSave }, { where: { id: msgToEdit.id } });
+                    userMessageRecord = await ChatMessage.findByPk(msgToEdit.id);
+                    
+                    const messagesToDelete = pastMsgs.slice(parsedEditIndex + 1).map(m => m.id);
+                    if (messagesToDelete.length > 0) {
+                        await ChatMessage.destroy({ where: { id: messagesToDelete } });
+                    }
+                } else {
+                    userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave });
+                }
+            } else {
+                userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave });
+            }
 
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
@@ -55,7 +131,7 @@ const aiController = {
             let flowiseFailed = false;
 
             if (model === "Data Analyst") {
-                const flowiseResult = await aiService.chatWithFlowise(message, currentSessionId);
+                const flowiseResult = await aiService.chatWithFlowise(processedMessage, currentSessionId, flowiseUploads);
                 aiResponse = flowiseResult.response;
                 flowiseFailed = flowiseResult.failed;
 
@@ -68,7 +144,28 @@ const aiController = {
                 if (flowiseFailed) {
                     res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
                 }
-                const stream = await aiService.chatWithAIStream(message);
+                
+                // 1. Lấy lịch sử trò chuyện của phiên hiện tại từ DB
+                const pastMessages = await ChatMessage.findAll({
+                    where: { session_id: currentSessionId },
+                    order: [['created_at', 'ASC']]
+                });
+
+                // 2. Chuyển đổi định dạng và cấu hình System Prompt
+                const messagesForAI = [
+                    { role: 'system', content: 'Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.' },
+                    ...pastMessages.slice(-20).map(m => ({ // Lấy 20 tin nhắn gần nhất để tránh tràn token
+                        role: m.role === 'ai' ? 'assistant' : 'user',
+                        content: cleanBase64Images(m.content)
+                    }))
+                ];
+
+                // 3. Ghi đè nội dung tin nhắn user cuối cùng (vừa lưu) để gộp cả phần text của file đính kèm (nếu có)
+                if (messagesForAI.length > 0 && messagesForAI[messagesForAI.length - 1].role === 'user') {
+                    messagesForAI[messagesForAI.length - 1].content = processedMessage;
+                }
+
+                const stream = await aiService.chatWithAIStream(messagesForAI);
                 for await (const chunk of stream) {
                     const content = chunk.choices[0]?.delta?.content || "";
                     if (content) {
@@ -86,7 +183,7 @@ const aiController = {
             console.error('Lỗi tại aiController.chat:', error);
 
             try {
-                if (userMessageRecord) await ChatMessage.destroy({ where: { id: userMessageRecord.id } });
+                if (userMessageRecord && parsedEditIndex === undefined) await ChatMessage.destroy({ where: { id: userMessageRecord.id } });
                 if (isNewSession && currentSessionId) {
                     await ChatSession.destroy({ where: { id: currentSessionId } });
                 }

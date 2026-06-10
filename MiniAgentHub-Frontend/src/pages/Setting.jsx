@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageToggle from '../components/LanguageToggle';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../components/ConfirmModal';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
@@ -26,6 +27,7 @@ const Settings = () => {
   const logout = useAuthStore((state) => state.logout); 
   const updateUser = useAuthStore((state) => state.updateUser); 
   const navigate = useNavigate();
+  const [confirmDeleteHistory, setConfirmDeleteHistory] = useState(false);
 
   const handleSignOut = () => {
     if (logout) logout(); 
@@ -34,7 +36,10 @@ const Settings = () => {
   };
 
   const handleClearHistory = async () => {
-    if (window.confirm(t('settings.clearChatHistoryConfirm'))) {
+    setConfirmDeleteHistory(true);
+  };
+
+  const executeClearHistory = async () => {
       try {
         await axiosClient.delete('/chat-sessions');
         toast.success(t('settings.clearSuccess', 'Chat history cleared successfully!'));
@@ -43,7 +48,6 @@ const Settings = () => {
         console.error('Lỗi khi xóa lịch sử:', error);
         toast.error(t('settings.clearError', 'Error clearing chat history.'));
       }
-    }
   };
 
   const [isEditingPhone, setIsEditingPhone] = useState(false);
@@ -289,6 +293,15 @@ const Settings = () => {
       <ChangePasswordModal 
         isOpen={isPasswordModalOpen} 
         onClose={() => setIsPasswordModalOpen(false)} 
+      />
+      
+      <ConfirmModal 
+        isOpen={confirmDeleteHistory}
+        onClose={() => setConfirmDeleteHistory(false)}
+        onConfirm={executeClearHistory}
+        title={t('settings.clearChatHistory', 'Clear chat history')}
+        message={t('settings.clearChatHistoryConfirm', 'Are you sure you want to delete this chat history?')}
+        confirmText={t('settings.clear', 'Clear')}
       />
     </div>
   );
