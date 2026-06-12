@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
-import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu } from 'lucide-react';
+import useSidebarStore from '../store/sidebarStore';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
@@ -13,6 +14,7 @@ function Sidebar() {
   const logout = useAuthStore((state) => state.logout);
   const role = useAuthStore((state) => state.role);
   const permissions = useAuthStore((state) => state.permissions) || [];
+  const { isCollapsed, toggleSidebar } = useSidebarStore();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -99,9 +101,10 @@ function Sidebar() {
 
   const getNavClass = (path) => {
     const isActive = location.pathname === path;
-    return isActive 
-      ? "flex items-center gap-3 w-full px-4 py-3 bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400 rounded-lg cursor-pointer transition-colors"
-      : "flex items-center gap-3 w-full px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] hover:text-gray-900 dark:hover:text-gray-200 rounded-lg cursor-pointer transition-colors";
+    const baseClass = isActive 
+      ? "bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400"
+      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] hover:text-gray-900 dark:hover:text-gray-200";
+    return `flex items-center gap-3 ${isCollapsed ? 'md:justify-center md:gap-0 md:px-0 px-4' : 'px-4'} w-full py-3 rounded-lg cursor-pointer transition-colors ${baseClass}`;
   };
 
   const handleDeleteSession = async (e, sessionId) => {
@@ -173,13 +176,22 @@ function Sidebar() {
         <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMobileOpen(false)} />
       )}
 
-      <div className={`fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 w-80 bg-white dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col text-gray-900 dark:text-white shrink-0`}>
+      <div className={`fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-all duration-300 ${isCollapsed ? 'w-80 md:w-20' : 'w-80'} bg-white dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col text-gray-900 dark:text-white shrink-0`}>
       <div className="p-6 flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between mb-8 shrink-0">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-wide">Agent Hub</h2>
-          <button className="md:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" onClick={() => setIsMobileOpen(false)}>
-            <X size={20} />
-          </button>
+        <div className={`flex items-center ${isCollapsed ? 'md:justify-center justify-between' : 'justify-between'} mb-8 shrink-0`}>
+          <h2 className={`text-xl font-bold text-gray-900 dark:text-white tracking-wide truncate ${isCollapsed ? 'md:hidden' : ''}`}>Agent Hub</h2>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={toggleSidebar}
+              className={`hidden md:flex p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-[#26272b] transition-colors ${isCollapsed ? '' : '-mr-2'}`}
+              title={isCollapsed ? "Mở rộng Sidebar" : "Thu gọn Sidebar"}
+            >
+              {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+            </button>
+            <button className="md:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" onClick={() => setIsMobileOpen(false)}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
         
         <nav className="space-y-1 flex flex-col flex-1 min-h-0">
@@ -188,7 +200,7 @@ function Sidebar() {
             className={`${getNavClass('/')} shrink-0`}
           >
             <MessageSquare size={20} />
-            <span className="font-medium text-sm">{t('sidebar.chat', 'Chat')}</span>
+            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.chat', 'Chat')}</span>
           </div>
 
           {(user?.role === 'Admin' || permissions.includes('USER_R') || permissions.includes('USER_U')) && (
@@ -197,7 +209,7 @@ function Sidebar() {
               className={`${getNavClass('/users')} shrink-0`}
             >
               <User size={20} />
-              <span className="font-medium text-sm">{t('sidebar.users', 'Users')}</span>
+              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.users', 'Users')}</span>
             </div>
           )}
 
@@ -207,7 +219,7 @@ function Sidebar() {
               className={`${getNavClass('/groups')} shrink-0`}
             >
               <Users size={20} />
-              <span className="font-medium text-sm">{t('sidebar.group', 'Groups')}</span>
+              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.group', 'Groups')}</span>
             </div>
           )}
 
@@ -216,13 +228,14 @@ function Sidebar() {
             className={`${getNavClass('/settings')} shrink-0`}
           >
             <Settings size={20} />
-            <span className="font-medium text-sm">{t('sidebar.setting', 'Settings')}</span>
+            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.setting', 'Settings')}</span>
           </div>
 
           {sessions.length > 0 && (
             <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 flex flex-col flex-1 min-h-0">
-              <div className="pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0">
-                {t('sidebar.history', 'History')}
+              <div className={`pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 ${isCollapsed ? 'md:text-center md:px-0' : ''}`}>
+                <span className={isCollapsed ? 'md:hidden' : ''}>{t('sidebar.history', 'History')}</span>
+                <span className={`hidden ${isCollapsed ? 'md:inline' : ''}`}>...</span>
               </div>
               <div className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1">
                 {sessions.map((session) => (
@@ -235,7 +248,7 @@ function Sidebar() {
                     <MessageSquare size={16} className="shrink-0 text-gray-400" />
                     
                     {editingSessionId === session.id ? (
-                      <div className="flex items-center gap-2 flex-1 w-full" onClick={e => e.stopPropagation()}>
+                      <div className={`flex items-center gap-2 flex-1 w-full ${isCollapsed ? 'md:hidden' : ''}`} onClick={e => e.stopPropagation()}>
                         <input
                           type="text"
                           value={editTitle}
@@ -252,9 +265,9 @@ function Sidebar() {
                       </div>
                     ) : (
                       <>
-                        <span className="font-medium text-sm truncate flex-1">{session.title}</span>
+                        <span className={`font-medium text-sm truncate flex-1 ${isCollapsed ? 'md:hidden' : ''}`}>{session.title}</span>
                         
-                        <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
+                        <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''} ${isCollapsed ? 'md:hidden' : ''}`}>
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -296,13 +309,13 @@ function Sidebar() {
       </div>
 
       {user && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3 px-2">
+        <div className={`p-4 border-t border-gray-200 dark:border-gray-800 flex items-center ${isCollapsed ? 'md:justify-center' : 'justify-between'} shrink-0`}>
+          <div className={`flex items-center gap-3 ${isCollapsed ? 'md:px-0' : 'px-2'}`}>
             <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-[#2a2a2a] flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
               <User size={20} />
             </div>
             
-            <div className="flex flex-col text-left overflow-hidden">
+            <div className={`flex flex-col text-left overflow-hidden ${isCollapsed ? 'md:hidden' : ''}`}>
               <span className="text-gray-900 dark:text-white text-sm font-semibold truncate">
                 {user.full_name}
               </span>
@@ -314,7 +327,7 @@ function Sidebar() {
 
           <button 
             onClick={handleLogout}
-            className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors"
+            className={`text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors ${isCollapsed ? 'md:hidden' : ''}`}
             title={t('sidebar.logoutTitle', 'Log out')}
           >
             <LogOut size={18} />
