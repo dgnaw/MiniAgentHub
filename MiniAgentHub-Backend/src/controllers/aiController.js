@@ -46,7 +46,7 @@ const aiController = {
                         base64Data = fileData.toString('base64');
                         // Phục hồi lại định dạng base64 từ file vật lý để lưu DB (cho frontend hiển thị)
                         messageToSave = message.replace(
-                            /\[🖼️ Hình ảnh đính kèm: (.*?)\]/g, 
+                            /\[🖼️ Hình ảnh đính kèm: (.*?)\]/g,
                             `!$1`
                         );
                     }
@@ -145,6 +145,29 @@ const aiController = {
                     res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
                 }
                 
+                // --- THÊM GLOBAL CONTEXT (KÝ ỨC DÀI HẠN TỪ CÁC PHIÊN KHÁC) ---
+                // Lấy tất cả ID phiên trò chuyện của user này
+                const userSessions = await ChatSession.findAll({ where: { user_id: userId }, attributes: ['id'] });
+                const otherSessionIds = userSessions.map(s => s.id).filter(id => id !== currentSessionId);
+                
+                let globalContextStr = "";
+                if (otherSessionIds.length > 0) {
+                    const globalMessages = await ChatMessage.findAll({
+                        where: { session_id: otherSessionIds },
+                        order: [['created_at', 'DESC']],
+                        limit: 10 // Chỉ lấy 10 tin nhắn gần nhất để tránh tràn Token
+                    });
+                    globalContextStr = globalMessages.reverse().map(m => {
+                        let safeContent = cleanBase64Images(m.content);
+                        if (safeContent && safeContent.length > 500) safeContent = safeContent.substring(0, 500) + '...'; // Cắt bớt nếu tin nhắn quá dài
+                        return `${m.role === 'ai' ? 'AI' : 'User'}: ${safeContent}`;
+                    }).join('\n');
+                }
+                
+                const systemContent = globalContextStr
+                    ? `Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.\n\nDưới đây là thông tin từ các cuộc trò chuyện ở các phiên khác của người dùng để bạn tham khảo ngữ cảnh (Ký ức dài hạn):\n"""\n${globalContextStr}\n"""`
+                    : 'Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.';
+
                 // 1. Lấy lịch sử trò chuyện của phiên hiện tại từ DB
                 const pastMessages = await ChatMessage.findAll({
                     where: { session_id: currentSessionId },
@@ -153,7 +176,7 @@ const aiController = {
 
                 // 2. Chuyển đổi định dạng và cấu hình System Prompt
                 const messagesForAI = [
-                    { role: 'system', content: 'Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.' },
+                    { role: 'system', content: systemContent },
                     ...pastMessages.slice(-20).map(m => ({ // Lấy 20 tin nhắn gần nhất để tránh tràn token
                         role: m.role === 'ai' ? 'assistant' : 'user',
                         content: cleanBase64Images(m.content)

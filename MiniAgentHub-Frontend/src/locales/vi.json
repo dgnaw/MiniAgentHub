@@ -60,6 +60,7 @@
     "promptPlaceholder": "Nhập yêu cầu tại đây...",
     "footerNote": "Neural Hub có thể hiển thị thông tin không chính xác, vì vậy hãy kiểm tra kỹ các câu trả lời.",
     "flowiseUnavailable": "Hệ thống phân tích dữ liệu (Flowise) đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!",
+    "flowiseBusy": "Đã hết lượt hoặc đang bận.",
     "errorConnect": "Xin lỗi, đã có lỗi xảy ra khi kết nối với máy chủ AI.",
     "analyzing": "Đang phân tích dữ liệu chuyên sâu",
     "thinking": "Đang tạo câu trả lời",

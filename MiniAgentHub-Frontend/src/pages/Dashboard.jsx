@@ -150,6 +150,13 @@ const Dashboard = () => {
     const textToSend = typeof customMessage === 'string' ? customMessage : input;
     if ((!textToSend.trim() && !selectedFile) || isLoading) return;
 
+    if (selectedModel === 'Data Analyst' && !isFlowiseConfigured) {
+      setLocalError('Hệ thống chưa được cấu hình URL cho Flowise. Vui lòng cấu hình để sử dụng tính năng này.');
+      setTimeout(() => setLocalError(''), 5000);
+      setShowModelDropdown(false);
+      return;
+    }
+
     let finalContent = textToSend.trim();
     if (selectedFile && !isEdit) {
       const safeName = selectedFile.name.replace(/[\\]/g, '_'); // Lọc ký tự đặc biệt để không vỡ cấu trúc regex
@@ -334,7 +341,7 @@ const Dashboard = () => {
                   <div className="font-medium text-blue-600 dark:text-blue-400 mb-0.5">Llama 3</div>
                   <div className="text-xs text-gray-500">{t('dashboard.modelLlamaDesc', 'General chat (via Groq)')}</div>
                 </div>
-              <div className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333] ${!isFlowiseConfigured ? 'opacity-60' : ''}`} onClick={() => { 
+              <div className={`px-4 py-3 text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333] ${!isFlowiseConfigured || !isFlowiseAvailable ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer'}`} onClick={() => { 
                 if (!isFlowiseConfigured) {
                   setLocalError('Hệ thống chưa được cấu hình URL cho Flowise. Vui lòng cấu hình để sử dụng tính năng này.');
                   setTimeout(() => setLocalError(''), 5000);
@@ -349,11 +356,14 @@ const Dashboard = () => {
                   setSelectedModel('Data Analyst'); 
                   setShowModelDropdown(false); 
                 }}>
-                <div className="font-medium text-emerald-600 dark:text-emerald-400 mb-0.5 flex items-center gap-2">
+                <div className={`font-medium text-emerald-600 dark:text-emerald-400 mb-0.5 flex items-center gap-2 ${!isFlowiseAvailable ? 'line-through' : ''}`}>
                   Data Analyst
                   {!isFlowiseConfigured && <span className="text-red-500 text-[10px] px-1.5 py-0.5 bg-red-50 dark:bg-red-500/10 rounded-full border border-red-100 dark:border-red-500/20 leading-none">Chưa cấu hình</span>}
                 </div>
                   <div className="text-xs text-gray-500">{t('dashboard.modelDataDesc', 'Data analysis (via Flowise)')}</div>
+                  {!isFlowiseAvailable && (
+                    <div className="text-xs text-red-500 mt-1">{t('dashboard.flowiseBusy', 'Đã hết lượt hoặc đang bận.')}</div>
+                  )}
                 </div>
               </div>
             )}
@@ -428,7 +438,20 @@ const Dashboard = () => {
                             />
                             <div className="flex justify-end gap-2 mt-3">
                               <button onClick={() => setEditingIndex(null)} className="px-4 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2b30] rounded-lg transition-colors">Hủy</button>
-                              <button onClick={() => handleSend(editInput, true, index)} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Gửi lại</button>
+                              <button onClick={() => {
+                                const originalContent = messages[index].content || '';
+                                const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
+                                const imgRegex = /!\[(.*?)\]\((data:image\/[^;]+;base64,[^\)]+)\)/g;
+                                
+                                const files = [...originalContent.matchAll(fileRegex)].map(m => m[0]);
+                                const imgs = [...originalContent.matchAll(imgRegex)].map(m => m[0]);
+                                
+                                let finalEdit = editInput.trim();
+                                if (files.length > 0) finalEdit = `${files.join('\n')}\n\n${finalEdit}`;
+                                if (imgs.length > 0) finalEdit = `${imgs.join('\n')}\n\n${finalEdit}`;
+                                
+                                handleSend(finalEdit.trim(), true, index);
+                              }} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Gửi lại</button>
                             </div>
                           </div>
                         </div>
@@ -485,7 +508,6 @@ const Dashboard = () => {
                               </button>
                               <button 
                                 onClick={() => {
-                                  if (!contentText) return;
                                   setEditInput(contentText);
                                   setEditingIndex(index);
                                 }} 
