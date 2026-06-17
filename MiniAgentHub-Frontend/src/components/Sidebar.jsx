@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
 import useSidebarStore from '../store/sidebarStore';
-import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
@@ -30,6 +30,8 @@ function Sidebar() {
   const [editTitle, setEditTitle] = useState('');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, type: '', data: null });
+  const [shareSessionId, setShareSessionId] = useState(null);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
@@ -233,11 +235,19 @@ function Sidebar() {
 
           {sessions.length > 0 && (
             <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 flex flex-col flex-1 min-h-0">
-              <div className={`pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 ${isCollapsed ? 'md:text-center md:px-0' : ''}`}>
+              <div 
+                className={`pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 flex items-center ${isCollapsed ? 'md:justify-center md:px-0' : 'justify-between cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors'}`}
+                onClick={() => !isCollapsed && setIsHistoryExpanded(!isHistoryExpanded)}
+              >
                 <span className={isCollapsed ? 'md:hidden' : ''}>{t('sidebar.history', 'History')}</span>
                 <span className={`hidden ${isCollapsed ? 'md:inline' : ''}`}>...</span>
+                {!isCollapsed && (
+                  isHistoryExpanded ? <ChevronDown size={14} className="opacity-70" /> : <ChevronRight size={14} className="opacity-70" />
+                )}
               </div>
-              <div className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1">
+              
+              {isHistoryExpanded && (
+                <div className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1">
                 {sessions.map((session) => (
                   <div 
                     key={session.id}
@@ -285,6 +295,12 @@ function Sidebar() {
                             onClick={e => e.stopPropagation()}
                           >
                             <button 
+                              onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setShareSessionId(session.id); }}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
+                            >
+                              <Share2 size={14} /> {t('sidebar.share', 'Share')}
+                            </button>
+                            <button 
                               onClick={(e) => handleStartEdit(e, session)}
                               className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
                             >
@@ -302,7 +318,8 @@ function Sidebar() {
                     )}
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </nav>
@@ -344,6 +361,36 @@ function Sidebar() {
         message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm', 'Are you sure you want to log out?') : t('sidebar.deleteSessionConfirm', 'Are you sure you want to delete this chat session?')}
         confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Log out') : t('sidebar.delete', 'Delete')}
       />
+
+      {shareSessionId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity p-4" onClick={() => setShareSessionId(null)}>
+          <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl w-full max-w-md p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShareSessionId(null)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <X size={20} />
+            </button>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('sidebar.shareSession', 'Share Chat')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('sidebar.shareDesc', 'Copy the link below to share this chat session.')}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="text"
+                readOnly
+                value={`${window.location.origin}/chat/${shareSessionId}`}
+                className="flex-1 bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/chat/${shareSessionId}`);
+                  toast.success(t('sidebar.copied', 'Copied to clipboard!'));
+                }}
+                className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
+              >
+                <Copy size={16} />
+                {t('sidebar.copyLink', 'Copy')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

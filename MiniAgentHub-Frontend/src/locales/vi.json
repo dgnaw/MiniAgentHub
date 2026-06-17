@@ -12,7 +12,12 @@
     "delete": "Xóa",
     "deleteSessionConfirm": "Bạn có chắc chắn muốn xóa cuộc trò chuyện này?",
     "deleteSessionError": "Xóa thất bại.",
-    "renameSessionError": "Đổi tên thất bại."
+    "renameSessionError": "Đổi tên thất bại.",
+    "share": "Chia sẻ",
+    "shareSession": "Chia sẻ cuộc trò chuyện",
+    "shareDesc": "Sao chép đường dẫn bên dưới để chia sẻ hoặc lưu trữ.",
+    "copyLink": "Sao chép",
+    "copied": "Đã sao chép vào khay nhớ tạm!"
   },
 
   "confirmModal": {
@@ -224,7 +229,10 @@
     "placeholderSelectGroup": "-- Chọn nhóm --",
     "members": "thành viên",
     "cancel": "Hủy",
-    "btnAddGroup": "Thêm vào nhóm"
+    "btnAddGroup": "Thêm vào nhóm",
+    "sortNewest": "Mới nhất",
+    "sortAZ": "Từ A - Z",
+    "sortZA": "Từ Z - A"
   },
 
   "userFormModal": {

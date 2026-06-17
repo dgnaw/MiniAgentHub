@@ -41,12 +41,11 @@ const aiService = {
                 file.mimetype.includes('text') || 
                 file.mimetype.includes('csv') || 
                 file.mimetype === 'application/json' ||
-                file.mimetype === 'application/vnd.ms-excel' ||
-                /\.(csv|txt|json|md)$/i.test(file.originalname)
+                /\.(csv|txt|json|md|xml|html|js|jsx|ts|tsx|py|java|c|cpp|cs|h|css|scss|sql|sh|bat)$/i.test(file.originalname)
             ) {
                 fileContent = fs.readFileSync(filePath, 'utf8');
             } else {
-                throw new Error('UNSUPPORTED_FILE_TYPE');
+                fileContent = `(Hệ thống không thể đọc nội dung chi tiết của định dạng file này. Tên file đính kèm: ${file.originalname})`;
             }
         } finally {
             // Đảm bảo dọn dẹp file rác ở mọi trường hợp (thành công lẫn khi bị lỗi)
@@ -171,60 +170,64 @@ const aiService = {
         return messagesForAI;
     },
 
-    processChatAttachment: async (file, message, cleanMessage, model) => {
+    processChatAttachments: async (files, message, cleanMessage, model) => {
         let processedMessage = cleanMessage || '';
         let messageToSave = message || '';
         let flowiseUploads = [];
+        let allExtractedText = '';
 
         try {
-            if (file) {
-                let base64Data = null;
-                if (file.mimetype.startsWith('image/')) {
-                    const fileData = fs.readFileSync(file.path);
-                    base64Data = fileData.toString('base64');
-                    // Phục hồi lại định dạng Markdown của hình ảnh để lưu DB (cho frontend render)
-                    messageToSave = messageToSave.replace(
-                        /\[🖼️ Hình ảnh đính kèm: (.*?)\]/g,
-                        `!$1`
-                    );
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    let base64Data = null;
+                    if (file.mimetype.startsWith('image/')) {
+                        const fileData = fs.readFileSync(file.path);
+                        base64Data = fileData.toString('base64');
+                    }
+
+                    if (model === "Data Analyst") {
+                        if (file.mimetype.startsWith('image/')) {
+                            const fileContent = await aiService.extractFileContent(file);
+                            allExtractedText += `\n--- Tài liệu: ${file.originalname} ---\n${fileContent}\n`;
+                        } else {
+                            if (!base64Data) {
+                                const fileData = fs.readFileSync(file.path);
+                                base64Data = fileData.toString('base64');
+                            }
+                            flowiseUploads.push({
+                                data: `data:${file.mimetype};base64,${base64Data}`,
+                                type: 'file',
+                                name: file.originalname,
+                                mime: file.mimetype
+                            });
+                            fs.unlinkSync(file.path); 
+                        }
+                    } else {
+                        const fileContent = await aiService.extractFileContent(file);
+                        allExtractedText += `\n--- Tài liệu: ${file.originalname} ---\n${fileContent}\n`;
+                    }
                 }
 
-                if (model === "Data Analyst") {
-                    if (file.mimetype.startsWith('image/')) {
-                        // Tránh gửi Base64 khổng lồ sang Flowise làm sập DB, dùng chung cơ chế OCR như Groq
-                        const fileContent = await aiService.extractFileContent(file);
-                        processedMessage = `Người dùng đã tải lên một hình ảnh/tài liệu. Hệ thống nhận diện (OCR) đã quét và trích xuất được văn bản sau từ file đó:\n\n"""\n${fileContent}\n"""\n\nDựa vào phần chữ đã được hệ thống trích xuất ở trên, hãy trả lời yêu cầu sau: ${processedMessage}`;
-                    } else {
-                        // Đối với CSV, JSON, PDF thì mới gửi dạng file base64 cho Flowise
-                        if (!base64Data) {
-                            const fileData = fs.readFileSync(file.path);
-                            base64Data = fileData.toString('base64');
-                        }
-                        flowiseUploads.push({
-                            data: `data:${file.mimetype};base64,${base64Data}`,
-                            type: 'file',
-                            name: file.originalname,
-                            mime: file.mimetype
-                        });
-                        fs.unlinkSync(file.path); // Dọn dẹp file tạm
-                    }
-                } else {
-                    const fileContent = await aiService.extractFileContent(file);
-                    processedMessage = `Người dùng đã tải lên một hình ảnh/tài liệu. Hệ thống nhận diện (OCR) đã quét và trích xuất được văn bản sau từ file đó:\n\n"""\n${fileContent}\n"""\n\nDựa vào phần chữ đã được hệ thống trích xuất ở trên, hãy trả lời yêu cầu sau của người dùng. Tuyệt đối KHÔNG được từ chối hoặc nói rằng bạn không thể nhìn thấy hình ảnh:\n\nYêu cầu: ${processedMessage}`;
+                messageToSave = messageToSave.replace(
+                    /\[🖼️ Hình ảnh đính kèm: (.*?)\]/g,
+                    `!$1`
+                );
+
+                if (allExtractedText.trim() !== '') {
+                    processedMessage = `Người dùng đã tải lên (các) hình ảnh/tài liệu. Hệ thống nhận diện (OCR) đã quét và trích xuất được văn bản sau từ các file đó:\n"""${allExtractedText}"""\n\nDựa vào phần chữ đã được hệ thống trích xuất ở trên, hãy trả lời yêu cầu sau của người dùng. Tuyệt đối KHÔNG được từ chối hoặc nói rằng bạn không thể nhìn thấy hình ảnh:\n\nYêu cầu: ${processedMessage}`;
                 }
             }
         } catch (err) {
             console.error("Lỗi xử lý file đính kèm:", err);
-            if (file && file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                }
+            }
             
             const error = new Error();
-            if (err.message === 'UNSUPPORTED_FILE_TYPE') {
-                error.status = 400;
-                error.message = 'Chỉ hỗ trợ file dạng Text, CSV, JSON hoặc PDF.';
-            } else {
-                error.status = 500;
-                error.message = 'Lỗi đọc file. Có thể thư viện pdf-parse bị lỗi hoặc file bị hỏng.';
-            }
+            error.status = 500;
+            error.message = 'Lỗi đọc file. Có thể thư viện đọc file bị lỗi hoặc file bị hỏng.';
             throw error;
         }
 

@@ -86,10 +86,11 @@ const Dashboard = () => {
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const [isFlowiseConfigured, setIsFlowiseConfigured] = useState(true);
   const [localError, setLocalError] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editInput, setEditInput] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -148,7 +149,7 @@ const Dashboard = () => {
 
   const handleSend = async (customMessage, isEdit = false, editIdx = null) => {
     const textToSend = typeof customMessage === 'string' ? customMessage : input;
-    if ((!textToSend.trim() && !selectedFile) || isLoading) return;
+    if ((!textToSend.trim() && selectedFiles.length === 0) || isLoading) return;
 
     if (selectedModel === 'Data Analyst' && !isFlowiseConfigured) {
       setLocalError('Hệ thống chưa được cấu hình URL cho Flowise. Vui lòng cấu hình để sử dụng tính năng này.');
@@ -158,18 +159,18 @@ const Dashboard = () => {
     }
 
     let finalContent = textToSend.trim();
-    if (selectedFile && !isEdit) {
-      const safeName = selectedFile.name.replace(/[\\]/g, '_'); // Lọc ký tự đặc biệt để không vỡ cấu trúc regex
-      if (selectedFile.type.startsWith('image/')) {
-        const base64 = await getBase64(selectedFile);
-        finalContent = finalContent 
-          ? `![${safeName}](${base64})\n\n${finalContent}` 
-          : `![${safeName}](${base64})`;
-      } else {
-        finalContent = finalContent 
-          ? `[📎 File đính kèm: ${safeName}]\n\n${finalContent}` 
-          : `[📎 File đính kèm: ${safeName}]`;
+    if (selectedFiles.length > 0 && !isEdit) {
+      let filesMarkdown = '';
+      for (const file of selectedFiles) {
+        const safeName = file.name.replace(/[\\]/g, '_');
+        if (file.type.startsWith('image/')) {
+          const base64 = await getBase64(file);
+          filesMarkdown += `!${safeName}\n\n`;
+        } else {
+          filesMarkdown += `[📎 File đính kèm: ${safeName}]\n\n`;
+        }
       }
+      finalContent = finalContent ? `${filesMarkdown}${finalContent}` : filesMarkdown.trim();
     }
 
     const userMessage = { role: 'user', content: finalContent };
@@ -179,7 +180,7 @@ const Dashboard = () => {
     } else {
       setMessages((prev) => [...prev, userMessage]);
       setInput('');
-      setSelectedFile(null);
+      setSelectedFiles([]);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'; // Reset chiều cao khung chat sau khi gửi
       }
@@ -195,13 +196,13 @@ const Dashboard = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       };
 
-      if (selectedFile && !isEdit) {
+      if (selectedFiles.length > 0 && !isEdit) {
         const formData = new FormData();
         const messageToSend = userMessage.content.replace(/!\[(.*?)\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[🖼️ Hình ảnh đính kèm: $1]');
         formData.append('message', messageToSend);
         formData.append('sessionId', sessionId || '');
         formData.append('model', selectedModel);
-        formData.append('file', selectedFile);
+        selectedFiles.forEach(f => formData.append('files', f)); // Nạp toàn bộ file vào formData
         fetchOptions.body = formData;
       } else {
         fetchOptions.headers['Content-Type'] = 'application/json';
@@ -316,10 +317,52 @@ const Dashboard = () => {
     }
   };
 
+  // Drag and Drop Handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 10)); // Giới hạn lấy 10 file
+    }
+  };
+
+  const removeFile = (indexToRemove) => {
+    setSelectedFiles(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden transition-colors">
+    <div 
+      className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden transition-colors relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       
       <Sidebar />
+
+      {/* Overlay Dropzone Visual */}
+      {isDragging && (
+        <div className="absolute inset-0 z-[60] bg-blue-500/10 backdrop-blur-sm border-4 border-blue-500 border-dashed m-4 rounded-3xl flex items-center justify-center pointer-events-none transition-all duration-200">
+            <div className="bg-white dark:bg-[#1e1f24] p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+                <Paperclip size={48} className="text-blue-500 mb-4 animate-bounce" />
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Thả file vào đây</h3>
+                <p className="text-gray-500 mt-2">Hỗ trợ đính kèm tối đa 10 files cùng lúc</p>
+            </div>
+        </div>
+      )}
 
       <main className="flex-1 flex flex-col relative">
         
@@ -592,34 +635,36 @@ const Dashboard = () => {
           
           <div className="w-full max-w-3xl relative flex flex-col bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
             
-            {selectedFile && (
-              <div className="px-2 pt-2 pb-1 flex items-center">
-                {selectedFile.type.startsWith('image/') ? (
-                  <div className="relative group">
-                    <img 
-                      src={URL.createObjectURL(selectedFile)} 
-                      alt="preview" 
-                      className="h-16 w-auto max-w-[200px] object-cover rounded-lg border border-gray-200 dark:border-[#333] shadow-sm cursor-zoom-in"
-                      onClick={() => setFullScreenImage(URL.createObjectURL(selectedFile))}
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center cursor-zoom-in pointer-events-none">
-                      <Eye className="text-white drop-shadow-md" size={20} />
+            {selectedFiles.length > 0 && (
+              <div className="px-3 pt-3 pb-1 flex items-center gap-3 flex-wrap max-h-32 overflow-y-auto custom-scrollbar">
+                {selectedFiles.map((file, idx) => (
+                  file.type.startsWith('image/') ? (
+                    <div key={idx} className="relative group shrink-0">
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt="preview" 
+                        className="h-16 w-16 object-cover rounded-lg border border-gray-200 dark:border-[#333] shadow-sm cursor-zoom-in"
+                        onClick={() => setFullScreenImage(URL.createObjectURL(file))}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center cursor-zoom-in pointer-events-none">
+                        <Eye className="text-white drop-shadow-md" size={16} />
+                      </div>
+                      <button onClick={() => removeFile(idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md transition-colors z-10">
+                        <X size={12} />
+                      </button>
                     </div>
-                    <button onClick={() => setSelectedFile(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md transition-colors z-10">
-                      <X size={12} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-gray-100 dark:bg-[#2a2b30] border border-gray-200 dark:border-[#333] text-gray-700 dark:text-gray-300 px-3 py-2 rounded-xl text-sm flex items-center gap-2 shadow-sm">
-                    <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
-                      <Paperclip size={14} />
+                  ) : (
+                    <div key={idx} className="bg-gray-100 dark:bg-[#2a2b30] border border-gray-200 dark:border-[#333] text-gray-700 dark:text-gray-300 px-3 py-2 rounded-xl text-sm flex items-center gap-2 shadow-sm shrink-0 max-w-[200px]">
+                      <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                        <Paperclip size={14} />
+                      </div>
+                      <span className="truncate font-medium">{file.name}</span>
+                      <button onClick={() => removeFile(idx)} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-[#3a3b40] rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <X size={14} />
+                      </button>
                     </div>
-                    <span className="truncate max-w-[150px] md:max-w-[250px] font-medium">{selectedFile.name}</span>
-                    <button onClick={() => setSelectedFile(null)} className="ml-1 p-1 hover:bg-gray-200 dark:hover:bg-[#3a3b40] rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
+                  )
+                ))}
               </div>
             )}
 
@@ -645,8 +690,15 @@ const Dashboard = () => {
             <div className="flex items-center gap-2 pr-1 shrink-0 pb-0.5">
               <input 
                 type="file" 
+                multiple
                 ref={fileInputRef} 
-                onChange={(e) => { if (e.target.files[0]) setSelectedFile(e.target.files[0]); }} 
+                onChange={(e) => { 
+                  if (e.target.files && e.target.files.length > 0) { 
+                    const newFiles = Array.from(e.target.files);
+                    setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 10));
+                  } 
+                  e.target.value = null; // Reset input để có thể chọn lại file vừa chọn
+                }} 
                 className="hidden" 
               />
               <button 
@@ -658,7 +710,7 @@ const Dashboard = () => {
               
               <button 
                 onClick={() => handleSend()}
-                disabled={(!input.trim() && !selectedFile) || isLoading}
+                disabled={(!input.trim() && selectedFiles.length === 0) || isLoading}
                 className={`bg-[#3b82f6] hover:bg-[#2563eb] text-white p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <Send size={20} className="ml-1" /> {/* Thêm ml-1 để icon send căn giữa đẹp hơn */}

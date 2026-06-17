@@ -26,6 +26,15 @@ const UserManagement = () => {
 
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: 'create', data: null });
 
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = () => setShowFilterDropdown(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
@@ -65,9 +74,17 @@ const UserManagement = () => {
     }
   };
 
-  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const sortedUsers = [...users].sort((a, b) => {
+    const nameA = (a.full_name || a.email || '').toLowerCase();
+    const nameB = (b.full_name || b.email || '').toLowerCase();
+    if (sortOrder === 'az') return nameA.localeCompare(nameB);
+    if (sortOrder === 'za') return nameB.localeCompare(nameA);
+    return 0; 
+  });
+
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedUsers = users.slice(startIndex, startIndex + itemsPerPage);
+  const displayedUsers = sortedUsers.slice(startIndex, startIndex + itemsPerPage);
   const hasPagination = totalPages > 1;
 
   const handleSelectAll = (e) => {
@@ -168,9 +185,21 @@ const UserManagement = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button className="flex items-center gap-2 bg-white dark:bg-[#1a1b20] hover:bg-gray-50 dark:hover:bg-[#26272b] border border-gray-200 dark:border-[#26272b] text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors">
-              <Filter size={16} /> {t('userManagement.filter', 'Filter')}
-            </button>
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center gap-2 bg-white dark:bg-[#1a1b20] hover:bg-gray-50 dark:hover:bg-[#26272b] border border-gray-200 dark:border-[#26272b] text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors"
+              >
+                <Filter size={16} /> {t('userManagement.filter', 'Filter')}
+              </button>
+              {showFilterDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-lg py-1 z-50">
+                  <button onClick={() => { setSortOrder('newest'); setShowFilterDropdown(false); setCurrentPage(1); }} className={`w-full text-left px-4 py-2 text-sm ${sortOrder === 'newest' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b]'}`}>{t('userManagement.sortNewest', 'Newest')}</button>
+                  <button onClick={() => { setSortOrder('az'); setShowFilterDropdown(false); setCurrentPage(1); }} className={`w-full text-left px-4 py-2 text-sm ${sortOrder === 'az' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b]'}`}>{t('userManagement.sortAZ', 'A to Z')}</button>
+                  <button onClick={() => { setSortOrder('za'); setShowFilterDropdown(false); setCurrentPage(1); }} className={`w-full text-left px-4 py-2 text-sm ${sortOrder === 'za' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b]'}`}>{t('userManagement.sortZA', 'Z to A')}</button>
+                </div>
+              )}
+            </div>
             {(user?.role === 'Admin' || permissions.includes('USER_C')) && (
               <button 
                 onClick={handleOpenCreate}

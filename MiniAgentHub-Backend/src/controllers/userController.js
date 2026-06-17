@@ -20,14 +20,6 @@ const userController = {
                 return res.status(result.status || 400).json({ message: result.error });
             }
             
-            if (!result.emailSent) {
-                return res.status(201).json({
-                    message: 'Tạo tài khoản thành công nhưng gửi email lỗi. Vui lòng cấp pass tay.',
-                    user: result.user,
-                    temporary_password: result.rawPassword
-                });
-            }
-            
             return res.status(201).json({
                 message: 'Tạo tài khoản thành công.',
                 user: result.user

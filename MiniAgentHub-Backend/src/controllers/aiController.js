@@ -14,7 +14,7 @@ const aiController = {
 
         try {
             const { message, sessionId, model, isPing } = req.body;
-            const file = req.file;
+            const files = req.files || [];
 
             if (isPing) {
                 const groqReady = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== '');
@@ -24,12 +24,12 @@ const aiController = {
 
             const userId = req.user.id;
 
-            if (!message && !file) {
-                return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi hoặc file đính kèm.' });
+            if (!message && files.length === 0) {
+                return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi hoặc ít nhất 1 file đính kèm.' });
             }
 
             const cleanMessage = cleanBase64Images(message) || '';
-            const fileData = await aiService.processChatAttachment(file, message, cleanMessage, model);
+            const fileData = await aiService.processChatAttachments(files, message, cleanMessage, model);
             
             aiProcessData = await chatService.prepareChatSessionAndMessage(userId, sessionId, cleanMessage, fileData.messageToSave, parsedEditIndex);
             const { currentSessionId } = aiProcessData;

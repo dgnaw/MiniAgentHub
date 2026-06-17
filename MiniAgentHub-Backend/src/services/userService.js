@@ -56,7 +56,11 @@ const userService = {
             await sendWelcomeEmail(email, full_name, rawPassword);
         } catch (mailError) {
             console.error('Lỗi gửi email cấp phát:', mailError);
-            emailSent = false;
+            
+            await UserGroup.destroy({ where: { user_id: newUser.id } });
+            await User.destroy({ where: { id: newUser.id } });
+            
+            return { error: 'Không thể gửi email chứa mật khẩu. Quá trình tạo người dùng đã bị hủy (rollback). Vui lòng kiểm tra lại cấu hình SMTP (.env).', status: 500 };
         }
 
         return {

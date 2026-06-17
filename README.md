@@ -22,6 +22,8 @@ Dự án được chia làm 2 phân hệ chính:
 
 ### 3. Trải nghiệm người dùng (UX/UI)
 - Giao diện Chat hiện đại, hỗ trợ render Markdown (Code block, Table, List).
+- Tính năng **Chia sẻ cuộc trò chuyện** (Share chat session) qua đường dẫn trực tiếp.
+- Thanh điều hướng (Sidebar) thông minh với chức năng **Thu gọn/mở rộng lịch sử (Collapsible History)**.
 - Hỗ trợ giao diện **Sáng (Light) / Tối (Dark)**.
 - Đa ngôn ngữ (i18n), hỗ trợ sẵn Tiếng Việt.
 - Tự động cuộn, quản lý lịch sử trò chuyện dễ dàng.
@@ -68,6 +70,11 @@ Dự án được chia làm 2 phân hệ chính:
   - Vai trò (Role) **Admin** được map với cả 3 quyền trên, trong khi Role **User** chỉ có quyền `USER_R`.
   - Nếu có yêu cầu: *"Cho phép nhóm **Trưởng phòng** được quyền xóa User"*. Bạn chỉ cần dùng giao diện UI gán quyền `USER_D` cho nhóm này (lưu xuống `GroupPermission`). Code backend `checkPermission('USER_D')` sẽ tự động cho phép người dùng thuộc nhóm Trưởng phòng thực hiện thao tác xóa mà bạn không cần phải sửa lại mã nguồn (như `if (role === 'Admin' || group === 'Trưởng phòng')`) hay khởi động lại server.
 
+- **Kiến trúc Clean Code (Tối ưu MVC):**
+  Hệ thống tách biệt triệt để trách nhiệm giữa luồng xử lý phản hồi Stream của AI (`aiController`, `aiService`) và logic thao tác Cơ sở dữ liệu của phiên trò chuyện (`chatController`, `chatService`). Điều này giúp Controller gọn nhẹ (tránh Fat Controller) và tuân thủ nguyên tắc Single Responsibility.
+- **Xử lý hình ảnh thông minh (OCR Workaround):**
+  Để vượt qua giới hạn không hỗ trợ ảnh của các mô hình Text-only LLMs (như Llama 3) và tránh làm sập bộ nhớ (Storage limit exceeded) của Flowise khi truyền chuỗi Base64 khổng lồ, hệ thống tích hợp sẵn thư viện OCR `Tesseract.js`. Ảnh tải lên sẽ được quét tự động tại server để lấy văn bản, sau đó gửi đoạn văn bản siêu nhẹ đó tới AI.
+
 ---
 
 ## � Cấu trúc thư mục
@@ -76,10 +83,11 @@ Dự án được chia làm 2 phân hệ chính:
 MiniAgentHub/
 ├── MiniAgentHub-Backend/         # Source code server, REST API
 │   ├── src/
-│   │   ├── controllers/          # Xử lý logic API (aiController, userController, ...)
+│   │   ├── controllers/          # Xử lý logic API (aiController, chatController, userController...)
 │   │   ├── middleware/           # Middleware bảo mật, xác thực quyền (authMiddleware)
 │   │   ├── models/               # Định nghĩa các Schema CSDL (ChatSession, ChatMessage, Group...)
-│   │   ├── services/             # Logic nghiệp vụ trung tâm (aiService, userService, groupService)
+│   │   ├── routes/               # Định tuyến API (aiRoutes, chatRoutes, userRoutes...)
+│   │   ├── services/             # Logic nghiệp vụ trung tâm (aiService, chatService, userService...)
 │   │   └── ...
 │   └── package.json
 │
