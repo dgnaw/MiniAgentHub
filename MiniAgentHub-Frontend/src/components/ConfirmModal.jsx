@@ -21,7 +21,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
           <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDanger ? 'bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'}`}>
             <AlertTriangle size={24} />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{title || t('confirmModal.title', 'Xác nhận')}</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{title || t('confirmModal.title', 'Confirm')}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{message}</p>
 
           <div className="flex w-full gap-3">
@@ -29,7 +29,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
               onClick={onClose}
               className="flex-1 bg-gray-100 dark:bg-[#26272b] hover:bg-gray-200 dark:hover:bg-[#33353b] text-gray-700 dark:text-gray-300 font-semibold py-2.5 rounded-xl transition-colors"
             >
-              {cancelText || t('confirmModal.cancel', 'Hủy')}
+              {cancelText || t('confirmModal.cancel', 'Cancel')}
             </button>
             <button
               onClick={() => {
@@ -38,7 +38,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
               }}
               className={`flex-1 font-semibold py-2.5 rounded-xl transition-colors text-white ${isDanger ? 'bg-red-500 hover:bg-red-600' : 'bg-[#3b82f6] hover:bg-[#2563eb]'}`}
             >
-              {confirmText || t('confirmModal.confirm', 'Xác nhận')}
+              {confirmText || t('confirmModal.confirm', 'Confirm')}
             </button>
           </div>
         </div>

@@ -4,12 +4,12 @@ require('dotenv').config();
 
 const { sequelize, connectDB } = require('./config/database');
 require('./models'); 
-const bcrypt = require('bcrypt'); 
 
 const authRoutes = require('./routes/authRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const userRoutes = require('./routes/userRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const chatRoutes = require('./routes/chatRoutes');
     
 const app = express();
 
@@ -20,6 +20,7 @@ app.use('/api', authRoutes);
 app.use('/api', groupRoutes);
 app.use('/api', userRoutes);
 app.use('/api', aiRoutes);
+app.use('/api', chatRoutes);
 
 const PORT = process.env.PORT || 5000;
 

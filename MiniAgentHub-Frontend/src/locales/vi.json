@@ -15,6 +15,12 @@
     "renameSessionError": "Đổi tên thất bại."
   },
 
+  "confirmModal": {
+    "title": "Xác nhận",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận"
+  },
+
   "login": {
     "secureAccess": "Truy cập Bảo mật",
     "title": "Đăng nhập",
