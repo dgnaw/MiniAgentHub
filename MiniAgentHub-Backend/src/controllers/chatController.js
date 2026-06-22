@@ -51,6 +51,28 @@ const chatController = {
             console.error('Lỗi tại chatController.renameSession:', error);
             return res.status(500).json({ message: 'Lỗi server khi đổi tên phiên trò chuyện.' });
         }
+    },
+
+    shareSession: async (req, res) => {
+        try {
+            const result = await chatService.shareSession(req.params.id, req.user.id);
+            if (result.error) return res.status(result.status).json({ message: result.error });
+            return res.status(200).json(result);
+        } catch (error) {
+            console.error('Lỗi tại chatController.shareSession:', error);
+            return res.status(500).json({ message: 'Lỗi server khi chia sẻ phiên trò chuyện.' });
+        }
+    },
+
+    getPublicSession: async (req, res) => {
+        try {
+            const result = await chatService.getPublicSession(req.params.id);
+            if (result.error) return res.status(result.status).json({ message: result.error });
+            return res.status(200).json(result.data);
+        } catch (error) {
+            console.error('Lỗi tại chatController.getPublicSession:', error);
+            return res.status(500).json({ message: 'Lỗi server khi lấy phiên trò chuyện công khai.' });
+        }
     }
 };
 

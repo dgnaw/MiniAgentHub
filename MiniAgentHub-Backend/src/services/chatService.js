@@ -102,6 +102,25 @@ const chatService = {
         if (!session) return { error: 'Không tìm thấy phiên trò chuyện.', status: 404 };
         await ChatSession.update({ title: title.trim() }, { where: { id: sessionId }, silent: true });
         return { message: 'Đã đổi tên phiên trò chuyện.', title: title.trim() };
+    },
+
+    shareSession: async (sessionId, userId) => {
+        const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
+        if (!session) return { error: 'Không tìm thấy phiên trò chuyện.', status: 404 };
+        await ChatSession.update({ is_shared: true }, { where: { id: sessionId } });
+        return { message: 'Đã chia sẻ phiên trò chuyện công khai.', is_shared: true };
+    },
+
+    getPublicSession: async (sessionId) => {
+        const session = await ChatSession.findByPk(sessionId);
+        if (!session || !session.is_shared) {
+            return { error: 'Phiên trò chuyện không tồn tại hoặc chưa được chia sẻ công khai.', status: 404 };
+        }
+        const messages = await ChatMessage.findAll({
+            where: { session_id: sessionId },
+            order: [['created_at', 'ASC']]
+        });
+        return { data: { title: session.title, messages }, status: 200 };
     }
 };
 

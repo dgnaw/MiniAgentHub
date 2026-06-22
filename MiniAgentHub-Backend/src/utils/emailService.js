@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -8,7 +10,10 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+const BANNER_PATH = path.join(__dirname, '../../../assets/unnamed.jpg');
+
 const sendWelcomeEmail = async (toEmail, fullName, rawPassword) => {
+
     const mailOptions = {
         from: `"Agent Hub Admin" <${process.env.EMAIL_USER}>`,
         to: toEmail,
@@ -25,7 +30,7 @@ const sendWelcomeEmail = async (toEmail, fullName, rawPassword) => {
 
                 <tr>
                     <td style="background-color: #000000;">
-                        <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=600&auto=format&fit=crop" alt="AI Network Node" width="600" height="200" style="display: block; object-fit: cover; opacity: 0.8;" />
+                        <img src="cid:banner@agenthub" alt="Agent Hub Banner" width="600" height="200" style="display: block; width: 100%; object-fit: cover; opacity: 0.8;" />
                     </td>
                 </tr>
 
@@ -89,9 +94,16 @@ const sendWelcomeEmail = async (toEmail, fullName, rawPassword) => {
                 </tr>
             </table>
         </div>
-        `
+        `,
+        attachments: [
+            {
+                filename: 'banner.jpg',
+                path: BANNER_PATH,
+                cid: 'banner@agenthub'
+            }
+        ]
     };
-    
+
     try {
         await transporter.sendMail(mailOptions);
         console.log(`Đã gửi email thành công tới: ${toEmail}`);

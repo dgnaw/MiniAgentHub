@@ -13,7 +13,7 @@ const handleValidationErrors = (req, res, next) => {
     next();
 };
 
-const userValidationRules = [
+const createUserValidationRules = [
     body('email')
         .trim()
         .notEmpty().withMessage('Email không được để trống.')
@@ -23,12 +23,24 @@ const userValidationRules = [
         .notEmpty().withMessage('Họ và tên không được để trống.')
 ];
 
+const updateUserValidationRules = [
+    body('email')
+        .optional()
+        .trim()
+        .notEmpty().withMessage('Email không được để trống.')
+        .isEmail().withMessage('Email không đúng định dạng.'),
+    body('full_name')
+        .optional()
+        .trim()
+        .notEmpty().withMessage('Họ và tên không được để trống.')
+];
+
 router.get('/users', authenticateToken, checkPermission('USER_R'), userController.getAllUsers);
 
 router.post('/users', 
     authenticateToken, 
     checkPermission('USER_C'), 
-    userValidationRules, 
+    createUserValidationRules, 
     handleValidationErrors, 
     userController.createUser
 );
@@ -40,7 +52,7 @@ router.get('/users/:id', authenticateToken, checkPermission('USER_R'), userContr
 router.put('/users/:id', 
     authenticateToken, 
     checkPermission('USER_U'), 
-    userValidationRules, 
+    updateUserValidationRules, 
     handleValidationErrors, 
     userController.updateUser
 );

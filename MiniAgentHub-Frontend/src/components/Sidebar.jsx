@@ -35,8 +35,15 @@ function Sidebar() {
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
+    const handleSessionsCleared = () => setSessions([]);
+    
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    window.addEventListener('sessions-cleared', handleSessionsCleared);
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      window.removeEventListener('sessions-cleared', handleSessionsCleared);
+    };
   }, []);
 
   useEffect(() => {
@@ -62,20 +69,40 @@ function Sidebar() {
         const responseData = response.data || response; 
         
         const userData = responseData.user || responseData;
+        const permissionsFromServer = responseData.permissions || [];
 
         useAuthStore.setState(state => {
           const currentRoleFromServer = userData.Role?.name || userData.role || (userData.role_id === 1 ? 'Admin' : 'User');
-          const isRoleChanged = state.user?.role !== currentRoleFromServer;
+          const updatedUser = {
+            ...state.user,
+            email: userData.email,
+            full_name: userData.full_name,
+            phone: userData.phone,
+            address: userData.address,
+            role_id: userData.role_id,
+            role: currentRoleFromServer
+          };
+
+          const isUserChanged = JSON.stringify(state.user) !== JSON.stringify(updatedUser);
           
-          if (isRoleChanged) {
-            if (state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
+          const statePermsSorted = [...(state.permissions || [])].sort();
+          const serverPermsSorted = [...permissionsFromServer].sort();
+          const isPermissionsChanged = JSON.stringify(statePermsSorted) !== JSON.stringify(serverPermsSorted);
+
+          if (isUserChanged || isPermissionsChanged) {
+            const isRoleChanged = state.user?.role !== currentRoleFromServer;
+            if (isRoleChanged && state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
                setTimeout(() => {
                   toast.error(t('sidebar.roleChanged', 'Your permissions have changed. The system will log you out to update!'));
                   logout();
                   navigate('/login');
                }, 300);
+               return state;
             }
-            return { user: { ...state.user, role: currentRoleFromServer } };
+            return { 
+              user: updatedUser,
+              permissions: permissionsFromServer
+            };
           }
           return state;
         });
@@ -96,6 +123,14 @@ function Sidebar() {
       checkUserGroups();
     }
   }, [user, location.pathname]);
+
+  useEffect(() => {
+    if (shareSessionId) {
+      axiosClient.put(`/chat-sessions/${shareSessionId}/share`).catch(err => {
+        console.error("Lỗi khi kích hoạt chế độ công khai cho cuộc trò chuyện:", err);
+      });
+    }
+  }, [shareSessionId]);
 
   const handleLogout = () => {
     setConfirmConfig({ isOpen: true, type: 'logout', data: null });
@@ -374,12 +409,12 @@ function Sidebar() {
               <input
                 type="text"
                 readOnly
-                value={`${window.location.origin}/chat/${shareSessionId}`}
+                value={`${window.location.origin}/shared/chat/${shareSessionId}`}
                 className="flex-1 bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none"
               />
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/chat/${shareSessionId}`);
+                  navigator.clipboard.writeText(`${window.location.origin}/shared/chat/${shareSessionId}`);
                   toast.success(t('sidebar.copied', 'Copied to clipboard!'));
                 }}
                 className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shrink-0"

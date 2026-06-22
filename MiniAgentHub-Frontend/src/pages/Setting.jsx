@@ -40,19 +40,28 @@ const Settings = () => {
   };
 
   const executeClearHistory = async () => {
-      try {
-        await axiosClient.delete('/chat-sessions');
-        toast.success(t('settings.clearSuccess', 'Chat history cleared successfully!'));
-        setTimeout(() => window.location.reload(), 1000); 
-      } catch (error) {
-        console.error('Lỗi khi xóa lịch sử:', error);
-        toast.error(t('settings.clearError', 'Error clearing chat history.'));
-      }
+    try {
+      await axiosClient.delete('/chat-sessions');
+      window.dispatchEvent(new Event('sessions-cleared'));
+      toast.success(t('settings.clearSuccess', 'Chat history cleared successfully!'));
+    } catch (error) {
+      console.error('Lỗi khi xóa lịch sử:', error);
+      toast.error(t('settings.clearError', 'Error clearing chat history.'));
+    }
   };
 
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phoneInput, setPhoneInput] = useState(user?.phone || '');
+  const [phoneError, setPhoneError] = useState('');
   const [isSavingPhone, setIsSavingPhone] = useState(false);
+
+  const validatePhone = (val) => {
+    const trimmedPhone = val.trim();
+    if (trimmedPhone !== '' && !/^[0-9]{10}$/.test(trimmedPhone)) {
+      return t('settings.invalidPhone', 'Invalid phone number (exactly 10 digits).');
+    }
+    return '';
+  };
 
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [addressInput, setAddressInput] = useState(user?.address || '');
@@ -62,9 +71,9 @@ const Settings = () => {
     if (!user?.id) return;
 
     const trimmedPhone = phoneInput.trim();
-    // Validate: Cho phép bỏ trống, nhưng nếu đã nhập thì phải là số, dài 10-15 ký tự, có thể chứa dấu + ở đầu
-    if (trimmedPhone !== '' && !/^\+?[0-9]{10}$/.test(trimmedPhone)) {
-      toast.error(t('settings.invalidPhone', 'Invalid phone number (10 digits only).'));
+    const err = validatePhone(trimmedPhone);
+    if (err) {
+      setPhoneError(err);
       return;
     }
 
@@ -121,13 +130,20 @@ const Settings = () => {
                 <div className="flex-1 mr-4">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.phoneNumber')}</h4>
                   {isEditingPhone ? (
-                    <input 
-                      type="text" 
-                      value={phoneInput} 
-                      onChange={(e) => setPhoneInput(e.target.value)}
-                      className="mt-1.5 w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-md px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                      placeholder={t('settings.phonePlaceholder', 'Enter phone number...')}
-                    />
+                    <div>
+                      <input 
+                        type="text" 
+                        value={phoneInput} 
+                        onChange={(e) => {
+                          setPhoneInput(e.target.value);
+                          setPhoneError(validatePhone(e.target.value));
+                        }}
+                        onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
+                        className={`mt-1.5 w-full bg-gray-50 dark:bg-[#131417] border ${phoneError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-[#333] focus:border-blue-500'} rounded-md px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none transition-colors`}
+                        placeholder={t('settings.phonePlaceholder', 'Enter phone number...')}
+                      />
+                      {phoneError && <p className="text-red-500 dark:text-red-400 text-[10px] mt-1">{phoneError}</p>}
+                    </div>
                   ) : (
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated', 'Not updated')}</p>
                   )}
@@ -139,7 +155,7 @@ const Settings = () => {
                     <button onClick={handleUpdatePhone} disabled={isSavingPhone} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
                       {isSavingPhone ? t('settings.saving', 'Saving...') : t('settings.save')}
                     </button>
-                    <button onClick={() => { setIsEditingPhone(false); setPhoneInput(user?.phone || ''); }} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                    <button onClick={() => { setIsEditingPhone(false); setPhoneInput(user?.phone || ''); setPhoneError(''); }} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                       {t('settings.cancel')}
                     </button>
                   </>

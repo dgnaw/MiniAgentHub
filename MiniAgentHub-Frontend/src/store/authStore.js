@@ -9,15 +9,19 @@ const useAuthStore = create(
       user: null,            
       permissions: [],       
       isAuthenticated: false,
+      mustChangePassword: false,
 
       
-      setLoginData: (userData, userPermissions) => {
+      setLoginData: (userData, userPermissions, mustChangePassword = false) => {
         set({
           user: userData,
           permissions: userPermissions,
           isAuthenticated: true,
+          mustChangePassword: mustChangePassword,
         });
       },
+
+      setMustChangePassword: (val) => set({ mustChangePassword: val }),
 
       updateUser: (updatedData) => {
         set((state) => ({
@@ -32,6 +36,7 @@ const useAuthStore = create(
           user: null,
           permissions: [],
           isAuthenticated: false,
+          mustChangePassword: false,
         });
       }
     }),

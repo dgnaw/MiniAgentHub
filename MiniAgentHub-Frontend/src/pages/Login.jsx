@@ -12,7 +12,7 @@ function Login() {
   const navigate = useNavigate();
   const setLoginData = useAuthStore((state) => state.setLoginData);
   const { t } = useTranslation();
-  useThemeStore(); 
+  useThemeStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,12 +44,12 @@ function Login() {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setError('');
-    
+
     const eErr = validateEmail(email);
     const pErr = validatePassword(password);
-    
+
     if (eErr || pErr) {
       setEmailError(eErr);
       setPasswordError(pErr);
@@ -65,10 +65,10 @@ function Login() {
 
       localStorage.setItem('agentHub_token', data.token);
 
-      setLoginData(data.user, data.permissions);
+      setLoginData(data.user, data.permissions, data.must_change_password);
 
       navigate('/');
-      
+
     } catch (err) {
       setError(err.response?.data?.message || t('login.loginFailed', 'Đăng nhập thất bại. Vui lòng kiểm tra lại!'));
     } finally {

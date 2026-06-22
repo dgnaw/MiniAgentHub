@@ -2,11 +2,19 @@
   "change-password-modal":{
     "title": "Change Password",
     "description": "Enter your new password below to update your credentials.",
+    "oldPassword": "Old Password",
+    "placeholderOldPassword": "Enter old password",
     "newPassword": "New Password",
     "placeholderNewPassword": "Enter new password",
     "newPasswordConfirm": "Confirm Password",
     "placeholderNewPasswordConfirm": "Confirm your password",
-    "updatePassword": "Update Password"
+    "updatePassword": "Update Password",
+    "errorOld": "Please enter your old password.",
+    "errorLength": "New password must be at least 6 characters.",
+    "errorMatch": "Passwords do not match.",
+    "success": "Password changed successfully!",
+    "errorChange": "Error changing password.",
+    "saving": "Saving..."
   },
 
   "dashboard": {

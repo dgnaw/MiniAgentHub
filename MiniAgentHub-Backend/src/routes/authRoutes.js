@@ -11,7 +11,6 @@ const handleValidationErrors = (req, res, next) => {
     next();
 };
 
-// Khai báo đường dẫn POST /login
 router.post('/login', [
     body('email')
         .trim()

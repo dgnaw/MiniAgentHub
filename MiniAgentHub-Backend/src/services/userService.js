@@ -1,4 +1,4 @@
-const { User, Group, Role, UserGroup } = require('../models');
+const { User, Group, Role, UserGroup, Permission, RolePermission, GroupPermission } = require('../models');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
@@ -10,14 +10,14 @@ const userService = {
         if (existingUser) {
             return { error: 'User with this email already exists', status: 409 };
         }
-        
+
         let targetRoleId = role_id;
-        
+
         if (role_name) {
             const roleRecord = await Role.findOne({ where: { name: role_name } });
             if (roleRecord) targetRoleId = roleRecord.id;
         }
-        
+
         const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetRoleId);
 
         if (targetRoleId && isValidUUID) {
@@ -32,7 +32,7 @@ const userService = {
 
         const rawPassword = crypto.randomBytes(4).toString('hex');
         const password_hash = await bcrypt.hash(rawPassword, 10);
-        
+
         const newUser = await User.create({
             email,
             full_name,
@@ -56,10 +56,10 @@ const userService = {
             await sendWelcomeEmail(email, full_name, rawPassword);
         } catch (mailError) {
             console.error('Lỗi gửi email cấp phát:', mailError);
-            
+
             await UserGroup.destroy({ where: { user_id: newUser.id } });
             await User.destroy({ where: { id: newUser.id } });
-            
+
             return { error: 'Không thể gửi email chứa mật khẩu. Quá trình tạo người dùng đã bị hủy (rollback). Vui lòng kiểm tra lại cấu hình SMTP (.env).', status: 500 };
         }
 
@@ -68,7 +68,7 @@ const userService = {
                 id: newUser.id,
                 email: newUser.email,
                 full_name: newUser.full_name,
-                role_id: newUser.role_id, 
+                role_id: newUser.role_id,
                 is_active: newUser.is_active,
             },
             emailSent,
@@ -81,10 +81,10 @@ const userService = {
             attributes: { exclude: ['password_hash'] },
             include: [
                 { model: Role, attributes: ['id', 'name'] },
-                { 
+                {
                     model: Group,
                     attributes: ['id', 'name'],
-                    through: { attributes: [] } 
+                    through: { attributes: [] }
                 }
             ],
             order: [['created_at', 'DESC']]
@@ -96,7 +96,7 @@ const userService = {
             attributes: { exclude: ['password_hash'] },
             include: [
                 { model: Role, attributes: ['id', 'name'] },
-                { 
+                {
                     model: Group,
                     attributes: ['id', 'name'],
                     through: { attributes: [] }
@@ -106,7 +106,41 @@ const userService = {
         if (!user) {
             return { error: 'User not found', status: 404 };
         }
-        return { data: user, status: 200 };
+
+        const roleId = user.role_id;
+        let rolePermissionIds = [];
+        if (roleId) {
+            const rolePerms = await RolePermission.findAll({
+                where: { role_id: roleId }
+            });
+            rolePermissionIds = rolePerms.map(rp => rp.permission_id);
+        }
+
+        const userGroups = await UserGroup.findAll({
+            where: { user_id: user.id }
+        });
+        const groupIds = userGroups.map(ug => ug.group_id);
+
+        let groupPermissionIds = [];
+        if (groupIds.length > 0) {
+            const groupPerms = await GroupPermission.findAll({ where: { group_id: groupIds } });
+            groupPermissionIds = groupPerms.map(gp => gp.permission_id);
+        }
+
+        const allPermissionIds = [...new Set([...rolePermissionIds, ...groupPermissionIds])];
+        let userPermissions = [];
+        if (allPermissionIds.length > 0) {
+            const permissionsList = await Permission.findAll({ where: { id: allPermissionIds } });
+            userPermissions = permissionsList.map(p => p.permission_key);
+        }
+
+        return { 
+            data: { 
+                user, 
+                permissions: userPermissions 
+            }, 
+            status: 200 
+        };
     },
 
     updateUser: async (id, updateData) => {
@@ -121,17 +155,17 @@ const userService = {
         if (phone !== undefined) user.phone = phone?.trim() || null;
         if (address !== undefined) user.address = address?.trim() || null;
         if (is_active !== undefined) user.is_active = is_active;
-        
+
         let targetRoleId = role_id;
         const targetRoleName = role_name || role;
-        
+
         if (targetRoleName) {
             const roleRecord = await Role.findOne({ where: { name: targetRoleName } });
             if (roleRecord) targetRoleId = roleRecord.id;
         }
-        
+
         const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetRoleId);
-        
+
         if (targetRoleId !== undefined && isValidUUID) {
             const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
@@ -150,7 +184,7 @@ const userService = {
                 }
             }
             await UserGroup.destroy({ where: { user_id: id } });
-            
+
             if (group_ids.length > 0) {
                 const userGroupRecords = group_ids.map(gId => ({ user_id: id, group_id: gId }));
                 await UserGroup.bulkCreate(userGroupRecords);
@@ -170,13 +204,21 @@ const userService = {
         return { data: { message: 'User deleted successfully' }, status: 200 };
     },
 
-    changePassword: async (userId, newPassword) => {
+    changePassword: async (userId, oldPassword, newPassword) => {
         const user = await User.findByPk(userId);
         if (!user) {
             const error = new Error('Người dùng không tồn tại!');
             error.status = 404;
             throw error;
         }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+        if (!isMatch) {
+            const error = new Error('Mật khẩu cũ không chính xác!');
+            error.status = 400;
+            throw error;
+        }
+
         const password_hash = await bcrypt.hash(newPassword, 10);
         user.password_hash = password_hash;
         user.is_first_login = false;

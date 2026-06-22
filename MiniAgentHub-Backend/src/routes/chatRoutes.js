@@ -8,5 +8,7 @@ router.get('/chat-sessions/:id/messages', authenticateToken, chatController.getS
 router.delete('/chat-sessions', authenticateToken, chatController.deleteAllSessions);
 router.delete('/chat-sessions/:id', authenticateToken, chatController.deleteSession);
 router.put('/chat-sessions/:id', authenticateToken, chatController.renameSession);
+router.put('/chat-sessions/:id/share', authenticateToken, chatController.shareSession);
+router.get('/public/chat-sessions/:id', chatController.getPublicSession);
 
 module.exports = router;
