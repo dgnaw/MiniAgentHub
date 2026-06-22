@@ -18,11 +18,44 @@ function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const validateEmail = (val) => {
+    if (!val) {
+      return t('login.emailRequired', 'Email không được để trống.');
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(val)) {
+      return t('login.emailInvalid', 'Email không đúng định dạng (ví dụ: ten@congty.com).');
+    }
+    return '';
+  };
+
+  const validatePassword = (val) => {
+    if (!val) {
+      return t('login.passwordRequired', 'Mật khẩu không được để trống.');
+    }
+    if (val.length < 6) {
+      return t('login.passwordLength', 'Mật khẩu phải chứa ít nhất 6 ký tự.');
+    }
+    return '';
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault(); 
     setError('');
+    
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    
+    if (eErr || pErr) {
+      setEmailError(eErr);
+      setPasswordError(pErr);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -63,7 +96,7 @@ function Login() {
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-5" noValidate>
           {/* Email Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -72,11 +105,18 @@ function Login() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setEmail(val);
+                setEmailError(validateEmail(val));
+              }}
+              onBlur={(e) => {
+                setEmailError(validateEmail(e.target.value));
+              }}
               placeholder={t('login.emailPlaceholder', 'name@company.com')}
-              required
-              className={`w-full bg-gray-50 dark:bg-[#131417] border ${error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors`}
+              className={`w-full bg-gray-50 dark:bg-[#131417] border ${emailError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-colors`}
             />
+            {emailError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{emailError}</p>}
           </div>
 
           <div>
@@ -87,10 +127,16 @@ function Login() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPassword(val);
+                  setPasswordError(validatePassword(val));
+                }}
+                onBlur={(e) => {
+                  setPasswordError(validatePassword(e.target.value));
+                }}
                 placeholder={t('login.passwordPlaceholder', 'Enter your password')}
-                required
-                className={`w-full bg-gray-50 dark:bg-[#131417] border ${error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors`}
+                className={`w-full bg-gray-50 dark:bg-[#131417] border ${passwordError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-colors`}
               />
               <button
                 type="button"
@@ -100,6 +146,7 @@ function Login() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {passwordError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{passwordError}</p>}
           </div>
 
           {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}

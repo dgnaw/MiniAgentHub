@@ -18,7 +18,7 @@ const aiService = {
         try {
             if (file.mimetype === 'application/pdf') {
                 const dataBuffer = fs.readFileSync(filePath);
-                
+
                 try {
                     const pdfData = await pdfParse(dataBuffer);
                     fileContent = pdfData.text;
@@ -38,8 +38,8 @@ const aiService = {
                     fileContent = "(Hệ thống không thể trích xuất văn bản từ hình ảnh này do lỗi định dạng.)";
                 }
             } else if (
-                file.mimetype.includes('text') || 
-                file.mimetype.includes('csv') || 
+                file.mimetype.includes('text') ||
+                file.mimetype.includes('csv') ||
                 file.mimetype === 'application/json' ||
                 /\.(csv|txt|json|md|xml|html|js|jsx|ts|tsx|py|java|c|cpp|cs|h|css|scss|sql|sh|bat)$/i.test(file.originalname)
             ) {
@@ -61,11 +61,11 @@ const aiService = {
         try {
             const stream = await client.chat.completions.create({
                 messages: messagesHistory,
-                model: 'llama-3.1-8b-instant', 
+                model: 'llama-3.1-8b-instant',
                 temperature: 1,
                 max_tokens: 1024,
                 top_p: 1,
-                stream: true, 
+                stream: true,
             });
             return stream;
         } catch (error) {
@@ -81,17 +81,17 @@ const aiService = {
                     { role: 'system', content: 'Bạn là AI chuyên tóm tắt tin nhắn thành tiêu đề ngắn (tối đa 6 từ). CHỈ trả về phần tiêu đề, không có tiền tố như "Tiêu đề:", không giải thích, không dùng dấu ngoặc kép hay markdown.' },
                     { role: 'user', content: message }
                 ],
-                model: 'llama-3.1-8b-instant', 
+                model: 'llama-3.1-8b-instant',
                 max_tokens: 40,
                 temperature: 0.3
             });
-            
+
             let title = response.choices[0]?.message?.content?.replace(/["'*]/g, '').trim() || "";
             title = title.replace(/^(Tiêu đề:\s*|Title:\s*)/i, '').trim();
             return title;
         } catch (error) {
             console.error("Lỗi khi tạo tiêu đề bằng Groq SDK:", error.message);
-            return null; 
+            return null;
         }
     },
 
@@ -101,14 +101,14 @@ const aiService = {
             const payload = {
                 question: message,
                 overrideConfig: {
-                    sessionId: sessionId 
+                    sessionId: sessionId
                 }
             };
-            
+
             if (uploads && uploads.length > 0) {
                 payload.uploads = uploads;
             }
-            
+
             const flowiseRes = await axios.post(flowiseUrl, payload);
             let aiResponse = flowiseRes.data.text || flowiseRes.data;
             let flowiseFailed = false;
@@ -128,7 +128,7 @@ const aiService = {
         // 1. Lấy Global Context (Ký ức dài hạn) từ các phiên khác
         const userSessions = await ChatSession.findAll({ where: { user_id: userId }, attributes: ['id'] });
         const otherSessionIds = userSessions.map(s => s.id).filter(id => id !== currentSessionId);
-        
+
         let globalContextStr = "";
         if (otherSessionIds.length > 0) {
             const globalMessages = await ChatMessage.findAll({
@@ -142,7 +142,7 @@ const aiService = {
                 return `${m.role === 'ai' ? 'AI' : 'User'}: ${safeContent}`;
             }).join('\n');
         }
-        
+
         const systemContent = globalContextStr
             ? `Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.\n\nDưới đây là thông tin từ các cuộc trò chuyện ở các phiên khác của người dùng để bạn tham khảo ngữ cảnh (Ký ức dài hạn):\n"""\n${globalContextStr}\n"""`
             : 'Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.';
@@ -186,22 +186,17 @@ const aiService = {
                     }
 
                     if (model === "Data Analyst") {
-                        if (file.mimetype.startsWith('image/')) {
-                            const fileContent = await aiService.extractFileContent(file);
-                            allExtractedText += `\n--- Tài liệu: ${file.originalname} ---\n${fileContent}\n`;
-                        } else {
-                            if (!base64Data) {
-                                const fileData = fs.readFileSync(file.path);
-                                base64Data = fileData.toString('base64');
-                            }
-                            flowiseUploads.push({
-                                data: `data:${file.mimetype};base64,${base64Data}`,
-                                type: 'file',
-                                name: file.originalname,
-                                mime: file.mimetype
-                            });
-                            fs.unlinkSync(file.path); 
+                        if (!base64Data) {
+                            const fileData = fs.readFileSync(file.path);
+                            base64Data = fileData.toString('base64');
                         }
+                        flowiseUploads.push({
+                            data: `data:${file.mimetype};base64,${base64Data}`,
+                            type: 'file',
+                            name: file.originalname,
+                            mime: file.mimetype
+                        });
+                        fs.unlinkSync(file.path);
                     } else {
                         const fileContent = await aiService.extractFileContent(file);
                         allExtractedText += `\n--- Tài liệu: ${file.originalname} ---\n${fileContent}\n`;
@@ -224,7 +219,7 @@ const aiService = {
                     if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
                 }
             }
-            
+
             const error = new Error();
             error.status = 500;
             error.message = 'Lỗi đọc file. Có thể thư viện đọc file bị lỗi hoặc file bị hỏng.';
