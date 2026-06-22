@@ -5,12 +5,7 @@ const userController = {
         try {
             let { email, full_name, phone, address, role_id, role_name, role, group_ids } = req.body;
             
-            email = email?.trim();
-            full_name = full_name?.trim();
 
-            if (!email || !full_name) {
-                return res.status(400).json({ message: 'Email và Tên không được để trống' });
-            }
 
             const targetRoleName = role_name || role;
 

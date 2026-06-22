@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, UserPlus, UserCog } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
@@ -18,10 +18,42 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [fullNameError, setFullNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   const [allGroups, setAllGroups] = useState([]);
-  const [searchGroup, setSearchGroup] = useState('');
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const validateFullName = (val) => {
+    if (!val || !val.trim()) {
+      return t('userFormModal.fullNameRequired', 'Họ và tên không được để trống.');
+    }
+    return '';
+  };
+
+  const validateEmail = (val) => {
+    if (!val || !val.trim()) {
+      return t('userFormModal.emailRequired', 'Email không được để trống.');
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(val)) {
+      return t('userFormModal.emailInvalid', 'Email không đúng định dạng (ví dụ: ten@congty.com).');
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowGroupDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,12 +72,16 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
   useEffect(() => {
     if (isOpen && initialData && mode === 'update') {
       setFormError('');
+      setFullNameError('');
+      setEmailError('');
       setFullName(initialData.full_name || initialData.name || '');
       setEmail(initialData.email || '');
       setRole(initialData.role_id === 1 || initialData.Role?.name === 'Admin' || initialData.role === 'Admin' ? 'Admin' : 'User');
       setSelectedGroups(initialData.Groups ? initialData.Groups.map(g => ({ id: g.id, name: g.name })) : []);
     } else if (isOpen && mode === 'create') {
       setFormError('');
+      setFullNameError('');
+      setEmailError('');
       setFullName('');
       setEmail('');
       setRole('User');
@@ -59,7 +95,6 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
     if (!isReadOnly && !selectedGroups.find(g => g.id === group.id)) {
       setSelectedGroups([...selectedGroups, group]);
     }
-    setSearchGroup('');
     setShowGroupDropdown(false);
   };
 
@@ -68,14 +103,17 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
   };
 
   const filteredGroups = allGroups.filter(g => 
-    g.name?.toLowerCase().includes(searchGroup.toLowerCase()) && 
     !selectedGroups.find(sg => sg.id === g.id)
   );
 
   const handleSubmit = async () => {
     setFormError('');
-    if (!fullName.trim() || !email.trim()) {
-      setFormError(t('userFormModal.alertNoNameEmail', 'Vui lòng nhập tên và email!'));
+    const fnErr = validateFullName(fullName);
+    const emErr = validateEmail(email);
+
+    if (fnErr || emErr) {
+      setFullNameError(fnErr);
+      setEmailError(emErr);
       return;
     }
 
@@ -129,11 +167,20 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
             <input 
               type="text" 
               value={fullName}
-              onChange={(e) => { setFullName(e.target.value); setFormError(''); }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFullName(val);
+                setFullNameError(validateFullName(val));
+                setFormError('');
+              }}
+              onBlur={(e) => {
+                setFullNameError(validateFullName(e.target.value));
+              }}
               placeholder={mode === 'create' ? t('userFormModal.fullNamePlaceholder', 'Enter full name') : ""}
               disabled={isReadOnly}
-              className={`w-full bg-white dark:bg-[#131417] border ${formError && !fullName.trim() ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
+              className={`w-full bg-white dark:bg-[#131417] border ${fullNameError ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
             />
+            {fullNameError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{fullNameError}</p>}
           </div>
 
           <div>
@@ -143,52 +190,63 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
             <input 
               type="email" 
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setFormError(''); }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setEmail(val);
+                setEmailError(validateEmail(val));
+                setFormError('');
+              }}
+              onBlur={(e) => {
+                setEmailError(validateEmail(e.target.value));
+              }}
               placeholder={mode === 'create' ? t('userFormModal.emailPlaceholder', 'name@company.com') : ""}
               disabled={isReadOnly}
-              className={`w-full bg-white dark:bg-[#131417] border ${formError && !email.trim() ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
+              className={`w-full bg-white dark:bg-[#131417] border ${emailError ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
             />
+            {emailError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{emailError}</p>}
           </div>
 
-          <div>
+          <div ref={dropdownRef}>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
               {t('userFormModal.assignGroups', 'Assign to Groups (Optional)')}
             </label>
             
             <div className="relative">
-              <div className="w-full bg-white dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-xl px-3 py-2 flex flex-wrap gap-2 items-center min-h-[46px]">
-                {selectedGroups.map((g) => (
-                  <span key={g.id} className="flex items-center gap-1 bg-blue-50 dark:bg-[#1e2b4d] text-blue-600 dark:text-blue-400 text-xs px-2.5 py-1.5 rounded-md border border-blue-200 dark:border-blue-500/20">
-                    {g.name}
-                    {!isReadOnly && <button onClick={() => removeGroup(g.id)} className="hover:text-gray-900 dark:hover:text-white ml-1"><X size={12} /></button>}
-                  </span>
-                ))}
-                {!isReadOnly && (
-                  <input 
-                  type="text" 
-                  value={searchGroup}
-                  onChange={(e) => {
-                    setSearchGroup(e.target.value);
-                    setShowGroupDropdown(true);
-                  }}
-                  onFocus={() => setShowGroupDropdown(true)}
-                  placeholder={t('userFormModal.addGroupPlaceholder', 'Add group...')} 
-                  className="bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-400 placeholder-gray-400 dark:placeholder-gray-500 flex-1 min-w-[100px]"
-                />
-                )}
-              </div>
+              {selectedGroups.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedGroups.map((g) => (
+                    <span key={g.id} className="flex items-center gap-1 bg-blue-50 dark:bg-[#1e2b4d] text-blue-600 dark:text-blue-400 text-xs px-2.5 py-1.5 rounded-md border border-blue-200 dark:border-blue-500/20">
+                      {g.name}
+                      {!isReadOnly && <button onClick={() => removeGroup(g.id)} className="hover:text-gray-900 dark:hover:text-white ml-1"><X size={12} /></button>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {!isReadOnly && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGroupDropdown(!showGroupDropdown)}
+                    className="w-full bg-white dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-xl px-4 py-3 text-sm text-left text-gray-700 dark:text-gray-300 flex items-center justify-between outline-none transition-colors focus:border-[#3b82f6]"
+                  >
+                    <span>{t('userFormModal.selectGroupsPlaceholder', 'Chọn nhóm...')}</span>
+                    <span className="text-gray-400 text-xs">▼</span>
+                  </button>
 
-              {showGroupDropdown && searchGroup.trim() !== '' && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-2xl max-h-40 overflow-y-auto z-10 custom-scrollbar">
-                  {filteredGroups.length > 0 ? (
-                    filteredGroups.map(group => (
-                      <div key={group.id} onClick={() => handleAddGroup(group)} className="px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#26272b] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors flex justify-between items-center">
-                        <span>{group.name || group.group_name}</span>
-                        <span className="text-gray-500 text-xs">{group.member_count || group.memberCount || group.members?.length || 0} {t('userFormModal.members', 'thành viên')}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('userFormModal.noGroupsFound', 'Không tìm thấy nhóm phù hợp')}</div>
+                  {showGroupDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-2xl max-h-40 overflow-y-auto z-10 custom-scrollbar">
+                      {filteredGroups.length > 0 ? (
+                        filteredGroups.map(group => (
+                          <div key={group.id} onClick={() => handleAddGroup(group)} className="px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-[#26272b] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors flex justify-between items-center border-b border-gray-100 dark:border-[#26272b]/50 last:border-b-0">
+                            <span>{group.name || group.group_name}</span>
+                            <span className="text-gray-500 text-xs">{group.member_count || group.memberCount || group.members?.length || 0} {t('userFormModal.members', 'thành viên')}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('userFormModal.noGroupsFound', 'Không tìm thấy nhóm phù hợp')}</div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
