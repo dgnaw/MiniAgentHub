@@ -25,7 +25,22 @@
     "card2Title": "Review and optimize my React code",
     "card2Desc": "Debug performance or refactor components",
     "promptPlaceholder": "Enter a prompt here...",
-    "footerNote": "Neural Hub may display inaccurate info, so double-check its responses."
+    "footerNote": "Neural Hub may display inaccurate info, so double-check its responses.",
+    "configApiKeyGroq": "Config API Key (Groq)",
+    "configApiUrlFlowise": "Config API URL (Flowise)",
+    "configApiKeyGroqDesc": "Enter your personal Groq API Key to use models like Llama, Mixtral... Your key is stored securely in your browser's localStorage and is not saved to the server.",
+    "configApiUrlFlowiseDesc": "Enter your Flowise Prediction API Endpoint URL to perform deep data analysis. The URL is stored securely in your browser.",
+    "groqApiKeyLabel": "Groq API Key",
+    "flowiseApiUrlLabel": "Flowise API Endpoint URL",
+    "expireLabel": "Expiration Time",
+    "expireNever": "Never expire",
+    "expire1h": "After 1 hour",
+    "expire1d": "After 1 day",
+    "expire7d": "After 7 days",
+    "expire30d": "After 30 days",
+    "clearConfig": "Clear Config",
+    "cancel": "Cancel",
+    "saveConfig": "Save Config"
   },
 
   "sidebar": {
@@ -35,7 +50,16 @@
     "setting": "Settings",
     "history": "History",
     "logoutConfirm": "Are you sure you want to log out of the system?",
-    "logoutTitle": "Log out"
+    "logoutTitle": "Log out",
+    "export": "Export",
+    "exportSuccess": "Chat exported!",
+    "exportError": "Failed to export chat.",
+    "exportTitle": "Export Session",
+    "exportFileName": "File Name",
+    "exportFormat": "Format",
+    "exportCancel": "Cancel",
+    "exportConfirm": "Export",
+    "exporting": "Exporting..."
   },
 
   "roles": {

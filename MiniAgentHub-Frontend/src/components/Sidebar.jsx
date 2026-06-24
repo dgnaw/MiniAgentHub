@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../store/authStore';
 import useSidebarStore from '../store/sidebarStore';
-import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight } from 'lucide-react';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight, Download } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import ConfirmModal from './ConfirmModal';
+import html2canvas from 'html2canvas';
 
 function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -28,6 +29,14 @@ function Sidebar() {
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  
+  const [exportConfig, setExportConfig] = useState({
+    isOpen: false,
+    session: null,
+    format: 'md',
+    fileName: '',
+    isExporting: false
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, type: '', data: null });
   const [shareSessionId, setShareSessionId] = useState(null);
@@ -154,6 +163,7 @@ function Sidebar() {
     if (confirmConfig.type === 'logout') {
       logout(); 
       navigate('/login'); 
+      setConfirmConfig({ isOpen: false, type: '', data: null });
     } else if (confirmConfig.type === 'deleteSession') {
       const sessionId = confirmConfig.data;
       try {
@@ -166,6 +176,8 @@ function Sidebar() {
       } catch (error) {
         console.error('Lỗi xóa session:', error);
         toast.error(t('sidebar.deleteSessionError', 'Failed to delete.'));
+      } finally {
+        setConfirmConfig({ isOpen: false, type: '', data: null });
       }
     }
   };
@@ -194,6 +206,149 @@ function Sidebar() {
   const handleCancelEdit = (e) => {
     e.stopPropagation();
     setEditingSessionId(null);
+  };
+
+  const handleExportSession = (e, session) => {
+    e.stopPropagation();
+    setActiveMenuId(null);
+    setExportConfig({
+      isOpen: true,
+      session: session,
+      format: 'md',
+      fileName: (session.title || 'chat').replace(/[^a-z0-9\u00C0-\u024F\u4e00-\u9fa5]/gi, '_').substring(0, 50),
+      isExporting: false
+    });
+  };
+
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const processExport = async () => {
+    const { session, format, fileName } = exportConfig;
+    if (!session) return;
+    
+    setExportConfig(prev => ({ ...prev, isExporting: true }));
+
+    try {
+      const res = await axiosClient.get(`/chat-sessions/${session.id}/messages`);
+      const messages = Array.isArray(res) ? res : (res.data || []);
+      const finalFileName = fileName.trim() || 'export';
+
+      if (format === 'json') {
+        const jsonStr = JSON.stringify(messages, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        downloadBlob(blob, `${finalFileName}.json`);
+      } 
+      else if (format === 'csv') {
+        let csvContent = "Role,Content,Time\n";
+        messages.forEach(msg => {
+          const role = msg.role === 'ai' ? 'AI' : 'User';
+          const content = (msg.content || '').replace(/"/g, '""');
+          const time = msg.createdAt ? new Date(msg.createdAt).toLocaleString() : new Date().toLocaleString();
+          csvContent += `"${role}","${content}","${time}"\n`;
+        });
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8' });
+        downloadBlob(blob, `${finalFileName}.csv`);
+      }
+      else if (format === 'txt') {
+        const lines = [`Chat Session: ${session.title || 'Untitled'}`, `Exported: ${new Date().toLocaleString()}`, ''];
+        messages.forEach(msg => {
+          lines.push(`${msg.role === 'ai' ? 'AI' : 'User'}:`);
+          lines.push(msg.content || '');
+          lines.push('----------------------------------------');
+        });
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        downloadBlob(blob, `${finalFileName}.txt`);
+      }
+      else if (format === 'md') {
+        const lines = [`# ${session.title || 'Chat Session'}`, `> Exported from Agent Hub — ${new Date().toLocaleString()}`, ''];
+        messages.forEach(msg => {
+          lines.push(`### ${msg.role === 'ai' ? '🤖 AI' : '👤 User'}`);
+          lines.push(msg.content || '');
+          lines.push('');
+        });
+        const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+        downloadBlob(blob, `${finalFileName}.md`);
+      }
+      else if (format === 'png') {
+        const theme = useThemeStore.getState().theme;
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '800px';
+        container.style.backgroundColor = theme === 'dark' ? '#131417' : '#f9fafb';
+        container.style.color = theme === 'dark' ? '#ffffff' : '#111827';
+        container.style.padding = '40px';
+        container.style.fontFamily = 'sans-serif';
+        
+        const title = document.createElement('h2');
+        title.innerText = session.title || 'Chat Session';
+        title.style.textAlign = 'center';
+        title.style.marginBottom = '30px';
+        title.style.color = theme === 'dark' ? '#ffffff' : '#111827';
+        container.appendChild(title);
+
+        messages.forEach(msg => {
+          const msgDiv = document.createElement('div');
+          msgDiv.style.marginBottom = '20px';
+          msgDiv.style.display = 'flex';
+          msgDiv.style.flexDirection = 'column';
+          msgDiv.style.alignItems = msg.role === 'user' ? 'flex-end' : 'flex-start';
+
+          const bubble = document.createElement('div');
+          bubble.style.maxWidth = '80%';
+          bubble.style.padding = '15px 20px';
+          bubble.style.borderRadius = '16px';
+          bubble.style.lineHeight = '1.5';
+          bubble.innerText = msg.content || ''; 
+          
+          if (msg.role === 'user') {
+            bubble.style.backgroundColor = '#2563eb';
+            bubble.style.color = '#ffffff';
+            bubble.style.borderBottomRightRadius = '4px';
+          } else {
+            bubble.style.backgroundColor = theme === 'dark' ? '#1e1f24' : '#ffffff';
+            bubble.style.border = theme === 'dark' ? '1px solid #2a2b30' : '1px solid #e5e7eb';
+            bubble.style.color = theme === 'dark' ? '#e5e7eb' : '#374151';
+            bubble.style.borderBottomLeftRadius = '4px';
+          }
+
+          msgDiv.appendChild(bubble);
+          container.appendChild(msgDiv);
+        });
+
+        document.body.appendChild(container);
+        
+        const canvas = await html2canvas(container, {
+          backgroundColor: theme === 'dark' ? '#131417' : '#f9fafb',
+          scale: 2,
+          logging: false
+        });
+        
+        document.body.removeChild(container);
+
+        const imgUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = imgUrl;
+        a.download = `${finalFileName}.png`;
+        a.click();
+      }
+
+      toast.success(t('sidebar.exportSuccess', 'Chat exported!'));
+      setExportConfig(prev => ({ ...prev, isOpen: false }));
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error(t('sidebar.exportError', 'Failed to export chat.'));
+    } finally {
+      setExportConfig(prev => ({ ...prev, isExporting: false }));
+    }
   };
 
   return (
@@ -326,7 +481,7 @@ function Sidebar() {
                         
                         {activeMenuId === session.id && (
                           <div 
-                            className="absolute right-4 top-10 w-32 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-lg shadow-xl py-1 z-50"
+                            className="absolute right-4 top-10 w-36 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-lg shadow-xl py-1 z-50"
                             onClick={e => e.stopPropagation()}
                           >
                             <button 
@@ -341,6 +496,13 @@ function Sidebar() {
                             >
                               <Pencil size={14} /> {t('sidebar.rename', 'Rename')}
                             </button>
+                            <button 
+                              onClick={(e) => handleExportSession(e, session)}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
+                            >
+                              <Download size={14} /> {t('sidebar.export', 'Export')}
+                            </button>
+                            <div className="border-t border-gray-100 dark:border-[#333] my-1" />
                             <button 
                               onClick={(e) => handleDeleteSession(e, session.id)}
                               className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
@@ -388,14 +550,84 @@ function Sidebar() {
       )}
       </div>
       
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={confirmConfig.isOpen}
-        onClose={() => setConfirmConfig({ isOpen: false, type: '', data: null })}
+        title={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Đăng xuất') : t('sidebar.delete', 'Xóa')}
+        message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm', 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?') : t('sidebar.deleteSessionConfirm', 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này?')}
         onConfirm={executeConfirm}
-        title={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Log out') : t('sidebar.delete', 'Delete')}
-        message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm', 'Are you sure you want to log out?') : t('sidebar.deleteSessionConfirm', 'Are you sure you want to delete this chat session?')}
-        confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Log out') : t('sidebar.delete', 'Delete')}
+        onCancel={() => setConfirmConfig({ isOpen: false, type: '', data: null })}
+        confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Đăng xuất') : t('sidebar.delete', 'Xóa')}
+        cancelText={t('confirmModal.cancel', 'Hủy')}
       />
+
+      {/* Export Modal */}
+      {exportConfig.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#333]">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('sidebar.exportTitle', 'Export Session')}
+              </h3>
+              <button
+                onClick={() => setExportConfig(prev => ({ ...prev, isOpen: false }))}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#333]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('sidebar.exportFileName', 'File Name')}
+                </label>
+                <input
+                  type="text"
+                  value={exportConfig.fileName}
+                  onChange={(e) => setExportConfig(prev => ({ ...prev, fileName: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#2d2d2d] border border-gray-300 dark:border-[#444] rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+                  placeholder="my_chat_export"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('sidebar.exportFormat', 'Format')}
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {['md', 'txt', 'csv', 'json', 'png'].map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => setExportConfig(prev => ({ ...prev, format: fmt }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center uppercase ${
+                        exportConfig.format === fmt
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#333]'
+                      }`}
+                    >
+                      .{fmt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 dark:bg-[#252525] border-t border-gray-100 dark:border-[#333] flex justify-end gap-3">
+              <button
+                onClick={() => setExportConfig(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333] rounded-lg transition-colors"
+                disabled={exportConfig.isExporting}
+              >
+                {t('sidebar.exportCancel', 'Cancel')}
+              </button>
+              <button
+                onClick={processExport}
+                disabled={exportConfig.isExporting || !exportConfig.fileName.trim()}
+                className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-all flex items-center justify-center min-w-[100px]"
+              >
+                {exportConfig.isExporting ? t('sidebar.exporting', 'Exporting...') : t('sidebar.exportConfirm', 'Export')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {shareSessionId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity p-4" onClick={() => setShareSessionId(null)}>

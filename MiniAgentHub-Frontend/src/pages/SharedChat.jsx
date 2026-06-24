@@ -105,13 +105,10 @@ const SharedChat = () => {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden transition-colors relative">
 
-      {/* TÍCH HỢP SIDEBAR GỐC CỦA BẠN VÀO ĐÂY */}
       <Sidebar />
 
-      {/* KHU VỰC CHAT CHÍNH (Giao diện giống gốc) */}
       <main className="flex-1 flex flex-col relative min-w-0">
 
-        {/* TOP BAR TRÊN DESKTOP */}
         <header className="hidden md:flex items-center justify-between px-4 py-2 shrink-0 z-10">
           <div className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2f2f2f] px-3 py-1.5 rounded-xl transition-colors" onClick={handleAction}>
             <span className="font-semibold text-[17px] text-gray-700 dark:text-gray-200">Agent Hub</span>
@@ -128,8 +125,6 @@ const SharedChat = () => {
           </div>
         </header>
 
-        {/* NỘI DUNG CUỘC TRÒ CHUYỆN (Cuộn được) */}
-        {/* pt-14 dùng để đẩy nội dung xuống trên mobile, tránh bị Mobile Top Header của file Sidebar.jsx đè lên */}
         <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6 pt-14 md:pt-6">
           <div className="w-full max-w-3xl mx-auto flex flex-col space-y-6">
             {loading ? (
@@ -154,13 +149,11 @@ const SharedChat = () => {
                       <div key={index} className={`flex flex-col w-full group ${isUser ? 'items-end' : 'items-start'}`}>
                         {isUser ? (
                           (() => {
-                            // Tìm và bóc tách đoạn text đính kèm file ra khỏi nội dung
                             const content = msg.content || '';
                             const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
                             const fileMatches = [...content.matchAll(fileRegex)];
 
-                            // Tìm và bóc tách hình ảnh base64
-                            const imgRegex = /!\[(.*?)\]\((data:image\/[^;]+;base64,[^\)]+)\)/g;
+                            const imgRegex = /!\[(.*?)\]\(([^)]+)\)/g;
                             const imgMatches = [...content.matchAll(imgRegex)];
 
                             const contentText = content.replace(fileRegex, '').replace(imgRegex, '').trim();
@@ -168,16 +161,19 @@ const SharedChat = () => {
                             return (
                               <div className="flex flex-col items-end w-full">
                                 <div className="flex flex-col items-end gap-2 max-w-[85%] md:max-w-[75%]">
-                                  {imgMatches.map((match, i) => (
-                                    <div key={`img-${i}`} className="relative group inline-block">
-                                      <img 
-                                        src={match[2]} 
-                                        alt={match[1]} 
-                                        className="max-h-64 w-auto rounded-2xl object-contain shadow-sm cursor-zoom-in" 
-                                        onClick={() => setFullScreenImage(match[2])}
-                                      />
-                                    </div>
-                                  ))}
+                                  {imgMatches.map((match, i) => {
+                                    const imgSrc = match[2].startsWith('/api/uploads') ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : ''}${match[2]}` : match[2];
+                                    return (
+                                      <div key={`img-${i}`} className="relative group inline-block">
+                                        <img 
+                                          src={imgSrc} 
+                                          alt={match[1]} 
+                                          className="max-h-64 w-auto rounded-2xl object-contain shadow-sm cursor-zoom-in" 
+                                          onClick={() => setFullScreenImage(imgSrc)}
+                                        />
+                                      </div>
+                                    );
+                                  })}
                                   {(contentText || fileMatches.length > 0) && (
                                     <div className="rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-blue-600 text-white rounded-br-sm shadow-sm">
                                       {fileMatches.map((match, i) => (
@@ -207,12 +203,14 @@ const SharedChat = () => {
                                   li: ({ node, ...props }) => <li {...props} />,
                                   strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
                                   pre: PreBlock,
-                                  code: ({ node, inline, ...props }) =>
-                                    inline
-                                      ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} />
-                                      : <code {...props} />,
-                                  a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                                  table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" {...props} /></div>,
+                                  code: ({node, inline, ...props}) => inline ? <code className="bg-gray-100 dark:bg-[#2b2d31] text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-[13px] font-mono border border-gray-200 dark:border-[#383a40]" {...props} /> : <code {...props} />,
+                                  a: ({node, ...props}) => <a className="text-[#0068ff] dark:text-[#4799ff] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                                  img: ({node, src, alt, ...props}) => {
+                                    const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
+                                    const finalSrc = src?.startsWith('/api/uploads') ? `${backendUrl}${src}` : src;
+                                    return <img src={finalSrc} alt={alt} className="max-w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-[#333] shadow-sm my-2 cursor-zoom-in" onClick={() => window.open(finalSrc, '_blank')} {...props} />;
+                                  },
+                                  table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-[#2b2d31]"><table className="min-w-full divide-y divide-gray-200 dark:divide-[#2b2d31] text-sm" {...props} /></div>,
                                   thead: ({ node, ...props }) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
                                   th: ({ node, ...props }) => <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider" {...props} />,
                                   td: ({ node, ...props }) => <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props} />
@@ -237,7 +235,6 @@ const SharedChat = () => {
           </div>
         </div>
 
-        {/* THANH FAKE INPUT GHIM CỐ ĐỊNH Ở ĐÁY MÀN HÌNH (Chuẩn Dashboard gốc) */}
         {!loading && !error && (
           <div className="absolute bottom-0 w-full p-4 md:p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
             <div
@@ -268,8 +265,6 @@ const SharedChat = () => {
         )}
 
       </main>
-
-      {/* Ảnh toàn màn hình */}
       {fullScreenImage && (
         <div 
           className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"

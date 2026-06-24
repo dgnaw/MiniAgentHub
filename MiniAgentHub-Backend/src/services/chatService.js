@@ -3,7 +3,7 @@ const ChatMessage = require('../models/chatMessage');
 const aiService = require('./aiService');
 
 const chatService = {
-    prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex) => {
+    prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
         let currentSessionId = sessionId;
         let isNewSession = false;
         let userMessageRecord = null;
@@ -11,7 +11,7 @@ const chatService = {
         if (!currentSessionId) {
             let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : ""); 
             try {
-                const aiTitle = await aiService.generateTitle(cleanMessage);
+                const aiTitle = await aiService.generateTitle(cleanMessage, customGroqKey);
                 if (aiTitle) title = aiTitle;
             } catch (error) {}
 
@@ -19,6 +19,14 @@ const chatService = {
             currentSessionId = newSession.id;
             isNewSession = true;
         } else {
+            if (parsedEditIndex === undefined) {
+                const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId } });
+                if (messageCount >= 100) {
+                    const limitError = new Error('Phiên trò chuyện này đã đạt giới hạn tối đa 100 tin nhắn. Vui lòng tạo phiên trò chuyện mới.');
+                    limitError.status = 400;
+                    throw limitError;
+                }
+            }
             await ChatSession.update({ updated_at: new Date() }, { where: { id: currentSessionId } });
         }
 

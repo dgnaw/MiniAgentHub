@@ -5,8 +5,6 @@ const userController = {
         try {
             let { email, full_name, phone, address, role_id, role_name, role, group_ids } = req.body;
 
-
-
             const targetRoleName = role_name || role;
 
             const result = await userService.createUser({ email, full_name, phone, address, role_id, role_name: targetRoleName, group_ids });

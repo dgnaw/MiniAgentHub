@@ -17,7 +17,16 @@
     "shareSession": "Chia sẻ cuộc trò chuyện",
     "shareDesc": "Sao chép đường dẫn bên dưới để chia sẻ hoặc lưu trữ.",
     "copyLink": "Sao chép",
-    "copied": "Đã sao chép vào khay nhớ tạm!"
+    "copied": "Đã sao chép vào khay nhớ tạm!",
+    "export": "Xuất file",
+    "exportSuccess": "Xuất cuộc trò chuyện thành công!",
+    "exportError": "Xuất cuộc trò chuyện thất bại.",
+    "exportTitle": "Xuất cuộc trò chuyện",
+    "exportFileName": "Tên file",
+    "exportFormat": "Định dạng",
+    "exportCancel": "Hủy",
+    "exportConfirm": "Xuất file",
+    "exporting": "Đang xuất..."
   },
 
   "confirmModal": {
@@ -79,7 +88,22 @@
     "analyzing": "Đang phân tích dữ liệu chuyên sâu",
     "thinking": "Đang tạo câu trả lời",
     "modelLlamaDesc": "Trò chuyện đa năng (qua Groq)",
-    "modelDataDesc": "Phân tích dữ liệu (qua Flowise)"
+    "modelDataDesc": "Phân tích dữ liệu (qua Flowise)",
+    "configApiKeyGroq": "Cấu hình API Key (Groq)",
+    "configApiUrlFlowise": "Cấu hình API URL (Flowise)",
+    "configApiKeyGroqDesc": "Nhập API Key Groq cá nhân của bạn để sử dụng các model Llama, Mixtral... Key được lưu trực tiếp trên trình duyệt (localStorage) của bạn và không lưu trên cơ sở dữ liệu server.",
+    "configApiUrlFlowiseDesc": "Nhập địa chỉ URL Prediction API của Flowise để thực hiện phân tích dữ liệu chuyên sâu. URL được lưu trực tiếp trên trình duyệt của bạn.",
+    "groqApiKeyLabel": "Groq API Key",
+    "flowiseApiUrlLabel": "Flowise API Endpoint URL",
+    "expireLabel": "Thời gian hết hạn (Expire)",
+    "expireNever": "Không bao giờ hết hạn",
+    "expire1h": "Sau 1 giờ",
+    "expire1d": "Sau 1 ngày",
+    "expire7d": "Sau 7 ngày",
+    "expire30d": "Sau 30 ngày",
+    "clearConfig": "Xóa cấu hình",
+    "cancel": "Hủy",
+    "saveConfig": "Lưu cấu hình"
   },
 
   "theme": {

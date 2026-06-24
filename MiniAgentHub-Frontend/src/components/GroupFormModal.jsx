@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, UserPlus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +28,17 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
   const [searchQuery, setSearchQuery] = useState('');
   const [allUsers, setAllUsers] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -308,9 +319,12 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             <section>
             <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.membersManagement', 'Members Management')}</h3>
               
-              <div className="relative mb-4">
-                <div className="flex items-center gap-3 bg-white dark:bg-[#1e1f24] border border-gray-300 dark:border-[#26272b] rounded-xl px-4 py-3">
-                  <UserPlus size={18} className="text-gray-500" />
+              <div className="relative mb-4" ref={dropdownRef}>
+                <div 
+                  className="flex items-center gap-3 bg-white dark:bg-[#1e1f24] border border-gray-300 dark:border-[#26272b] rounded-xl px-4 py-3 cursor-pointer"
+                  onClick={() => setShowSuggestions(!showSuggestions)}
+                >
+                  <UserPlus size={18} className="text-gray-500 shrink-0" />
                   <input 
                     type="text" 
                     value={searchQuery}
@@ -318,13 +332,19 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                       setSearchQuery(e.target.value);
                       setShowSuggestions(true);
                     }}
+                    onClick={(e) => e.stopPropagation()}
                     onFocus={() => setShowSuggestions(true)}
-                    placeholder={t('groupFormModal.searchPlaceholder', 'Search by name or email...')} 
-                    className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none"
+                    placeholder={t('groupFormModal.searchPlaceholder', 'Select or search user...')} 
+                    className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none cursor-text"
                   />
+                  {showSuggestions ? (
+                    <ChevronUp size={18} className="text-gray-500 shrink-0" />
+                  ) : (
+                    <ChevronDown size={18} className="text-gray-500 shrink-0" />
+                  )}
                 </div>
 
-                {showSuggestions && searchQuery.trim() !== '' && (
+                {showSuggestions && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1e1f24] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-2xl max-h-48 overflow-y-auto z-10 custom-scrollbar">
                     {filteredUsers.length > 0 ? (
                       filteredUsers.map(user => (
