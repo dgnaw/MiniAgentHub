@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { ChevronDown, ChevronLeft, Sparkles, Code, Plus, Paperclip, Send, AlertCircle, X, Copy, Check, Eye, Pencil, Square, Key, Settings } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Sparkles, Code, Plus, Paperclip, Send, AlertCircle, X, Copy, Check, Eye, Pencil, Square, Key, Settings, RefreshCw } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +62,7 @@ const PreBlock = ({ children, ...props }) => {
   );
 };
 
-const MemoizedAiMessage = React.memo(({ content }) => {
+const MemoizedAiMessage = React.memo(({ content, index }) => {
   return (
     <div className="flex flex-col items-start w-full">
       <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm">
@@ -101,6 +101,12 @@ const MemoizedAiMessage = React.memo(({ content }) => {
           className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
           <Copy size={13} /> Copy
+        </button>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('regenerate-message', { detail: { index } }))}
+          className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          <RefreshCw size={13} /> Regenerate
         </button>
       </div>
     </div>
@@ -175,6 +181,7 @@ const Dashboard = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
 
   useEffect(() => {
     if (sessionId) {
@@ -580,6 +587,19 @@ const Dashboard = () => {
     setSelectedFiles(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
+  useEffect(() => {
+    const handleRegenerateEvent = (e) => {
+      const aiIndex = e.detail.index;
+      const userIndex = aiIndex - 1;
+      if (userIndex >= 0 && messages[userIndex] && messages[userIndex].role === 'user') {
+        handleSend(messages[userIndex].content, true, userIndex);
+      }
+    };
+    
+    window.addEventListener('regenerate-message', handleRegenerateEvent);
+    return () => window.removeEventListener('regenerate-message', handleRegenerateEvent);
+  }, [messages, handleSend]);
+
   return (
     <div
       className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden transition-colors relative"
@@ -839,7 +859,7 @@ const Dashboard = () => {
                       })()
                     )
                   ) : (
-                    <MemoizedAiMessage content={msg.content} />
+                    <MemoizedAiMessage content={msg.content} index={index} />
                   )}
                 </div>
               ))}
