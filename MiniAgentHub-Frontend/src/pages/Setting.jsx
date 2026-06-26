@@ -122,87 +122,101 @@ const Settings = () => {
           </div>
 
           <div className="space-y-3">
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4 w-full sm:flex-1">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400 shrink-0">
-                  <Phone size={18} />
+            <div className={`bg-white dark:bg-[#1a1b20] border ${isEditingPhone ? 'border-blue-500/50' : 'border-gray-200 dark:border-[#26272b]'} rounded-xl p-4 shadow-sm dark:shadow-none transition-colors`}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 w-full sm:flex-1">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400 shrink-0">
+                    <Phone size={18} />
+                  </div>
+                  <div className="flex-1 mr-4">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.phoneNumber')}</h4>
+                    {!isEditingPhone && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated', 'Not updated')}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 mr-4">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.phoneNumber')}</h4>
-                  {isEditingPhone ? (
-                    <div>
-                      <input 
-                        type="text" 
-                        value={phoneInput} 
-                        onChange={(e) => {
-                          setPhoneInput(e.target.value);
-                          setPhoneError(validatePhone(e.target.value));
-                        }}
-                        onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
-                        className={`mt-1.5 w-full bg-gray-50 dark:bg-[#131417] border ${phoneError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-[#333] focus:border-blue-500'} rounded-md px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none transition-colors`}
-                        placeholder={t('settings.phonePlaceholder', 'Enter phone number...')}
-                      />
-                      {phoneError && <p className="text-red-500 dark:text-red-400 text-[10px] mt-1">{phoneError}</p>}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated', 'Not updated')}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0 w-full sm:w-auto justify-end mt-2 sm:mt-0">
-                {isEditingPhone ? (
-                  <>
-                    <button onClick={handleUpdatePhone} disabled={isSavingPhone} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
-                      {isSavingPhone ? t('settings.saving', 'Saving...') : t('settings.save')}
+                {!isEditingPhone && (
+                  <div className="flex gap-2 shrink-0 justify-end">
+                    <button onClick={() => setIsEditingPhone(true)} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                      {t('settings.update')}
                     </button>
-                    <button onClick={() => { setIsEditingPhone(false); setPhoneInput(user?.phone || ''); setPhoneError(''); }} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-                      {t('settings.cancel')}
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => setIsEditingPhone(true)} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-                    {t('settings.update')}
-                  </button>
+                  </div>
                 )}
               </div>
+              
+              {isEditingPhone && (
+                <div className="mt-4 pl-0 sm:pl-14 flex flex-col sm:flex-row gap-3 items-start sm:items-start">
+                  <div className="flex-1 w-full">
+                    <input 
+                      type="text" 
+                      value={phoneInput} 
+                      onChange={(e) => {
+                        setPhoneInput(e.target.value);
+                        setPhoneError(validatePhone(e.target.value));
+                      }}
+                      onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
+                      className={`w-full bg-gray-50 dark:bg-[#131417] border ${phoneError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-[#333] focus:border-blue-500'} rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none transition-colors`}
+                      placeholder={t('settings.phonePlaceholder', 'Enter phone number...')}
+                      autoFocus
+                    />
+                    {phoneError && <p className="text-red-500 dark:text-red-400 text-xs mt-1.5">{phoneError}</p>}
+                  </div>
+                  <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
+                    <button onClick={handleUpdatePhone} disabled={isSavingPhone} className="flex-1 sm:flex-none bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
+                      {isSavingPhone ? t('settings.saving', 'Saving...') : t('settings.save')}
+                    </button>
+                    <button onClick={() => { setIsEditingPhone(false); setPhoneInput(user?.phone || ''); setPhoneError(''); }} className="flex-1 sm:flex-none bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-5 py-2 rounded-lg text-sm font-semibold transition-colors">
+                      {t('settings.cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm dark:shadow-none">
-              <div className="flex items-center gap-4 w-full sm:flex-1">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400 shrink-0">
-                  <MapPin size={18} />
+            <div className={`bg-white dark:bg-[#1a1b20] border ${isEditingAddress ? 'border-blue-500/50' : 'border-gray-200 dark:border-[#26272b]'} rounded-xl p-4 shadow-sm dark:shadow-none transition-colors`}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 w-full sm:flex-1">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-[#222328] flex items-center justify-center text-blue-500 dark:text-blue-400 shrink-0">
+                    <MapPin size={18} />
+                  </div>
+                  <div className="flex-1 mr-4">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.address')}</h4>
+                    {!isEditingAddress && (
+                      <p className="text-xs text-gray-500 mt-0.5">{user?.address || t('settings.notUpdated', 'Not updated')}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 mr-4">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.address')}</h4>
-                  {isEditingAddress ? (
+                {!isEditingAddress && (
+                  <div className="flex gap-2 shrink-0 justify-end">
+                    <button onClick={() => setIsEditingAddress(true)} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                      {t('settings.update')}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {isEditingAddress && (
+                <div className="mt-4 pl-0 sm:pl-14 flex flex-col sm:flex-row gap-3 items-start sm:items-start">
+                  <div className="flex-1 w-full">
                     <input 
                       type="text" 
                       value={addressInput} 
                       onChange={(e) => setAddressInput(e.target.value)}
-                      className="mt-1.5 w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-md px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
                       placeholder={t('settings.addressPlaceholder', 'Enter address...')}
+                      autoFocus
                     />
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-0.5">{user?.address || t('settings.notUpdated', 'Not updated')}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0 w-full sm:w-auto justify-end mt-2 sm:mt-0">
-                {isEditingAddress ? (
-                  <>
-                    <button onClick={handleUpdateAddress} disabled={isSavingAddress} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
+                  </div>
+                  <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
+                    <button onClick={handleUpdateAddress} disabled={isSavingAddress} className="flex-1 sm:flex-none bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
                       {isSavingAddress ? t('settings.saving', 'Saving...') : t('settings.save')}
                     </button>
-                    <button onClick={() => { setIsEditingAddress(false); setAddressInput(user?.address || ''); }} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                    <button onClick={() => { setIsEditingAddress(false); setAddressInput(user?.address || ''); }} className="flex-1 sm:flex-none bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-5 py-2 rounded-lg text-sm font-semibold transition-colors">
                       {t('settings.cancel')}
                     </button>
-                  </>
-                ) : (
-                  <button onClick={() => setIsEditingAddress(true)} className="bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-1.5 rounded-lg text-xs font-semibold transition-colors">
-                    {t('settings.update')}
-                  </button>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

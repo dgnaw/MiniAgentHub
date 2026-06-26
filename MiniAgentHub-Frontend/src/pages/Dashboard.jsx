@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 
 const PreBlock = ({ children, ...props }) => {
   const [copied, setCopied] = useState(false);
-  
+
   let textContent = '';
   let language = '';
 
@@ -24,9 +24,9 @@ const PreBlock = ({ children, ...props }) => {
       } else {
         textContent = String(childData);
       }
-      textContent = textContent.replace(/\n$/, ''); 
+      textContent = textContent.replace(/\n$/, '');
     }
-    
+
     if (children.props.className) {
       const match = /language-(\w+)/.exec(children.props.className || '');
       if (match) {
@@ -62,6 +62,51 @@ const PreBlock = ({ children, ...props }) => {
   );
 };
 
+const MemoizedAiMessage = React.memo(({ content }) => {
+  return (
+    <div className="flex flex-col items-start w-full">
+      <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm">
+        <ReactMarkdown
+          rehypePlugins={[rehypeRaw]}
+          components={{
+            p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+            ul: ({ node, ...props }) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
+            ol: ({ node, ...props }) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
+            li: ({ node, ...props }) => <li {...props} />,
+            strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+            pre: PreBlock,
+            code: ({ node, inline, ...props }) => inline ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} /> : <code {...props} />,
+            a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+            img: ({ node, src, alt, ...props }) => {
+              const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
+              const finalSrc = src?.startsWith('/api/uploads') ? `${backendUrl}${src}` : src;
+              return <img src={finalSrc} alt={alt} className="max-w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-[#333] shadow-sm my-2 cursor-zoom-in" onClick={() => window.open(finalSrc, '_blank')} {...props} />;
+            },
+            table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" {...props} /></div>,
+            thead: ({ node, ...props }) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
+            th: ({ node, ...props }) => <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider" {...props} />,
+            td: ({ node, ...props }) => <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props} />
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+      <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 ml-2">
+        <button
+          onClick={() => {
+            if (!content) return;
+            navigator.clipboard.writeText(content);
+            toast.success('Đã copy phản hồi!');
+          }}
+          className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        >
+          <Copy size={13} /> Copy
+        </button>
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => prevProps.content === nextProps.content);
+
 const getBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.readAsDataURL(file);
@@ -82,7 +127,7 @@ const Dashboard = () => {
   useThemeStore();
   const user = useAuthStore((state) => state.user);
   const { t } = useTranslation();
-  const { id: sessionId } = useParams(); 
+  const { id: sessionId } = useParams();
   const navigate = useNavigate();
 
   const [input, setInput] = useState('');
@@ -95,7 +140,7 @@ const Dashboard = () => {
   const [tempApiKey, setTempApiKey] = useState('');
   const [tempApiUrl, setTempApiUrl] = useState('');
   const [tempExpire, setTempExpire] = useState('never');
-  const [showModelDropdown, setShowModelDropdown] = useState(false); 
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isFlowiseAvailable, setIsFlowiseAvailable] = useState(true);
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const [isFlowiseConfigured, setIsFlowiseConfigured] = useState(true);
@@ -225,7 +270,7 @@ const Dashboard = () => {
     const type = apiKeyModalConfig.type;
     const storageKey = type === 'groq' ? 'agentHub_custom_groq_api_key' : 'agentHub_custom_flowise_api_url';
     const val = type === 'groq' ? tempApiKey : tempApiUrl;
-    
+
     localStorage.setItem(storageKey, val.trim());
     localStorage.setItem(`agentHub_custom_${type}_expire_option`, tempExpire);
 
@@ -237,7 +282,7 @@ const Dashboard = () => {
       else if (tempExpire === '1d') durationMs = 24 * 60 * 60 * 1000;
       else if (tempExpire === '7d') durationMs = 7 * 24 * 60 * 60 * 1000;
       else if (tempExpire === '30d') durationMs = 30 * 24 * 60 * 60 * 1000;
-      
+
       localStorage.setItem(`agentHub_custom_${type}_expire`, (Date.now() + durationMs).toString());
     }
 
@@ -252,7 +297,7 @@ const Dashboard = () => {
     localStorage.removeItem(storageKey);
     localStorage.removeItem(`agentHub_custom_${type}_expire`);
     localStorage.removeItem(`agentHub_custom_${type}_expire_option`);
-    
+
     if (type === 'groq') {
       setTempApiKey('');
     } else {
@@ -342,13 +387,13 @@ const Dashboard = () => {
 
     try {
       const token = localStorage.getItem('agentHub_token');
-      
+
       const customGroqKey = getCustomKey('groq');
       const customFlowiseUrl = getCustomKey('flowise');
 
       let fetchOptions = {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'X-Groq-Api-Key': customGroqKey,
           'X-Flowise-Api-Url': customFlowiseUrl
@@ -375,7 +420,7 @@ const Dashboard = () => {
       }
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, fetchOptions);
-      
+
       if (!response.ok) {
         let errMsg = 'Server connection error';
         try {
@@ -383,7 +428,7 @@ const Dashboard = () => {
           if (errJson && errJson.message) {
             errMsg = errJson.message;
           }
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(errMsg);
       }
 
@@ -419,7 +464,6 @@ const Dashboard = () => {
                 if (parsed.flowiseUnavailable) {
                   setIsFlowiseAvailable(false);
                   setSelectedModel('llama-3.1-8b-instant');
-                  // Thêm cảnh báo vào ngay đầu tin nhắn AI
                   if (!isAiMessageAdded) {
                     setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
                     isAiMessageAdded = true;
@@ -427,31 +471,38 @@ const Dashboard = () => {
                   aiResponseText += "*(Hệ thống phân tích dữ liệu đang bận hoặc lỗi, tự động chuyển sang AI thường)*\n\n";
                 }
                 if (parsed.chunk) {
-                  // Kiểm tra chunk có phải lỗi API Key không để cập nhật trạng thái UI
                   if (parsed.chunk.includes('No key found') || parsed.chunk.includes('API Key')) {
                     setIsApiKeyMissing(true);
                   } else if (!parsed.chunk.includes('Lỗi hệ thống')) {
                     setIsApiKeyMissing(false);
                   }
 
-                  // Thêm tin nhắn AI trống vào danh sách khi nhận token đầu tiên
                   if (!isAiMessageAdded) {
                     setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
                     isAiMessageAdded = true;
                   }
 
                   if (isAiMessageAdded) {
-                    aiResponseText += parsed.chunk;
-                    setMessages((prev) => {
-                      const newMsgs = [...prev];
-                      if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
-                        newMsgs[newMsgs.length - 1].content = aiResponseText;
-                      }
-                      return newMsgs;
-                    });
+                    const words = parsed.chunk.match(/\S+|\s+/g) || [];
+                    
+                    for (const word of words) {
+                      if (stopped || isDone) break;
+                      
+                      aiResponseText += word;
+                      setMessages((prev) => {
+                        const newMsgs = [...prev];
+                        if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+                          newMsgs[newMsgs.length - 1].content = aiResponseText;
+                        }
+                        return newMsgs;
+                      });
+
+                      const delayTime = selectedModel === 'Data Analyst' ? 5 : 5;
+                      await new Promise(resolve => setTimeout(resolve, delayTime));
+                    }
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           }
           if (stopped || isDone) break;
@@ -475,7 +526,7 @@ const Dashboard = () => {
       }
 
       console.error("Lỗi khi chat:", error);
-      
+
       setMessages((prev) => [
         ...prev,
         { role: 'ai', content: `**Lỗi hệ thống:** ${error.message || 'Đã xảy ra lỗi khi kết nối server.'}` }
@@ -487,7 +538,7 @@ const Dashboard = () => {
       } else {
         setInput(textToSend.trim());
       }
-      
+
       setLocalError(error.message || 'Đã xảy ra lỗi khi kết nối server.');
       setTimeout(() => setLocalError(''), 7000);
     } finally {
@@ -530,37 +581,37 @@ const Dashboard = () => {
   };
 
   return (
-    <div 
+    <div
       className="flex h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden transition-colors relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      
+
       <Sidebar />
 
       {/* Overlay Dropzone Visual */}
       {isDragging && (
         <div className="absolute inset-0 z-[60] bg-blue-500/10 backdrop-blur-sm border-4 border-blue-500 border-dashed m-4 rounded-3xl flex items-center justify-center pointer-events-none transition-all duration-200">
-            <div className="bg-white dark:bg-[#1e1f24] p-8 rounded-2xl shadow-2xl flex flex-col items-center">
-                <Paperclip size={48} className="text-blue-500 mb-4 animate-bounce" />
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Thả file vào đây</h3>
-                <p className="text-gray-500 mt-2">Hỗ trợ đính kèm tối đa 10 files cùng lúc</p>
-            </div>
+          <div className="bg-white dark:bg-[#1e1f24] p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+            <Paperclip size={48} className="text-blue-500 mb-4 animate-bounce" />
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Thả file vào đây</h3>
+            <p className="text-gray-500 mt-2">Hỗ trợ đính kèm tối đa 10 files cùng lúc</p>
+          </div>
         </div>
       )}
 
       <main className="flex-1 flex flex-col relative">
-        
+
         <header className="flex justify-end p-4 pt-16 md:p-6 md:pt-6">
 
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowModelDropdown(!showModelDropdown)}
               className="flex items-center gap-2 bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] hover:bg-gray-100 dark:hover:bg-[#2a2b30] text-gray-700 dark:text-gray-300 shadow-sm dark:shadow-none px-4 py-2 rounded-full text-sm font-medium transition-colors"
             >
-              {selectedModel === 'Data Analyst' 
-                ? 'Data Analyst (Flowise)' 
+              {selectedModel === 'Data Analyst'
+                ? 'Data Analyst (Flowise)'
                 : `${groqModels.find(m => m.id === selectedModel)?.name || 'Llama 3.1 8B'} (Groq)`}
               <ChevronDown size={16} className="text-gray-400" />
             </button>
@@ -593,15 +644,15 @@ const Dashboard = () => {
                       <ChevronLeft size={16} className="text-gray-400" />
                     </div>
                   </div>
-                  
+
                   {/* Submenu for Groq versions to the left */}
                   <div className="absolute top-0 right-[calc(100%+8px)] hidden group-hover:block w-64 bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg py-1 z-[90]">
                     {groqModels.map((model) => (
-                      <div 
+                      <div
                         key={model.id}
-                        onClick={() => { 
-                          setSelectedModel(model.id); 
-                          setShowModelDropdown(false); 
+                        onClick={() => {
+                          setSelectedModel(model.id);
+                          setShowModelDropdown(false);
                         }}
                         className={`px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer text-sm transition-colors ${selectedModel === model.id ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
                       >
@@ -617,16 +668,16 @@ const Dashboard = () => {
                 </div>
 
                 {/* Data Analyst (Flowise) */}
-                <div 
+                <div
                   className={`px-4 py-3 text-sm text-gray-700 dark:text-gray-300 transition-colors border-t border-gray-100 dark:border-[#333] rounded-b-xl flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer`}
-                  onClick={() => { 
+                  onClick={() => {
                     if (!isFlowiseAvailable) {
                       toast.error(t('dashboard.flowiseUnavailable', 'Data analysis system is busy or out of requests. Please try again later!'));
                       setShowModelDropdown(false);
                       return;
                     }
-                    setSelectedModel('Data Analyst'); 
-                    setShowModelDropdown(false); 
+                    setSelectedModel('Data Analyst');
+                    setShowModelDropdown(false);
                   }}
                 >
                   <div className="flex-1">
@@ -669,10 +720,10 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
-                <div 
-                  onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
-                  className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
-                >
+              <div
+                onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
+                className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
+              >
                 <Sparkles className="text-blue-500 dark:text-blue-400 mb-4" size={24} />
                 <h3 className="text-gray-800 dark:text-gray-200 font-semibold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-white transition-colors">
                   {t('dashboard.card1Title')}
@@ -680,7 +731,7 @@ const Dashboard = () => {
                 <p className="text-gray-500 text-sm">{t('dashboard.card1Desc')}</p>
               </div>
 
-              <div 
+              <div
                 onClick={() => handleSend(`${t('dashboard.card2Title')}: ${t('dashboard.card2Desc')}`)}
                 className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
               >
@@ -690,7 +741,7 @@ const Dashboard = () => {
                 </h3>
                 <p className="text-gray-500 text-sm">{t('dashboard.card2Desc')}</p>
               </div>
-              </div>
+            </div>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6">
@@ -698,86 +749,86 @@ const Dashboard = () => {
               {messages.map((msg, index) => (
                 <div key={index} className={`flex flex-col w-full group ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   {msg.role === 'user' ? (
-                      editingIndex === index ? (
-                        <div className="flex flex-col items-end w-full gap-2 my-2">
-                          <div className="w-full max-w-[85%] md:max-w-[75%] bg-white dark:bg-[#1e1f24] border border-blue-500 rounded-2xl p-3 shadow-sm">
-                            <textarea 
-                              value={editInput}
-                              onChange={(e) => {
-                                setEditInput(e.target.value);
-                                e.target.style.height = 'auto';
-                                e.target.style.height = `${e.target.scrollHeight}px`;
-                              }}
-                              maxLength={5000}
-                              className="w-full bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 text-[15px] resize-none overflow-y-auto max-h-[200px] custom-scrollbar"
-                              rows={1}
-                              autoFocus
-                              onFocus={(e) => {
-                                e.target.style.height = 'auto';
-                                e.target.style.height = `${e.target.scrollHeight}px`;
-                              }}
-                            />
-                            <div className="flex justify-end gap-2 mt-3">
-                              <button onClick={() => setEditingIndex(null)} className="px-4 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2b30] rounded-lg transition-colors">Hủy</button>
-                              <button onClick={() => {
-                                const originalContent = messages[index].content || '';
-                                const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
-                                const imgRegex = /!\[(.*?)\]\(([^)]+)\)/g;
-                                
-                                const files = [...originalContent.matchAll(fileRegex)].map(m => m[0]);
-                                const imgs = [...originalContent.matchAll(imgRegex)].map(m => m[0]);
-                                
-                                let finalEdit = editInput.trim();
-                                if (files.length > 0) finalEdit = `${files.join('\n')}\n\n${finalEdit}`;
-                                if (imgs.length > 0) finalEdit = `${imgs.join('\n')}\n\n${finalEdit}`;
-                                
-                                handleSend(finalEdit.trim(), true, index);
-                              }} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Gửi lại</button>
-                            </div>
+                    editingIndex === index ? (
+                      <div className="flex flex-col items-end w-full gap-2 my-2">
+                        <div className="w-full max-w-[85%] md:max-w-[75%] bg-white dark:bg-[#1e1f24] border border-blue-500 rounded-2xl p-3 shadow-sm">
+                          <textarea
+                            value={editInput}
+                            onChange={(e) => {
+                              setEditInput(e.target.value);
+                              e.target.style.height = 'auto';
+                              e.target.style.height = `${e.target.scrollHeight}px`;
+                            }}
+                            maxLength={5000}
+                            className="w-full bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 text-[15px] resize-none overflow-y-auto max-h-[200px] custom-scrollbar"
+                            rows={1}
+                            autoFocus
+                            onFocus={(e) => {
+                              e.target.style.height = 'auto';
+                              e.target.style.height = `${e.target.scrollHeight}px`;
+                            }}
+                          />
+                          <div className="flex justify-end gap-2 mt-3">
+                            <button onClick={() => setEditingIndex(null)} className="px-4 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2b30] rounded-lg transition-colors">Hủy</button>
+                            <button onClick={() => {
+                              const originalContent = messages[index].content || '';
+                              const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
+                              const imgRegex = /!\[(.*?)\]\(([^)]+)\)/g;
+
+                              const files = [...originalContent.matchAll(fileRegex)].map(m => m[0]);
+                              const imgs = [...originalContent.matchAll(imgRegex)].map(m => m[0]);
+
+                              let finalEdit = editInput.trim();
+                              if (files.length > 0) finalEdit = `${files.join('\n')}\n\n${finalEdit}`;
+                              if (imgs.length > 0) finalEdit = `${imgs.join('\n')}\n\n${finalEdit}`;
+
+                              handleSend(finalEdit.trim(), true, index);
+                            }} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">Gửi lại</button>
                           </div>
                         </div>
-                      ) : (
+                      </div>
+                    ) : (
                       (() => {
                         // Tìm và bóc tách đoạn text đính kèm file ra khỏi nội dung
                         const content = msg.content || '';
                         const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
                         const fileMatches = [...content.matchAll(fileRegex)];
-                        
+
                         // Tìm và bóc tách hình ảnh
                         const imgRegex = /!\[(.*?)\]\(([^)]+)\)/g;
                         const imgMatches = [...content.matchAll(imgRegex)];
-                        
+
                         const contentText = content.replace(fileRegex, '').replace(imgRegex, '').trim();
-                        
+
                         return (
                           <div className="flex flex-col items-end w-full">
                             <div className="flex flex-col items-end gap-2 max-w-[85%] md:max-w-[75%]">
-                            {imgMatches.map((match, i) => {
-                              const imgSrc = match[2].startsWith('/api/uploads') ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : ''}${match[2]}` : match[2];
-                              return (
-                                <div key={`img-${i}`} className="relative group inline-block">
-                                  <img 
-                                    src={imgSrc} 
-                                    alt={match[1]} 
-                                    className="max-h-64 w-auto rounded-2xl object-contain shadow-sm cursor-zoom-in" 
-                                    onClick={() => setFullScreenImage(imgSrc)}
-                                  />
-                                </div>
-                              );
-                            })}
-                            {(contentText || fileMatches.length > 0) && (
-                              <div className="rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-blue-600 text-white rounded-br-sm">
-                                {fileMatches.map((match, i) => (
-                                  <div key={i} className={`bg-white/20 dark:bg-black/20 text-white rounded-xl p-2 flex items-center gap-3 w-fit shadow-sm border border-white/10 ${contentText ? 'mb-2.5' : ''}`}>
-                                    <div className="p-1.5 bg-white/20 rounded-lg">
-                                      <Paperclip size={16} />
-                                    </div>
-                                    <span className="text-sm font-medium truncate max-w-[200px]">{match[1]}</span>
+                              {imgMatches.map((match, i) => {
+                                const imgSrc = match[2].startsWith('/api/uploads') ? `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : ''}${match[2]}` : match[2];
+                                return (
+                                  <div key={`img-${i}`} className="relative group inline-block">
+                                    <img
+                                      src={imgSrc}
+                                      alt={match[1]}
+                                      className="max-h-64 w-auto rounded-2xl object-contain shadow-sm cursor-zoom-in"
+                                      onClick={() => setFullScreenImage(imgSrc)}
+                                    />
                                   </div>
-                                ))}
-                                {contentText && <span className="whitespace-pre-wrap">{contentText}</span>}
-                              </div>
-                            )}
+                                );
+                              })}
+                              {(contentText || fileMatches.length > 0) && (
+                                <div className="rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-blue-600 text-white rounded-br-sm">
+                                  {fileMatches.map((match, i) => (
+                                    <div key={i} className={`bg-white/20 dark:bg-black/20 text-white rounded-xl p-2 flex items-center gap-3 w-fit shadow-sm border border-white/10 ${contentText ? 'mb-2.5' : ''}`}>
+                                      <div className="p-1.5 bg-white/20 rounded-lg">
+                                        <Paperclip size={16} />
+                                      </div>
+                                      <span className="text-sm font-medium truncate max-w-[200px]">{match[1]}</span>
+                                    </div>
+                                  ))}
+                                  {contentText && <span className="whitespace-pre-wrap">{contentText}</span>}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 mr-2">
                               <button onClick={() => { if (!contentText) return; navigator.clipboard.writeText(contentText); toast.success('Đã copy tin nhắn!'); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy size={13} /> Copy</button>
@@ -786,52 +837,13 @@ const Dashboard = () => {
                           </div>
                         );
                       })()
-                      )
-                    ) : (
-                      <div className="flex flex-col items-start w-full">
-                        <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm">
-                        <ReactMarkdown
-                          rehypePlugins={[rehypeRaw]}
-                          components={{
-                            p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
-                            ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,
-                            ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2 space-y-1" {...props} />,
-                            li: ({node, ...props}) => <li {...props} />,
-                            strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
-                            pre: PreBlock,
-                            code: ({node, inline, ...props}) => inline ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} /> : <code {...props} />,
-                            a: ({node, ...props}) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                            img: ({node, src, alt, ...props}) => {
-                              const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
-                              const finalSrc = src?.startsWith('/api/uploads') ? `${backendUrl}${src}` : src;
-                              return <img src={finalSrc} alt={alt} className="max-w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-[#333] shadow-sm my-2 cursor-zoom-in" onClick={() => window.open(finalSrc, '_blank')} {...props} />;
-                            },
-                            table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-gray-700"><table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm" {...props} /></div>,
-                            thead: ({node, ...props}) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
-                            th: ({node, ...props}) => <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider" {...props} />,
-                            td: ({node, ...props}) => <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props} />
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                        </div>
-                        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 ml-2">
-                          <button 
-                            onClick={() => {
-                              if (!msg.content) return;
-                              navigator.clipboard.writeText(msg.content);
-                              toast.success('Đã copy phản hồi!');
-                            }} 
-                            className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                          >
-                            <Copy size={13} /> Copy
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    )
+                  ) : (
+                    <MemoizedAiMessage content={msg.content} />
+                  )}
                 </div>
               ))}
-              {isLoading && (
+              {isLoading && (!messages.length || messages[messages.length - 1].role !== 'ai') && (
                 <div className="flex flex-col items-start">
                   <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-3">
                     <Sparkles size={16} className="text-blue-500 animate-pulse" />
@@ -858,17 +870,17 @@ const Dashboard = () => {
               {localError}
             </div>
           )}
-          
+
           <div className="w-full max-w-3xl relative flex flex-col bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] focus-within:border-blue-500 dark:focus-within:border-[#555] transition-colors">
-            
+
             {selectedFiles.length > 0 && (
               <div className="px-3 pt-3 pb-1 flex items-center gap-3 flex-wrap max-h-32 overflow-y-auto custom-scrollbar">
                 {selectedFiles.map((file, idx) => (
                   file.type.startsWith('image/') ? (
                     <div key={idx} className="relative group shrink-0">
-                      <img 
-                        src={URL.createObjectURL(file)} 
-                        alt="preview" 
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="preview"
                         className="h-16 w-16 object-cover rounded-lg border border-gray-200 dark:border-[#333] shadow-sm cursor-zoom-in"
                         onClick={() => setFullScreenImage(URL.createObjectURL(file))}
                       />
@@ -895,60 +907,60 @@ const Dashboard = () => {
             )}
 
             <div className="flex items-end w-full">
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors shrink-0"
-            >
-              <Plus size={22} />
-            </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors shrink-0"
+              >
+                <Plus size={22} />
+              </button>
 
-            <textarea 
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${e.target.scrollHeight}px`;
-              }}
-              maxLength={5000}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              placeholder={t('dashboard.promptPlaceholder')} 
-              className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 px-2 py-3 text-base resize-none overflow-y-auto max-h-[200px] custom-scrollbar"
-            />
-
-            <div className="flex items-center gap-2 pr-1 shrink-0 pb-0.5">
-              <input 
-                type="file" 
-                multiple
-                ref={fileInputRef} 
-                onChange={(e) => { 
-                  if (e.target.files && e.target.files.length > 0) { 
-                    const newFiles = Array.from(e.target.files);
-                    setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 10));
-                  } 
-                  e.target.value = null; // Reset input để có thể chọn lại file vừa chọn
-                }} 
-                className="hidden" 
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                maxLength={5000}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                placeholder={t('dashboard.promptPlaceholder')}
+                className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 px-2 py-3 text-base resize-none overflow-y-auto max-h-[200px] custom-scrollbar"
               />
-              
-              {isLoading ? (
-                <button 
-                  onClick={handleStop}
-                  className="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full transition-colors flex items-center justify-center shadow-md animate-pulse shrink-0"
-                >
-                  <Square size={20} fill="currentColor" className="text-white" />
-                </button>
-              ) : (
-                <button 
-                  onClick={() => handleSend()}
-                  disabled={!input.trim() && selectedFiles.length === 0}
-                  className="bg-[#3b82f6] hover:bg-[#2563eb] text-white p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                >
-                  <Send size={20} className="ml-1 text-white" />
-                </button>
-              )}
-            </div>
+
+              <div className="flex items-center gap-2 pr-1 shrink-0 pb-0.5">
+                <input
+                  type="file"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const newFiles = Array.from(e.target.files);
+                      setSelectedFiles(prev => [...prev, ...newFiles].slice(0, 10));
+                    }
+                    e.target.value = null; // Reset input để có thể chọn lại file vừa chọn
+                  }}
+                  className="hidden"
+                />
+
+                {isLoading ? (
+                  <button
+                    onClick={handleStop}
+                    className="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full transition-colors flex items-center justify-center shadow-md animate-pulse shrink-0"
+                  >
+                    <Square size={20} fill="currentColor" className="text-white" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim() && selectedFiles.length === 0}
+                    className="bg-[#3b82f6] hover:bg-[#2563eb] text-white p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  >
+                    <Send size={20} className="ml-1 text-white" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -960,19 +972,19 @@ const Dashboard = () => {
 
       {/* Ảnh toàn màn hình */}
       {fullScreenImage && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
           onClick={() => setFullScreenImage(null)}
         >
-          <button 
+          <button
             className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
             onClick={(e) => { e.stopPropagation(); setFullScreenImage(null); }}
           >
             <X size={24} />
           </button>
-          <img 
-            src={fullScreenImage} 
-            alt="Full screen" 
+          <img
+            src={fullScreenImage}
+            alt="Full screen"
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl cursor-default animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           />
@@ -983,7 +995,7 @@ const Dashboard = () => {
       {apiKeyModalConfig.isOpen && (
         <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#1e1f23] border border-gray-200 dark:border-[#333] w-full max-w-md rounded-2xl shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-            <button 
+            <button
               onClick={() => setApiKeyModalConfig({ isOpen: false, type: 'groq' })}
               className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 rounded-full p-2 transition-colors"
             >
@@ -1000,7 +1012,7 @@ const Dashboard = () => {
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
-              {apiKeyModalConfig.type === 'groq' 
+              {apiKeyModalConfig.type === 'groq'
                 ? t('dashboard.configApiKeyGroqDesc', 'Nhập API Key Groq cá nhân của bạn để sử dụng các model Llama, Mixtral... Key được lưu trực tiếp trên trình duyệt (localStorage) của bạn và không lưu trên cơ sở dữ liệu server.')
                 : t('dashboard.configApiUrlFlowiseDesc', 'Nhập địa chỉ URL Prediction API của Flowise để thực hiện phân tích dữ liệu chuyên sâu. URL được lưu trực tiếp trên trình duyệt của bạn.')}
             </p>
@@ -1009,7 +1021,7 @@ const Dashboard = () => {
               {apiKeyModalConfig.type === 'groq' ? (
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.groqApiKeyLabel', 'Groq API Key')}</label>
-                  <input 
+                  <input
                     type="password"
                     value={tempApiKey}
                     onChange={(e) => setTempApiKey(e.target.value)}
@@ -1020,7 +1032,7 @@ const Dashboard = () => {
               ) : (
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.flowiseApiUrlLabel', 'Flowise API Endpoint URL')}</label>
-                  <input 
+                  <input
                     type="text"
                     value={tempApiUrl}
                     onChange={(e) => setTempApiUrl(e.target.value)}
@@ -1047,20 +1059,20 @@ const Dashboard = () => {
             </div>
 
             <div className="flex gap-3 justify-end items-center">
-              <button 
+              <button
                 onClick={clearApiKeyConfig}
                 className="px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
               >
                 {t('dashboard.clearConfig', 'Xóa cấu hình')}
               </button>
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => setApiKeyModalConfig({ isOpen: false, type: 'groq' })}
                   className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] rounded-xl transition-colors"
                 >
                   {t('dashboard.cancel', 'Hủy')}
                 </button>
-                <button 
+                <button
                   onClick={saveApiKeyConfig}
                   className={`px-5 py-2.5 text-sm font-medium text-white rounded-xl shadow-md transition-all active:scale-95 ${apiKeyModalConfig.type === 'groq' ? 'bg-[#3b82f6] hover:bg-[#2563eb]' : 'bg-[#10b981] hover:bg-[#059669]'}`}
                 >

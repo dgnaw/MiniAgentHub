@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// File này lưu trữ dữ liệu người dùng sau khi đã lấy được từ axiosClient.js
 const useAuthStore = create(
   persist(
     (set) => ({
