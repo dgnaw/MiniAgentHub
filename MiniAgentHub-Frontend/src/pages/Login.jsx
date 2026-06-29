@@ -104,7 +104,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white flex flex-col items-center justify-center relative px-4 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white flex flex-col items-center justify-center relative px-6 sm:px-8 transition-colors duration-300">
       <div className="absolute top-0 w-full flex justify-between items-center p-6">
         <h1 className="text-xl font-bold tracking-wider text-gray-900 dark:text-white">Agent Hub</h1>
         <div className="w-40">
@@ -112,7 +112,7 @@ function Login() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a1b20] w-full max-w-md p-8 rounded-2xl border border-gray-200 dark:border-[#26272b] shadow-2xl transition-colors duration-300">
+      <div className="bg-white dark:bg-[#1a1b20] w-full max-w-md mt-5 p-8 rounded-2xl border border-gray-200 dark:border-[#26272b] shadow-2xl transition-colors duration-300">
         <div className="mb-8">
           <p className="text-blue-500 text-xs font-semibold tracking-widest mb-2 uppercase">
             {t('login.secureAccess', 'Secure Access')}

@@ -25,7 +25,7 @@ const checkPermission = (requiredPermission) => {
     return async (req, res, next) => {
         try {
             // Bypass cho Admin: Mặc định Admin có toàn quyền, không cần tra cứu Permission
-            if (req.user.role === 'Admin' || req.user.role_name === 'Admin' || req.user.role_id === 1) {
+            if (req.user.role_name === 'Admin') {
                 return next();
             }
 

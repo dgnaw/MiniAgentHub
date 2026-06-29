@@ -1,6 +1,6 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
-// File gửi/nhân dữ liệu với backend (xử lý Token)
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL, 
   headers: {
@@ -30,7 +30,7 @@ axiosClient.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       console.warn("Token không hợp lệ hoặc đã hết hạn!");
-      localStorage.removeItem('agentHub_token');
+      useAuthStore.getState().logout();
     }
     
     return Promise.reject(error);

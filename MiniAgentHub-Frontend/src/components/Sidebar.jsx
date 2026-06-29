@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useAuthStore from '../store/authStore';
 import useSidebarStore from '../store/sidebarStore';
-import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight, Download } from 'lucide-react';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight, Download, Clock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
@@ -9,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import ConfirmModal from './ConfirmModal';
 import html2canvas from 'html2canvas';
+import ExportModal from './ExportModal';
 
 function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -27,23 +29,23 @@ function Sidebar() {
   const [sessions, setSessions] = useState([]);
 
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   
-  const [exportConfig, setExportConfig] = useState({
-    isOpen: false,
-    session: null,
-    format: 'md',
-    fileName: '',
-    isExporting: false
-  });
+  const [exportConfig, setExportConfig] = useState({ isOpen: false, session: null });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, type: '', data: null });
   const [shareSessionId, setShareSessionId] = useState(null);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  const [showCollapsedHistory, setShowCollapsedHistory] = useState(false);
+  const [collapsedHistoryPos, setCollapsedHistoryPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
-    const handleClickOutside = () => setActiveMenuId(null);
+    const handleClickOutside = () => {
+      setActiveMenuId(null);
+      setShowCollapsedHistory(false);
+    };
     const handleSessionsCleared = () => setSessions([]);
     
     document.addEventListener('click', handleClickOutside);
@@ -131,7 +133,7 @@ function Sidebar() {
     if (user?.id) {
       checkUserGroups();
     }
-  }, [user, location.pathname]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (shareSessionId) {
@@ -211,145 +213,10 @@ function Sidebar() {
   const handleExportSession = (e, session) => {
     e.stopPropagation();
     setActiveMenuId(null);
-    setExportConfig({
-      isOpen: true,
-      session: session,
-      format: 'md',
-      fileName: (session.title || 'chat').replace(/[^a-z0-9\u00C0-\u024F\u4e00-\u9fa5]/gi, '_').substring(0, 50),
-      isExporting: false
-    });
+    setExportConfig({ isOpen: true, session: session });
   };
 
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
-  const processExport = async () => {
-    const { session, format, fileName } = exportConfig;
-    if (!session) return;
-    
-    setExportConfig(prev => ({ ...prev, isExporting: true }));
-
-    try {
-      const res = await axiosClient.get(`/chat-sessions/${session.id}/messages`);
-      const messages = Array.isArray(res) ? res : (res.data || []);
-      const finalFileName = fileName.trim() || 'export';
-
-      if (format === 'json') {
-        const jsonStr = JSON.stringify(messages, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
-        downloadBlob(blob, `${finalFileName}.json`);
-      } 
-      else if (format === 'csv') {
-        let csvContent = "Role,Content,Time\n";
-        messages.forEach(msg => {
-          const role = msg.role === 'ai' ? 'AI' : 'User';
-          const content = (msg.content || '').replace(/"/g, '""');
-          const time = msg.createdAt ? new Date(msg.createdAt).toLocaleString() : new Date().toLocaleString();
-          csvContent += `"${role}","${content}","${time}"\n`;
-        });
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8' });
-        downloadBlob(blob, `${finalFileName}.csv`);
-      }
-      else if (format === 'txt') {
-        const lines = [`Chat Session: ${session.title || 'Untitled'}`, `Exported: ${new Date().toLocaleString()}`, ''];
-        messages.forEach(msg => {
-          lines.push(`${msg.role === 'ai' ? 'AI' : 'User'}:`);
-          lines.push(msg.content || '');
-          lines.push('----------------------------------------');
-        });
-        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-        downloadBlob(blob, `${finalFileName}.txt`);
-      }
-      else if (format === 'md') {
-        const lines = [`# ${session.title || 'Chat Session'}`, `> Exported from Agent Hub — ${new Date().toLocaleString()}`, ''];
-        messages.forEach(msg => {
-          lines.push(`### ${msg.role === 'ai' ? '🤖 AI' : '👤 User'}`);
-          lines.push(msg.content || '');
-          lines.push('');
-        });
-        const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
-        downloadBlob(blob, `${finalFileName}.md`);
-      }
-      else if (format === 'png') {
-        const theme = useThemeStore.getState().theme;
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = '800px';
-        container.style.backgroundColor = theme === 'dark' ? '#131417' : '#f9fafb';
-        container.style.color = theme === 'dark' ? '#ffffff' : '#111827';
-        container.style.padding = '40px';
-        container.style.fontFamily = 'sans-serif';
-        
-        const title = document.createElement('h2');
-        title.innerText = session.title || 'Chat Session';
-        title.style.textAlign = 'center';
-        title.style.marginBottom = '30px';
-        title.style.color = theme === 'dark' ? '#ffffff' : '#111827';
-        container.appendChild(title);
-
-        messages.forEach(msg => {
-          const msgDiv = document.createElement('div');
-          msgDiv.style.marginBottom = '20px';
-          msgDiv.style.display = 'flex';
-          msgDiv.style.flexDirection = 'column';
-          msgDiv.style.alignItems = msg.role === 'user' ? 'flex-end' : 'flex-start';
-
-          const bubble = document.createElement('div');
-          bubble.style.maxWidth = '80%';
-          bubble.style.padding = '15px 20px';
-          bubble.style.borderRadius = '16px';
-          bubble.style.lineHeight = '1.5';
-          bubble.innerText = msg.content || ''; 
-          
-          if (msg.role === 'user') {
-            bubble.style.backgroundColor = '#2563eb';
-            bubble.style.color = '#ffffff';
-            bubble.style.borderBottomRightRadius = '4px';
-          } else {
-            bubble.style.backgroundColor = theme === 'dark' ? '#1e1f24' : '#ffffff';
-            bubble.style.border = theme === 'dark' ? '1px solid #2a2b30' : '1px solid #e5e7eb';
-            bubble.style.color = theme === 'dark' ? '#e5e7eb' : '#374151';
-            bubble.style.borderBottomLeftRadius = '4px';
-          }
-
-          msgDiv.appendChild(bubble);
-          container.appendChild(msgDiv);
-        });
-
-        document.body.appendChild(container);
-        
-        const canvas = await html2canvas(container, {
-          backgroundColor: theme === 'dark' ? '#131417' : '#f9fafb',
-          scale: 2,
-          logging: false
-        });
-        
-        document.body.removeChild(container);
-
-        const imgUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = imgUrl;
-        a.download = `${finalFileName}.png`;
-        a.click();
-      }
-
-      toast.success(t('sidebar.exportSuccess', 'Chat exported!'));
-      setExportConfig(prev => ({ ...prev, isOpen: false }));
-    } catch (err) {
-      console.error('Export error:', err);
-      toast.error(t('sidebar.exportError', 'Failed to export chat.'));
-    } finally {
-      setExportConfig(prev => ({ ...prev, isExporting: false }));
-    }
-  };
 
   return (
     <>
@@ -425,19 +292,42 @@ function Sidebar() {
 
           {sessions.length > 0 && (
             <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 flex flex-col flex-1 min-h-0">
-              <div 
-                className={`pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 flex items-center ${isCollapsed ? 'md:justify-center md:px-0' : 'justify-between cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors'}`}
-                onClick={() => !isCollapsed && setIsHistoryExpanded(!isHistoryExpanded)}
-              >
-                <span className={isCollapsed ? 'md:hidden' : ''}>{t('sidebar.history', 'History')}</span>
-                <span className={`hidden ${isCollapsed ? 'md:inline' : ''}`}>...</span>
-                {!isCollapsed && (
-                  isHistoryExpanded ? <ChevronDown size={14} className="opacity-70" /> : <ChevronRight size={14} className="opacity-70" />
-                )}
-              </div>
-              
-              {isHistoryExpanded && (
-                <div className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1">
+              {isCollapsed ? (
+                <div className="flex justify-center w-full">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (showCollapsedHistory) {
+                        setShowCollapsedHistory(false);
+                      } else {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setCollapsedHistoryPos({ top: rect.top, left: rect.right + 12 });
+                        setShowCollapsedHistory(true);
+                      }
+                    }}
+                    className={`p-2.5 rounded-xl transition-colors ${showCollapsedHistory ? 'bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#26272b]'}`}
+                    title={t('sidebar.history', 'History')}
+                  >
+                    <Clock size={20} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div 
+                    className="pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 flex items-center justify-between cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+                  >
+                    <span>{t('sidebar.history', 'History')}</span>
+                    {isHistoryExpanded ? <ChevronDown size={14} className="opacity-70" /> : <ChevronRight size={14} className="opacity-70" /> }
+                  </div>
+                  
+                  {isHistoryExpanded && (
+                <div 
+                  className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1"
+                  onScroll={() => {
+                    if (activeMenuId) setActiveMenuId(null);
+                  }}
+                >
                 {sessions.map((session) => (
                   <div 
                     key={session.id}
@@ -471,51 +361,39 @@ function Sidebar() {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActiveMenuId(activeMenuId === session.id ? null : session.id);
+                              if (activeMenuId === session.id) {
+                                setActiveMenuId(null);
+                              } else {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                let left = rect.right + 8;
+                                if (left + 144 > window.innerWidth) {
+                                  left = rect.left - 144 - 8;
+                                }
+
+                                const positionStyle = { left };
+                                const menuHeight = 180;
+                                if (rect.top + menuHeight > window.innerHeight) {
+                                  positionStyle.bottom = window.innerHeight - rect.bottom;
+                                } else {
+                                  positionStyle.top = rect.top;
+                                }
+
+                                setMenuPosition(positionStyle);
+                                setActiveMenuId(session.id);
+                              }
                             }}
                             className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded"
                           >
                             <MoreVertical size={14} />
                           </button>
                         </div>
-                        
-                        {activeMenuId === session.id && (
-                          <div 
-                            className="absolute right-4 top-10 w-36 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-lg shadow-xl py-1 z-50"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setShareSessionId(session.id); }}
-                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
-                            >
-                              <Share2 size={14} /> {t('sidebar.share', 'Share')}
-                            </button>
-                            <button 
-                              onClick={(e) => handleStartEdit(e, session)}
-                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
-                            >
-                              <Pencil size={14} /> {t('sidebar.rename', 'Rename')}
-                            </button>
-                            <button 
-                              onClick={(e) => handleExportSession(e, session)}
-                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
-                            >
-                              <Download size={14} /> {t('sidebar.export', 'Export')}
-                            </button>
-                            <div className="border-t border-gray-100 dark:border-[#333] my-1" />
-                            <button 
-                              onClick={(e) => handleDeleteSession(e, session.id)}
-                              className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
-                            >
-                              <Trash2 size={14} /> {t('sidebar.delete', 'Delete')}
-                            </button>
-                          </div>
-                        )}
                       </>
                     )}
                   </div>
                 ))}
                 </div>
+              )}
+              </>
               )}
             </div>
           )}
@@ -555,79 +433,132 @@ function Sidebar() {
         title={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Đăng xuất') : t('sidebar.delete', 'Xóa')}
         message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm', 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?') : t('sidebar.deleteSessionConfirm', 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này?')}
         onConfirm={executeConfirm}
-        onCancel={() => setConfirmConfig({ isOpen: false, type: '', data: null })}
+        onClose={() => setConfirmConfig({ isOpen: false, type: '', data: null })}
         confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Đăng xuất') : t('sidebar.delete', 'Xóa')}
         cancelText={t('confirmModal.cancel', 'Hủy')}
       />
 
-      {/* Export Modal */}
-      {exportConfig.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#333]">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {t('sidebar.exportTitle', 'Export Session')}
-              </h3>
-              <button
-                onClick={() => setExportConfig(prev => ({ ...prev, isOpen: false }))}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#333]"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('sidebar.exportFileName', 'File Name')}
-                </label>
-                <input
-                  type="text"
-                  value={exportConfig.fileName}
-                  onChange={(e) => setExportConfig(prev => ({ ...prev, fileName: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#2d2d2d] border border-gray-300 dark:border-[#444] rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
-                  placeholder="my_chat_export"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('sidebar.exportFormat', 'Format')}
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {['md', 'txt', 'csv', 'json', 'png'].map((fmt) => (
-                    <button
-                      key={fmt}
-                      onClick={() => setExportConfig(prev => ({ ...prev, format: fmt }))}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center uppercase ${
-                        exportConfig.format === fmt
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                          : 'border-gray-200 dark:border-[#444] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#333]'
-                      }`}
-                    >
-                      .{fmt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 dark:bg-[#252525] border-t border-gray-100 dark:border-[#333] flex justify-end gap-3">
-              <button
-                onClick={() => setExportConfig(prev => ({ ...prev, isOpen: false }))}
-                className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333] rounded-lg transition-colors"
-                disabled={exportConfig.isExporting}
-              >
-                {t('sidebar.exportCancel', 'Cancel')}
-              </button>
-              <button
-                onClick={processExport}
-                disabled={exportConfig.isExporting || !exportConfig.fileName.trim()}
-                className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-all flex items-center justify-center min-w-[100px]"
-              >
-                {exportConfig.isExporting ? t('sidebar.exporting', 'Exporting...') : t('sidebar.exportConfirm', 'Export')}
-              </button>
-            </div>
+      {/* Collapsed History Popup */}
+      {showCollapsedHistory && isCollapsed && createPortal(
+        <div 
+          className="fixed w-64 max-h-[60vh] overflow-y-auto bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-2xl py-2 z-[100] custom-scrollbar"
+          style={{ top: collapsedHistoryPos.top, left: collapsedHistoryPos.left }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+            {t('sidebar.history', 'History')}
           </div>
-        </div>
+          {sessions.map(session => (
+            <div 
+              key={session.id}
+              onClick={() => { navigate(`/chat/${session.id}`); setIsMobileOpen(false); setShowCollapsedHistory(false); }}
+              className="group relative w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b] flex items-center gap-3 transition-colors cursor-pointer"
+            >
+              <MessageSquare size={16} className="text-gray-400 shrink-0" />
+              
+              {editingSessionId === session.id ? (
+                <div className="flex items-center gap-2 flex-1 w-full" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={e => setEditTitle(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSaveEdit(e, session.id);
+                      if (e.key === 'Escape') handleCancelEdit(e);
+                    }}
+                    className="flex-1 bg-white dark:bg-[#131417] text-sm text-gray-900 dark:text-white px-2 py-1 rounded outline-none border border-blue-500 w-full min-w-0"
+                    autoFocus
+                  />
+                  <button onClick={e => handleSaveEdit(e, session.id)} className="text-green-500 hover:text-green-600 shrink-0"><Check size={16}/></button>
+                  <button onClick={e => handleCancelEdit(e)} className="text-red-500 hover:text-red-600 shrink-0"><X size={16}/></button>
+                </div>
+              ) : (
+                <>
+                  <span className="truncate flex-1">{session.title}</span>
+                  <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (activeMenuId === session.id) {
+                          setActiveMenuId(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          let left = rect.right + 8;
+                          if (left + 144 > window.innerWidth) {
+                            left = rect.left - 144 - 8;
+                          }
+
+                          const positionStyle = { left };
+                          const menuHeight = 180;
+                          if (rect.top + menuHeight > window.innerHeight) {
+                            positionStyle.bottom = window.innerHeight - rect.bottom;
+                          } else {
+                            positionStyle.top = rect.top;
+                          }
+
+                          setMenuPosition(positionStyle);
+                          setActiveMenuId(session.id);
+                        }
+                      }}
+                      className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>,
+        document.body
       )}
+
+      {/* Active Session Menu Portal */}
+      {activeMenuId && (() => {
+        const activeSession = sessions.find(s => s.id === activeMenuId);
+        if (!activeSession) return null;
+        return createPortal(
+          <div 
+            className="fixed w-36 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-lg shadow-xl py-1 z-[110]"
+            style={menuPosition}
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setShareSessionId(activeSession.id); }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
+            >
+              <Share2 size={14} /> {t('sidebar.share', 'Share')}
+            </button>
+            <button 
+              onClick={(e) => { handleStartEdit(e, activeSession); }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
+            >
+              <Pencil size={14} /> {t('sidebar.rename', 'Rename')}
+            </button>
+            <button 
+              onClick={(e) => { handleExportSession(e, activeSession); }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
+            >
+              <Download size={14} /> {t('sidebar.export', 'Export')}
+            </button>
+            <div className="border-t border-gray-100 dark:border-[#333] my-1" />
+            <button 
+              onClick={(e) => { handleDeleteSession(e, activeSession.id); }}
+              className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+            >
+              <Trash2 size={14} /> {t('sidebar.delete', 'Delete')}
+            </button>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {/* Export Modal */}
+      <ExportModal 
+        isOpen={exportConfig.isOpen} 
+        session={exportConfig.session} 
+        onClose={() => setExportConfig({ isOpen: false, session: null })} 
+      />
 
       {shareSessionId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity p-4" onClick={() => setShareSessionId(null)}>

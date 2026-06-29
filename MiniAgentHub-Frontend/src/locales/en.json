@@ -17,6 +17,32 @@
     "saving": "Saving..."
   },
 
+  "login": {
+    "secureAccess": "Secure Access",
+    "title": "Log In",
+    "description": "Welcome back to Agent Hub. Enter your credentials to access your dashboard.",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "name@company.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "authenticating": "Authenticating...",
+    "submitBtn": "Continue to Dashboard",
+    "encrypted": "End-to-End Encrypted",
+    "certified": "ISO 27001 Certified",
+    "loginFailed": "Login failed. Please check your credentials!",
+    "emailRequired": "Email is required.",
+    "emailInvalid": "Invalid email format (e.g. name@company.com).",
+    "passwordRequired": "Password is required.",
+    "passwordLength": "Password must be at least 6 characters.",
+    "forgotPassword": "Forgot Password?",
+    "resetPasswordTitle": "Reset Password",
+    "resetPasswordDesc": "Enter your email address. We will generate a temporary password and send it to you.",
+    "sending": "Sending...",
+    "sendNewPassword": "Send New Password",
+    "resetPasswordSuccess": "A new password has been sent to your email!",
+    "resetPasswordError": "An error occurred. Please try again."
+  },
+
   "dashboard": {
     "greeting": "Hello, {{name}}",
     "subtitle": "How can I help your workflow today?",
@@ -40,7 +66,13 @@
     "expire30d": "After 30 days",
     "clearConfig": "Clear Config",
     "cancel": "Cancel",
-    "saveConfig": "Save Config"
+    "saveConfig": "Save Config",
+    "copyResponseSuccess": "Response copied!",
+    "copyMessageSuccess": "Message copied!",
+    "saveGroqKeySuccess": "Personal Groq API Key saved successfully!",
+    "saveFlowiseUrlSuccess": "Personal Flowise API URL saved successfully!",
+    "deleteGroqKeySuccess": "Personal Groq API Key deleted.",
+    "deleteFlowiseUrlSuccess": "Personal Flowise API URL deleted."
   },
 
   "sidebar": {
@@ -59,7 +91,27 @@
     "exportFormat": "Format",
     "exportCancel": "Cancel",
     "exportConfirm": "Export",
-    "exporting": "Exporting..."
+    "exporting": "Exporting...",
+    "share": "Share",
+    "rename": "Rename",
+    "delete": "Delete",
+    "deleteSessionConfirm": "Are you sure you want to delete this chat session?",
+    "shareSession": "Share Chat",
+    "shareDesc": "Copy the link below to share this chat session.",
+    "copied": "Copied to clipboard!",
+    "copyLink": "Copy",
+    "deleteSessionSuccess": "Chat session deleted successfully!",
+    "deleteSessionError": "Failed to delete chat session.",
+    "renameSessionSuccess": "Chat session renamed successfully!",
+    "renameSessionError": "Failed to rename chat session.",
+    "recentSessions": "Recent Sessions",
+    "roleChanged": "Your permissions have changed. The system will log you out to update!"
+  },
+
+  "confirmModal": {
+    "title": "Confirm",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
 
   "roles": {

@@ -16,6 +16,9 @@
     "share": "Chia sẻ",
     "shareSession": "Chia sẻ cuộc trò chuyện",
     "shareDesc": "Sao chép đường dẫn bên dưới để chia sẻ hoặc lưu trữ.",
+    "deleteSessionSuccess": "Xóa phiên trò chuyện thành công!",
+    "renameSessionSuccess": "Đổi tên phiên trò chuyện thành công!",
+    "recentSessions": "Lịch sử gần đây",
     "copyLink": "Sao chép",
     "copied": "Đã sao chép vào khay nhớ tạm!",
     "export": "Xuất file",
@@ -47,7 +50,18 @@
     "submitBtn": "Đăng nhập vào bảng điều khiển",
     "encrypted": "Mã hóa đầu cuối",
     "certified": "Chứng nhận ISO 27001",
-    "loginFailed": "Đăng nhập thất bại. Vui lòng kiểm tra lại!"
+    "loginFailed": "Đăng nhập thất bại. Vui lòng kiểm tra lại!",
+    "emailRequired": "Email không được để trống.",
+    "emailInvalid": "Email không đúng định dạng (ví dụ: ten@congty.com).",
+    "passwordRequired": "Mật khẩu không được để trống.",
+    "passwordLength": "Mật khẩu phải chứa ít nhất 6 ký tự.",
+    "forgotPassword": "Quên mật khẩu?",
+    "resetPasswordTitle": "Khôi phục mật khẩu",
+    "resetPasswordDesc": "Nhập địa chỉ email của bạn. Chúng tôi sẽ tạo mật khẩu tạm thời và gửi cho bạn.",
+    "sending": "Đang gửi...",
+    "sendNewPassword": "Gửi mật khẩu mới",
+    "resetPasswordSuccess": "Một mật khẩu mới đã được gửi đến email của bạn!",
+    "resetPasswordError": "Có lỗi xảy ra. Vui lòng thử lại."
   },
 
   "roles": {
@@ -103,7 +117,13 @@
     "expire30d": "Sau 30 ngày",
     "clearConfig": "Xóa cấu hình",
     "cancel": "Hủy",
-    "saveConfig": "Lưu cấu hình"
+    "saveConfig": "Lưu cấu hình",
+    "copyResponseSuccess": "Đã copy phản hồi!",
+    "copyMessageSuccess": "Đã copy tin nhắn!",
+    "saveGroqKeySuccess": "Đã lưu cấu hình API Key Groq cá nhân!",
+    "saveFlowiseUrlSuccess": "Đã lưu cấu hình API URL Flowise cá nhân!",
+    "deleteGroqKeySuccess": "Đã xóa API Key Groq cá nhân.",
+    "deleteFlowiseUrlSuccess": "Đã xóa API URL Flowise cá nhân."
   },
 
   "theme": {
