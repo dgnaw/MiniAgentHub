@@ -1,10 +1,12 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/user');
 const Role = require('../models/role');
 const Permission = require('../models/permission');
 const RolePermission = require('../models/rolePermission');
 const { UserGroup, GroupPermission } = require('../models');
+const { sendResetPasswordEmail } = require('../utils/emailService');
 
 const loginUser = async (email, password) => {
     const user = await User.findOne({ where: { email } });
@@ -81,6 +83,37 @@ const loginUser = async (email, password) => {
     };
 };
 
+
+
+const forgotPassword = async (email) => {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+        const error = new Error('Tài khoản với email này không tồn tại.');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (!user.is_active) {
+        const error = new Error('Tài khoản của bạn đã bị khóa.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const tempPassword = crypto.randomBytes(4).toString('hex');
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(tempPassword, salt);
+
+    user.password_hash = passwordHash;
+    user.is_first_login = true;
+    await user.save();
+
+    await sendResetPasswordEmail(user.email, user.full_name, tempPassword);
+
+    return { message: 'Mật khẩu mới đã được gửi tới email của bạn.' };
+};
+
 module.exports = {
-    loginUser
+    loginUser,
+    forgotPassword
 };

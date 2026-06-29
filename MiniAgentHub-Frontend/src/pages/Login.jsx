@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, ArrowLeft, Mail, X } from 'lucide-react';
 
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import ThemeToggle from '../components/ThemeToggle';
 import useThemeStore from '../store/themeStore';
+import toast from 'react-hot-toast';
 
 function Login() {
   const navigate = useNavigate();
@@ -21,6 +22,11 @@ function Login() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isSendingForgot, setIsSendingForgot] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   const validateEmail = (val) => {
     if (!val) {
@@ -76,6 +82,27 @@ function Login() {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    if (!forgotEmail.trim()) {
+      setForgotError(t('login.emailRequired', 'Email is required.'));
+      return;
+    }
+    
+    setIsSendingForgot(true);
+    try {
+      const data = await axiosClient.post('/forgot-password', { email: forgotEmail.trim() });
+      toast.success(data.message || t('login.resetPasswordSuccess', 'A new password has been sent to your email!'));
+      setIsForgotModalOpen(false);
+      setForgotEmail('');
+    } catch (err) {
+      setForgotError(err.response?.data?.message || t('login.resetPasswordError', 'An error occurred. Please try again.'));
+    } finally {
+      setIsSendingForgot(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white flex flex-col items-center justify-center relative px-4 transition-colors duration-300">
       <div className="absolute top-0 w-full flex justify-between items-center p-6">
@@ -97,7 +124,6 @@ function Login() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5" noValidate>
-          {/* Email Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
@@ -147,6 +173,15 @@ function Login() {
               </button>
             </div>
             {passwordError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{passwordError}</p>}
+            <div className="flex justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => setIsForgotModalOpen(true)}
+                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline transition-colors focus:outline-none"
+              >
+                {t('login.forgotPassword', 'Forgot Password?')}
+              </button>
+            </div>
           </div>
 
           {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
@@ -169,6 +204,55 @@ function Login() {
           <ShieldCheck size={14} /> {t('login.certified', 'ISO 27001 Certified')}
         </span>
       </div>
+
+      {isForgotModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1a1b20] w-full max-w-md p-6 rounded-2xl border border-gray-200 dark:border-[#26272b] shadow-2xl relative">
+            <button 
+              onClick={() => { setIsForgotModalOpen(false); setForgotError(''); setForgotEmail(''); }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.resetPasswordTitle', 'Reset Password')}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('login.resetPasswordDesc', 'Enter your email address. We will generate a temporary password and send it to you.')}
+              </p>
+            </div>
+
+            <form onSubmit={handleForgotPassword} className="space-y-4" noValidate>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => { setForgotEmail(e.target.value); setForgotError(''); }}
+                  placeholder={t('login.emailPlaceholder', 'name@company.com')}
+                  className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
+                  autoFocus
+                />
+                {forgotError && <p className="text-red-500 dark:text-red-400 text-xs mt-1.5">{forgotError}</p>}
+              </div>
+              <button
+                type="submit"
+                disabled={isSendingForgot}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {isSendingForgot ? t('login.sending', 'Sending...') : (
+                  <>
+                    <Mail size={16} />
+                    {t('login.sendNewPassword', 'Send New Password')}
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

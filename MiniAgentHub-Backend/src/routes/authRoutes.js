@@ -21,4 +21,11 @@ router.post('/login', [
         .isLength({ min: 6 }).withMessage('Mật khẩu phải chứa ít nhất 6 ký tự.')
 ], handleValidationErrors, authController.login);
 
+router.post('/forgot-password', [
+    body('email')
+        .trim()
+        .notEmpty().withMessage('Email không được để trống.')
+        .isEmail().withMessage('Email không đúng định dạng.')
+], handleValidationErrors, authController.forgotPassword);
+
 module.exports = router;
