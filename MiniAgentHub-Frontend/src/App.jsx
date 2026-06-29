@@ -8,14 +8,15 @@ import UserManagement from './pages/UserManagement';
 import SharedChat from './pages/SharedChat';
 import { Toaster } from 'react-hot-toast';
 import ChangePasswordModal from './components/ChangePasswordModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const mustChangePassword = useAuthStore((state) => state.mustChangePassword);
 
   return (
-    <>
-    <Toaster position="top-right" reverseOrder={false} />
+    <ErrorBoundary>
+      <Toaster position="top-right" reverseOrder={false} />
     {isAuthenticated && mustChangePassword && <ChangePasswordModal isOpen={mustChangePassword} isForced={true} onClose={() => {}} />}
     <BrowserRouter>
       <Routes>
@@ -86,7 +87,7 @@ function App() {
       </Routes>
 
     </BrowserRouter>
-    </>
+    </ErrorBoundary>
   );
 }
 
