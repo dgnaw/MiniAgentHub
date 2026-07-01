@@ -3,12 +3,13 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const { sendWelcomeEmail } = require('../utils/emailService');
+const AppError = require('../utils/AppError');
 
 const userService = {
-    createUser: async ({ email, full_name, phone, address, role_id, role_name, group_ids }) => {
+    createUser: async ({ email, full_name, phone, address, role_id, role_name, group_ids }, lng = 'vi') => {
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-            return { error: 'user.emailExists', status: 409 };
+            throw new AppError('user.emailExists', 409);
         }
 
         let targetRoleId = role_id;
@@ -23,7 +24,7 @@ const userService = {
         if (targetRoleId && isValidUUID) {
             const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
-                return { error: 'user.roleNotFound', status: 404 };
+                throw new AppError('user.roleNotFound', 404);
             }
         } else {
             const defaultRole = await Role.findOne({ where: { name: 'User' } });
@@ -45,7 +46,7 @@ const userService = {
         if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
             const groupCount = await Group.count({ where: { id: group_ids } });
             if (groupCount !== group_ids.length) {
-                return { error: 'user.invalidGroupId', status: 400 };
+                throw new AppError('user.invalidGroupId', 400);
             }
             const userGroupRecords = group_ids.map(gId => ({ user_id: newUser.id, group_id: gId }));
             await UserGroup.bulkCreate(userGroupRecords);
@@ -53,14 +54,14 @@ const userService = {
 
         let emailSent = true;
         try {
-            await sendWelcomeEmail(email, full_name, rawPassword);
+            await sendWelcomeEmail(email, full_name, rawPassword, lng);
         } catch (mailError) {
             console.error('Lỗi gửi email cấp phát:', mailError);
 
             await UserGroup.destroy({ where: { user_id: newUser.id } });
             await User.destroy({ where: { id: newUser.id } });
 
-            return { error: 'user.emailSendFailed', status: 500 };
+            throw new AppError('user.emailSendFailed', 500);
         }
 
         return {
@@ -104,7 +105,7 @@ const userService = {
             ]
         });
         if (!user) {
-            return { error: 'user.notFound', status: 404 };
+            throw new AppError('user.notFound', 404);
         }
 
         const roleId = user.role_id;
@@ -148,7 +149,7 @@ const userService = {
             include: [{ model: Role, attributes: ['name'] }]
         });
         if (!user) {
-            return { error: 'user.notFound', status: 404 };
+            throw new AppError('user.notFound', 404);
         }
 
         const { full_name, phone, address, role_id, role_name, role, is_active, group_ids } = updateData;
@@ -163,7 +164,7 @@ const userService = {
 
         if (user.Role && user.Role.name === 'Admin') {
             if (targetRoleId || targetRoleName || is_active === false) {
-                return { error: 'user.cannotDemoteAdmin', status: 403 };
+                throw new AppError('user.cannotDemoteAdmin', 403);
             }
         }
 
@@ -177,7 +178,7 @@ const userService = {
         if (targetRoleId !== undefined && isValidUUID) {
             const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
-                return { error: 'user.roleNotFound', status: 404 };
+                throw new AppError('user.roleNotFound', 404);
             }
             user.role_id = targetRoleId;
         }
@@ -188,7 +189,7 @@ const userService = {
             if (group_ids.length > 0) {
                 const groupCount = await Group.count({ where: { id: group_ids } });
                 if (groupCount !== group_ids.length) {
-                    return { error: 'user.invalidGroupId', status: 400 };
+                    throw new AppError('user.invalidGroupId', 400);
                 }
             }
             await UserGroup.destroy({ where: { user_id: id } });
@@ -207,11 +208,11 @@ const userService = {
             include: [{ model: Role, attributes: ['name'] }]
         });
         if (!user) {
-            return { error: 'user.notFound', status: 404 };
+            throw new AppError('user.notFound', 404);
         }
 
         if (user.Role && user.Role.name === 'Admin') {
-            return { error: 'user.cannotDeleteAdmin', status: 403 };
+            throw new AppError('user.cannotDeleteAdmin', 403);
         }
 
         await user.destroy();
@@ -221,16 +222,12 @@ const userService = {
     changePassword: async (userId, oldPassword, newPassword) => {
         const user = await User.findByPk(userId);
         if (!user) {
-            const error = new Error('user.notFound');
-            error.status = 404;
-            throw error;
+            throw new AppError('user.notFound', 404);
         }
 
         const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
         if (!isMatch) {
-            const error = new Error('auth.oldPasswordIncorrect');
-            error.status = 400;
-            throw error;
+            throw new AppError('auth.oldPasswordIncorrect', 400);
         }
 
         const password_hash = await bcrypt.hash(newPassword, 10);

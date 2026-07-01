@@ -248,7 +248,9 @@
     "alertNoName": "Vui lòng nhập tên nhóm!",
     "alertReadRequired": "Bạn không thể tắt quyền Read. Quyền này là bắt buộc để bạn có thể tiếp tục nhìn thấy và quản lý nhóm!",
     "alertSelfRemove": "Bạn không thể tự xóa chính mình khỏi nhóm để tránh việc mất quyền truy cập!",
-    "noName": "Không có tên"
+    "noName": "Không có tên",
+    "createSuccess": "Tạo nhóm thành công!",
+    "updateSuccess": "Cập nhật nhóm thành công!"
   },
 
   "userManagement": {
@@ -316,7 +318,13 @@
     "saving": "Đang lưu...",
     "alertNoNameEmail": "Vui lòng nhập tên và email!",
     "alertSaveError": "Có lỗi xảy ra khi lưu người dùng!",
-    "members": "thành viên"
+    "members": "thành viên",
+    "fullNameRequired": "Họ và tên không được để trống.",
+    "emailRequired": "Email không được để trống.",
+    "emailInvalid": "Email không đúng định dạng (ví dụ: ten@congty.com).",
+    "selectGroupsPlaceholder": "Chọn nhóm...",
+    "createSuccess": "Tạo người dùng thành công!",
+    "updateSuccess": "Cập nhật người dùng thành công!"
   },
 
   "chat": {

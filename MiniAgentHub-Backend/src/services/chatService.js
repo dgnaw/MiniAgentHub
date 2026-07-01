@@ -1,6 +1,7 @@
 const ChatSession = require('../models/chatSession');
 const ChatMessage = require('../models/chatMessage');
 const aiService = require('./aiService');
+const AppError = require('../utils/AppError');
 
 const chatService = {
     prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
@@ -22,9 +23,7 @@ const chatService = {
             if (parsedEditIndex === undefined) {
                 const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId } });
                 if (messageCount >= 100) {
-                    const limitError = new Error('chat.limitExceeded');
-                    limitError.status = 400;
-                    throw limitError;
+                    throw new AppError('chat.limitExceeded', 400);
                 }
             }
             await ChatSession.update({ updated_at: new Date() }, { where: { id: currentSessionId } });
@@ -98,23 +97,23 @@ const chatService = {
 
     deleteSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) return { error: 'chat.notFound', status: 404 };
+        if (!session) throw new AppError('chat.notFound', 404);
         await ChatMessage.destroy({ where: { session_id: sessionId } });
         await ChatSession.destroy({ where: { id: sessionId } });
         return { message: 'chat.deleteSuccess' };
     },
 
     renameSession: async (sessionId, userId, title) => {
-        if (!title || !title.trim()) return { error: 'chat.titleRequired', status: 400 };
+        if (!title || !title.trim()) throw new AppError('chat.titleRequired', 400);
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) return { error: 'chat.notFound', status: 404 };
+        if (!session) throw new AppError('chat.notFound', 404);
         await ChatSession.update({ title: title.trim() }, { where: { id: sessionId }, silent: true });
         return { message: 'chat.renameSuccess', title: title.trim() };
     },
 
     shareSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) return { error: 'chat.notFound', status: 404 };
+        if (!session) throw new AppError('chat.notFound', 404);
         await ChatSession.update({ is_shared: true }, { where: { id: sessionId } });
         return { message: 'chat.shareSuccess', is_shared: true };
     },
@@ -122,7 +121,7 @@ const chatService = {
     getPublicSession: async (sessionId) => {
         const session = await ChatSession.findByPk(sessionId);
         if (!session || !session.is_shared) {
-            return { error: 'chat.publicSessionNotFound', status: 404 };
+            throw new AppError('chat.publicSessionNotFound', 404);
         }
         const messages = await ChatMessage.findAll({
             where: { session_id: sessionId },

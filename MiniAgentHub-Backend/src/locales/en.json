@@ -66,5 +66,30 @@
     "emptyMessage": "Please provide a question or at least 1 attachment.",
     "messageTooLong": "Message is too long. Please enter a maximum of 5000 characters.",
     "modelFetchError": "Unable to fetch model list from Groq API."
+  },
+  "email": {
+    "welcome": {
+      "subject": "Welcome to Agent Hub - Your Login Credentials",
+      "onboardingConfirmed": "ONBOARDING CONFIRMED",
+      "title": "Your Agent Hub account is ready",
+      "greeting": "Hello <strong>{{fullName}}</strong>,<br><br> Your registration is complete. Please use the temporary credentials below to access your new workspace for the first time.",
+      "footerSupport": "If you have any questions, feel free to contact the Agent Hub support team."
+    },
+    "reset": {
+      "subject": "Agent Hub - Password Reset",
+      "passwordReset": "PASSWORD RESET",
+      "title": "Your new temporary password",
+      "greeting": "Hello <strong>{{fullName}}</strong>,<br><br> We received a request to reset the password for your Agent Hub account. Please use the temporary credentials below to log in. You will be asked to create a new, secure password immediately after logging in.",
+      "footerSupport": "If you did not request a password reset, please ignore this email or contact support if you have concerns."
+    },
+    "securityCredentials": "Security Credentials",
+    "changePasswordAdvice": "Please change your password after logging in.",
+    "changePasswordAdviceReset": "Please change your password immediately after logging in.",
+    "loginEmail": "LOGIN EMAIL",
+    "temporaryPassword": "TEMPORARY PASSWORD",
+    "loginToDashboard": "Log in to Dashboard &rarr;",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "helpCenter": "Help Center"
   }
 }

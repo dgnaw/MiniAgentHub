@@ -7,33 +7,26 @@ const Permission = require('../models/permission');
 const RolePermission = require('../models/rolePermission');
 const { UserGroup, GroupPermission } = require('../models');
 const { sendResetPasswordEmail } = require('../utils/emailService');
+const AppError = require('../utils/AppError');
 
 const loginUser = async (email, password) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-        const error = new Error('auth.invalidCredentials');
-        error.statusCode = 401;
-        throw error;
+        throw new AppError('auth.invalidCredentials', 401);
     }
 
     if (!user.is_active) {
-        const error = new Error('auth.accountLocked');
-        error.statusCode = 403; 
-        throw error;
+        throw new AppError('auth.accountLocked', 403);
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-        const error = new Error('auth.invalidCredentials');
-        error.statusCode = 401;
-        throw error;
+        throw new AppError('auth.invalidCredentials', 401);
     }
 
     if (!process.env.JWT_SECRET) {
         console.error('Lỗi: JWT_SECRET chưa được cấu hình trong file .env');
-        const error = new Error('server.configError');
-        error.statusCode = 500;
-        throw error;
+        throw new AppError('server.configError', 500);
     }
 
     const role = await Role.findByPk(user.role_id);
@@ -95,9 +88,7 @@ const loginUser = async (email, password) => {
 
 const refreshAccessToken = async (refreshToken) => {
     if (!refreshToken) {
-        const error = new Error('auth.refreshTokenMissing');
-        error.statusCode = 401;
-        throw error;
+        throw new AppError('auth.refreshTokenMissing', 401);
     }
 
     const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
@@ -105,22 +96,16 @@ const refreshAccessToken = async (refreshToken) => {
     try {
         decoded = jwt.verify(refreshToken, refreshSecret);
     } catch (err) {
-        const error = new Error('auth.refreshTokenInvalid');
-        error.statusCode = 403;
-        throw error;
+        throw new AppError('auth.refreshTokenInvalid', 403);
     }
 
     const user = await User.findOne({ where: { id: decoded.id, refresh_token: refreshToken } });
     if (!user) {
-        const error = new Error('auth.refreshTokenNotFound');
-        error.statusCode = 403;
-        throw error;
+        throw new AppError('auth.refreshTokenNotFound', 403);
     }
 
     if (!user.is_active) {
-        const error = new Error('auth.accountLocked');
-        error.statusCode = 403;
-        throw error;
+        throw new AppError('auth.accountLocked', 403);
     }
 
     const role = await Role.findByPk(user.role_id);
@@ -145,18 +130,14 @@ const logoutUser = async (userId) => {
     return { message: 'auth.logoutSuccess' };
 };
 
-const forgotPassword = async (email) => {
+const forgotPassword = async (email, lng = 'vi') => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-        const error = new Error('auth.emailNotFound');
-        error.statusCode = 404;
-        throw error;
+        throw new AppError('auth.emailNotFound', 404);
     }
 
     if (!user.is_active) {
-        const error = new Error('auth.accountLocked');
-        error.statusCode = 403;
-        throw error;
+        throw new AppError('auth.accountLocked', 403);
     }
 
     const tempPassword = crypto.randomBytes(4).toString('hex');
@@ -168,7 +149,7 @@ const forgotPassword = async (email) => {
     user.is_first_login = true;
     await user.save();
 
-    await sendResetPasswordEmail(user.email, user.full_name, tempPassword);
+    await sendResetPasswordEmail(user.email, user.full_name, tempPassword, lng);
 
     return { message: 'auth.newPasswordSent' };
 };

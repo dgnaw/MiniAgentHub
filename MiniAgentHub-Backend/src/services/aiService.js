@@ -6,11 +6,12 @@ const pdfParse = require('pdf-parse-new');
 const Tesseract = require('tesseract.js');
 const ChatSession = require('../models/chatSession');
 const ChatMessage = require('../models/chatMessage');
+const AppError = require('../utils/AppError');
 
 const getGroqClient = (customKey) => {
     const key = customKey || process.env.GROQ_API_KEY;
     if (!key || key.trim() === '') {
-        throw new Error('ai.apiKeyInvalid');
+        throw new AppError('ai.apiKeyInvalid', 500);
     }
     return new Groq({
         apiKey: key
@@ -358,9 +359,8 @@ const aiService = {
                     if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
                 }
             }
-
-            error.message = 'ai.fileReadError';
-            throw error;
+            if (err instanceof AppError) throw err;
+            throw new AppError('ai.fileReadError', 500);
         }
 
         return { processedMessage, messageToSave, flowiseUploads };

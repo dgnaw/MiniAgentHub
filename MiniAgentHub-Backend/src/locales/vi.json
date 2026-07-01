@@ -27,12 +27,12 @@
     "notFound": "Người dùng không tồn tại!",
     "cannotDemoteAdmin": "Không thể hạ quyền hoặc khoá tài khoản Admin gốc.",
     "cannotDeleteAdmin": "Hành động bị từ chối: Không thể xóa tài khoản Admin gốc của hệ thống.",
-    "emailExists": "User with this email already exists",
+    "emailExists": "Email này đã được sử dụng.",
     "createSuccess": "Tạo tài khoản thành công.",
-    "roleNotFound": "Role not found",
+    "roleNotFound": "Không tìm thấy quyền (role) này.",
     "emailSendFailed": "Không thể gửi email chứa mật khẩu. Quá trình tạo người dùng đã bị hủy (rollback).",
     "invalidGroupId": "Một hoặc nhiều Group ID không hợp lệ.",
-    "deleteSuccess": "User deleted successfully"
+    "deleteSuccess": "Xóa người dùng thành công."
   },
   "validation": {
     "emailRequired": "Email không được để trống.",
@@ -66,5 +66,30 @@
     "emptyMessage": "Vui lòng cung cấp nội dung câu hỏi hoặc ít nhất 1 file đính kèm.",
     "messageTooLong": "Nội dung tin nhắn quá dài. Vui lòng nhập tối đa 5000 ký tự.",
     "modelFetchError": "Không thể lấy danh sách model từ Groq API."
+  },
+  "email": {
+    "welcome": {
+      "subject": "Chào mừng đến với Agent Hub - Thông tin Đăng nhập",
+      "onboardingConfirmed": "XÁC NHẬN ĐĂNG KÝ",
+      "title": "Tài khoản Agent Hub của bạn đã sẵn sàng",
+      "greeting": "Xin chào <strong>{{fullName}}</strong>,<br><br> Quá trình đăng ký của bạn đã hoàn tất. Vui lòng sử dụng thông tin đăng nhập tạm thời bên dưới để truy cập không gian làm việc mới của bạn lần đầu tiên.",
+      "footerSupport": "Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ nhóm hỗ trợ của Agent Hub."
+    },
+    "reset": {
+      "subject": "Agent Hub - Khôi phục Mật khẩu",
+      "passwordReset": "KHÔI PHỤC MẬT KHẨU",
+      "title": "Mật khẩu tạm thời mới của bạn",
+      "greeting": "Xin chào <strong>{{fullName}}</strong>,<br><br> Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản Agent Hub của bạn. Vui lòng sử dụng thông tin đăng nhập tạm thời bên dưới để đăng nhập. Bạn sẽ được yêu cầu tạo một mật khẩu bảo mật mới ngay sau khi đăng nhập.",
+      "footerSupport": "Nếu bạn không yêu cầu khôi phục mật khẩu, vui lòng bỏ qua email này hoặc liên hệ nhóm hỗ trợ nếu bạn có bất kỳ lo ngại nào."
+    },
+    "securityCredentials": "Thông tin Đăng nhập",
+    "changePasswordAdvice": "Vui lòng đổi mật khẩu sau khi đăng nhập.",
+    "changePasswordAdviceReset": "Vui lòng đổi mật khẩu ngay sau khi đăng nhập.",
+    "loginEmail": "EMAIL ĐĂNG NHẬP",
+    "temporaryPassword": "MẬT KHẨU TẠM THỜI",
+    "loginToDashboard": "Đăng nhập vào Bảng điều khiển &rarr;",
+    "privacyPolicy": "Chính sách Bảo mật",
+    "termsOfService": "Điều khoản Dịch vụ",
+    "helpCenter": "Trung tâm Hỗ trợ"
   }
 }

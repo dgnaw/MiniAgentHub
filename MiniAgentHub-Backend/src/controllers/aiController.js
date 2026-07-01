@@ -8,7 +8,7 @@ const cleanBase64Images = (text) => {
 };
 
 const aiController = {
-    chat: async (req, res) => {
+    chat: async (req, res, next) => {
         let aiProcessData = {};
         let aiResponse = "";
         let clientDisconnected = false;
@@ -149,7 +149,7 @@ const aiController = {
             }
 
             if (!res.headersSent) {
-                return res.status(error.status || 500).json({ message: error.message ? req.t(error.message) : req.t('server.internalError') });
+                return next(error);
             } else {
                 res.write(`data: ${JSON.stringify({ chunk: errorMessage })}\n\n`);
                 res.write(`data: [DONE]\n\n`);
@@ -158,13 +158,13 @@ const aiController = {
         }
     },
 
-    getModels: async (req, res) => {
+    getModels: async (req, res, next) => {
         try {
             const customGroqKey = req.headers['x-groq-api-key'];
             const models = await aiService.getAvailableModels(customGroqKey);
             return res.status(200).json(models);
         } catch (error) {
-            return res.status(500).json({ message: req.t('ai.modelFetchError') });
+            next(error);
         }
     }
 };

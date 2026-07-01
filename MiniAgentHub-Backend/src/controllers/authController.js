@@ -1,6 +1,6 @@
 const authService = require('../services/authService');
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
@@ -16,32 +16,26 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Lỗi API Login:', error);
-        const statusCode = error.statusCode || 500;
-        const message = statusCode === 500 ? req.t('server.internalError') : req.t(error.message);
-        return res.status(statusCode).json({ message });
+        next(error);
     }
 };
 
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res, next) => {
     try {
         const { email } = req.body;
         if (!email) {
             return res.status(400).json({ message: req.t('validation.emailRequired') });
         }
 
-        const result = await authService.forgotPassword(email);
+        const result = await authService.forgotPassword(email, req.language);
         return res.status(200).json({ message: req.t(result.message) });
 
     } catch (error) {
-        console.error('Lỗi API Forgot Password:', error);
-        const statusCode = error.statusCode || 500;
-        const message = statusCode === 500 ? req.t('server.internalError') : req.t(error.message);
-        return res.status(statusCode).json({ message });
+        next(error);
     }
 };
 
-const refreshToken = async (req, res) => {
+const refreshToken = async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
         if (!refreshToken) {
@@ -51,21 +45,17 @@ const refreshToken = async (req, res) => {
         const result = await authService.refreshAccessToken(refreshToken);
         return res.status(200).json(result);
     } catch (error) {
-        console.error('Lỗi API Refresh Token:', error);
-        const statusCode = error.statusCode || 500;
-        const message = statusCode === 500 ? req.t('server.internalError') : req.t(error.message);
-        return res.status(statusCode).json({ message });
+        next(error);
     }
 };
 
-const logout = async (req, res) => {
+const logout = async (req, res, next) => {
     try {
         const userId = req.user.id; // Lấy từ authMiddleware
         const result = await authService.logoutUser(userId);
         return res.status(200).json({ message: req.t(result.message) });
     } catch (error) {
-        console.error('Lỗi API Logout:', error);
-        return res.status(500).json({ message: req.t('server.internalError') });
+        next(error);
     }
 };
 

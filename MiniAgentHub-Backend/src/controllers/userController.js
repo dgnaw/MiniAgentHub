@@ -1,17 +1,13 @@
 const userService = require('../services/userService');
 
 const userController = {
-    createUser: async (req, res) => {
+    createUser: async (req, res, next) => {
         try {
             let { email, full_name, phone, address, role_id, role_name, role, group_ids } = req.body;
 
             const targetRoleName = role_name || role;
 
-            const result = await userService.createUser({ email, full_name, phone, address, role_id, role_name: targetRoleName, group_ids });
-
-            if (result.error) {
-                return res.status(result.status || 400).json({ message: req.t(result.error) });
-            }
+            const result = await userService.createUser({ email, full_name, phone, address, role_id, role_name: targetRoleName, group_ids }, req.language);
 
             return res.status(201).json({
                 message: req.t('user.createSuccess'),
@@ -19,36 +15,29 @@ const userController = {
             });
 
         } catch (error) {
-            console.error('Lỗi tại userController.createUser:', error);
-            const status = error.status || 500;
-            return res.status(status).json({ message: error.message ? req.t(error.message) : req.t('server.internalError') });
+            next(error);
         }
     },
 
-    getAllUsers: async (req, res) => {
+    getAllUsers: async (req, res, next) => {
         try {
             const users = await userService.getAllUsers();
             return res.status(200).json(users);
         } catch (error) {
-            console.error('Lỗi tại userController.getAllUsers:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    getUserById: async (req, res) => {
+    getUserById: async (req, res, next) => {
         try {
             const result = await userService.getUserById(req.params.id);
-            if (result.error) {
-                return res.status(result.status || 404).json({ message: req.t(result.error) });
-            }
             return res.status(result.status || 200).json(result.data);
         } catch (error) {
-            console.error('Lỗi tại userController.getUserById:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    updateUser: async (req, res) => {
+    updateUser: async (req, res, next) => {
         try {
             const updateData = { ...req.body };
 
@@ -62,30 +51,22 @@ const userController = {
             }
 
             const result = await userService.updateUser(req.params.id, updateData);
-            if (result.error) {
-                return res.status(result.status || 400).json({ message: req.t(result.error) });
-            }
             return res.status(result.status || 200).json(result.data);
         } catch (error) {
-            console.error('Lỗi tại userController.updateUser:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    deleteUser: async (req, res) => {
+    deleteUser: async (req, res, next) => {
         try {
             const result = await userService.deleteUser(req.params.id);
-            if (result.error) {
-                return res.status(result.status || 400).json({ message: req.t(result.error) });
-            }
             return res.status(result.status || 200).json({ message: req.t(result.data.message) });
         } catch (error) {
-            console.error('Lỗi tại userController.deleteUser:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    changePassword: async (req, res) => {
+    changePassword: async (req, res, next) => {
         try {
             const { old_password, new_password } = req.body;
 
@@ -104,9 +85,7 @@ const userController = {
 
             return res.status(200).json({ message: req.t('auth.changePasswordSuccess') });
         } catch (error) {
-            console.error('Lỗi tại changePassword Controller:', error);
-            const status = error.status || 500;
-            return res.status(status).json({ message: error.message ? req.t(error.message) : req.t('server.internalError') });
+            next(error);
         }
     }
 

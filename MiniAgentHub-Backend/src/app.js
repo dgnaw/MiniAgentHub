@@ -13,6 +13,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const path = require('path');
 const { i18next, middleware } = require('./config/i18n');
 const { authenticateToken } = require('./middleware/authMiddleware');
+const errorHandler = require('./middleware/errorHandler');
     
 const app = express();
 app.use(cors());
@@ -30,6 +31,9 @@ app.use('/api', groupRoutes);
 app.use('/api', userRoutes);
 app.use('/api', aiRoutes);
 app.use('/api', chatRoutes);
+
+// Bắt lỗi toàn cục
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

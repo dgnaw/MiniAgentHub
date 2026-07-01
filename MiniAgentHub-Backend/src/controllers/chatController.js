@@ -1,77 +1,66 @@
 const chatService = require('../services/chatService');
 
 const chatController = {
-    getSessions: async (req, res) => {
+    getSessions: async (req, res, next) => {
         try {
             const sessions = await chatService.getSessions(req.user.id);
             return res.status(200).json(sessions);
         } catch (error) {
-            console.error('Lỗi tại chatController.getSessions:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    getSessionMessages: async (req, res) => {
+    getSessionMessages: async (req, res, next) => {
         try {
             const messages = await chatService.getSessionMessages(req.params.id);
             return res.status(200).json(messages);
         } catch (error) {
-            console.error('Lỗi tại chatController.getSessionMessages:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    deleteAllSessions: async (req, res) => {
+    deleteAllSessions: async (req, res, next) => {
         try {
             const result = await chatService.deleteAllSessions(req.user.id);
             return res.status(200).json({ message: req.t(result.message) });
         } catch (error) {
-            console.error('Lỗi tại chatController.deleteAllSessions:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    deleteSession: async (req, res) => {
+    deleteSession: async (req, res, next) => {
         try {
             const result = await chatService.deleteSession(req.params.id, req.user.id);
-            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
             return res.status(200).json({ message: req.t(result.message) });
         } catch (error) {
-            console.error('Lỗi tại chatController.deleteSession:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    renameSession: async (req, res) => {
+    renameSession: async (req, res, next) => {
         try {
             const result = await chatService.renameSession(req.params.id, req.user.id, req.body.title);
-            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
             return res.status(200).json({ message: req.t(result.message), title: result.title });
         } catch (error) {
-            console.error('Lỗi tại chatController.renameSession:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    shareSession: async (req, res) => {
+    shareSession: async (req, res, next) => {
         try {
             const result = await chatService.shareSession(req.params.id, req.user.id);
-            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
             return res.status(200).json({ message: req.t(result.message), is_shared: result.is_shared });
         } catch (error) {
-            console.error('Lỗi tại chatController.shareSession:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     },
 
-    getPublicSession: async (req, res) => {
+    getPublicSession: async (req, res, next) => {
         try {
             const result = await chatService.getPublicSession(req.params.id);
-            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
             return res.status(200).json(result.data);
         } catch (error) {
-            console.error('Lỗi tại chatController.getPublicSession:', error);
-            return res.status(500).json({ message: req.t('server.internalError') });
+            next(error);
         }
     }
 };
