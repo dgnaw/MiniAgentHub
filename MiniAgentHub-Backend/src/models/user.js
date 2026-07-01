@@ -48,6 +48,14 @@ const User = sequelize.define('User', {
     refresh_token: {
         type: DataTypes.TEXT,
         allowNull: true,
+    },
+    groq_api_key: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+    },
+    flowise_api_url: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
     }
 }, {
     tableName: 'users',

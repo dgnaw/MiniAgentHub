@@ -6,10 +6,21 @@ const login = async (req, res, next) => {
 
         const result = await authService.loginUser(email, password);
 
+        const isProd = process.env.NODE_ENV === 'production';
+        const cookieOptions = {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000 
+        };
+
+        res.cookie('agentHub_token', result.token, cookieOptions);
+        if (result.refreshToken) {
+            res.cookie('agentHub_refreshToken', result.refreshToken, cookieOptions);
+        }
+
         return res.status(200).json({
             message: req.t('auth.loginSuccess'),
-            token: result.token,
-            refreshToken: result.refreshToken,
             user: result.user,
             permissions: result.permissions,
             must_change_password: result.must_change_password
@@ -37,13 +48,24 @@ const forgotPassword = async (req, res, next) => {
 
 const refreshToken = async (req, res, next) => {
     try {
-        const { refreshToken } = req.body;
+        const refreshToken = req.cookies?.agentHub_refreshToken;
         if (!refreshToken) {
-            return res.status(400).json({ message: req.t('auth.refreshTokenMissing') });
+            return res.status(401).json({ message: req.t('auth.refreshTokenMissing') });
         }
         
         const result = await authService.refreshAccessToken(refreshToken);
-        return res.status(200).json(result);
+
+        const isProd = process.env.NODE_ENV === 'production';
+        const cookieOptions = {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        };
+
+        res.cookie('agentHub_token', result.token, cookieOptions);
+
+        return res.status(200).json({ message: 'Token refreshed successfully' });
     } catch (error) {
         next(error);
     }
@@ -51,8 +73,12 @@ const refreshToken = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
     try {
-        const userId = req.user.id; // Lấy từ authMiddleware
+        const userId = req.user.id; 
         const result = await authService.logoutUser(userId);
+        
+        res.clearCookie('agentHub_token');
+        res.clearCookie('agentHub_refreshToken');
+
         return res.status(200).json({ message: req.t(result.message) });
     } catch (error) {
         next(error);

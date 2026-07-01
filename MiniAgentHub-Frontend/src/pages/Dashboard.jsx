@@ -211,6 +211,7 @@ const Dashboard = () => {
       <ApiKeyModal
         isOpen={apiKeyModalConfig.isOpen}
         type={apiKeyModalConfig.type}
+        user={user}
         onClose={() => setApiKeyModalConfig({ isOpen: false, type: 'groq' })}
         onSuccess={() => setApiKeyChanged(prev => prev + 1)}
       />

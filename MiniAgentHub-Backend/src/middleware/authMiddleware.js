@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { Permission, RolePermission, UserGroup, GroupPermission } = require('../models');
+const AppError = require('../utils/AppError');
 
 const authenticateToken = (req, res, next) => {
     // whitelist some public paths
@@ -8,15 +9,10 @@ const authenticateToken = (req, res, next) => {
         return next();
     }
 
-    const authHeader = req.headers['authorization'];
-    
-    let token;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
-    }
+    const token = req.cookies?.agentHub_token;
 
     if (!token) {
-        return res.status(401).json({ message: req.t('auth.tokenNotFound') });
+        return next(new AppError('auth.tokenNotFound', 401));
     }
 
     try {
@@ -26,7 +22,7 @@ const authenticateToken = (req, res, next) => {
         
         next();
     } catch (error) {
-        return res.status(401).json({ message: req.t('auth.tokenInvalid') });
+        return next(new AppError('auth.tokenInvalid', 401));
     }
 };
 
@@ -35,7 +31,7 @@ const checkPermission = (requiredPermission) => {
         try {
             // Safety check: Đảm bảo req.user tồn tại (tránh lỗi crash trên các route public vô tình gọi checkPermission)
             if (!req.user) {
-                return res.status(401).json({ message: req.t('auth.unauthenticated') });
+                return next(new AppError('auth.unauthenticated', 401));
             }
 
             const roleId = req.user.role_id; 
@@ -82,15 +78,13 @@ const checkPermission = (requiredPermission) => {
             }
 
             if (!userPermissions.includes(requiredPermission)) {
-                return res.status(403).json({ 
-                    message: req.t('auth.forbidden') 
-                });
+                return next(new AppError('auth.forbidden', 403));
             }
 
             next();
         } catch (error) {
             console.error('Lỗi kiểm tra quyền:', error);
-            return res.status(500).json({ message: req.t('server.initError') });
+            return next(new AppError('server.initError', 500));
         }
     };
 };

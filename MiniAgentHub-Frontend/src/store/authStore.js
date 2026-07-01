@@ -29,9 +29,6 @@ const useAuthStore = create(
       },
 
       logout: () => {
-        localStorage.removeItem('agentHub_token');
-        localStorage.removeItem('agentHub_refreshToken');
-        
         set({
           user: null,
           permissions: [],

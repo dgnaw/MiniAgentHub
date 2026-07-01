@@ -1,5 +1,6 @@
 const aiService = require('../services/aiService');
 const chatService = require('../services/chatService');
+const userService = require('../services/userService');
 
 // Hàm gỡ bỏ hình ảnh Base64 khổng lồ ra khỏi văn bản trước khi đưa cho AI đọc
 const cleanBase64Images = (text) => {
@@ -20,20 +21,20 @@ const aiController = {
             }
         });
 
-        const customGroqKey = req.headers['x-groq-api-key'];
-        const customFlowiseUrl = req.headers['x-flowise-api-url'];
-
         try {
             const { message, sessionId, model, isPing } = req.body;
             const files = req.files || [];
+
+            const userId = req.user.id;
+            const userKeys = await userService.getUserApiKeys(userId);
+            const customGroqKey = userKeys.groq_api_key;
+            const customFlowiseUrl = userKeys.flowise_api_url;
 
             if (isPing) {
                 const groqReady = !!(customGroqKey?.trim() || (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== ''));
                 const flowiseReady = !!(customFlowiseUrl?.trim() || (process.env.FLOWISE_API_URL && process.env.FLOWISE_API_URL.trim() !== ''));
                 return res.status(200).json({ ready: groqReady, flowiseReady: flowiseReady });
             }
-
-            const userId = req.user.id;
 
             if (!message && files.length === 0) {
                 return res.status(400).json({ message: req.t('ai.emptyMessage') });
@@ -160,7 +161,9 @@ const aiController = {
 
     getModels: async (req, res, next) => {
         try {
-            const customGroqKey = req.headers['x-groq-api-key'];
+            const userId = req.user.id;
+            const userKeys = await userService.getUserApiKeys(userId);
+            const customGroqKey = userKeys.groq_api_key;
             const models = await aiService.getAvailableModels(customGroqKey);
             return res.status(200).json(models);
         } catch (error) {

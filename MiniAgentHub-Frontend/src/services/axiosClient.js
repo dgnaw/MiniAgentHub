@@ -3,6 +3,7 @@ import useAuthStore from '../store/authStore';
 
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL, 
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,11 +12,7 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('agentHub_token');
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+
 
     const language = localStorage.getItem('language') || localStorage.getItem('i18nextLng') || 'vi';
     config.headers['Accept-Language'] = language;
@@ -53,17 +50,12 @@ axiosClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      const refreshToken = localStorage.getItem('agentHub_refreshToken');
-      if (!refreshToken) {
-        useAuthStore.getState().logout();
-        return Promise.reject(error);
-      }
+
 
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+        }).then(() => {
           return axiosClient(originalRequest);
         }).catch(err => {
           return Promise.reject(err);
@@ -74,13 +66,9 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/refresh-token`, { refreshToken });
-        localStorage.setItem('agentHub_token', data.token);
+        await axios.post(`${import.meta.env.VITE_API_URL}/refresh-token`, {}, { withCredentials: true });
         
-        axiosClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.token;
-        originalRequest.headers['Authorization'] = 'Bearer ' + data.token;
-        
-        processQueue(null, data.token);
+        processQueue(null, null);
         return axiosClient(originalRequest);
       } catch (err) {
         processQueue(err, null);

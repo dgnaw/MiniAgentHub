@@ -69,7 +69,7 @@ const sendWelcomeEmail = async (toEmail, fullName, rawPassword, lng = 'vi') => {
 
                         </div>
 
-                        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" style="display: block; width: 100%; text-align: center; background-color: #006ecf; color: #ffffff; text-decoration: none; padding: 16px 0; border-radius: 8px; font-weight: 600; margin-top: 35px; font-size: 15px;">
+                        <a href="${process.env.FRONTEND_URL}/login" style="display: block; width: 100%; text-align: center; background-color: #006ecf; color: #ffffff; text-decoration: none; padding: 16px 0; border-radius: 8px; font-weight: 600; margin-top: 35px; font-size: 15px;">
                             ${t('email.loginToDashboard', 'Log in to Dashboard &rarr;')}
                         </a>
 
@@ -170,7 +170,7 @@ const sendResetPasswordEmail = async (toEmail, fullName, rawPassword, lng = 'vi'
 
                         </div>
 
-                        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" style="display: block; width: 100%; text-align: center; background-color: #006ecf; color: #ffffff; text-decoration: none; padding: 16px 0; border-radius: 8px; font-weight: 600; margin-top: 35px; font-size: 15px;">
+                        <a href="${process.env.FRONTEND_URL}/login" style="display: block; width: 100%; text-align: center; background-color: #006ecf; color: #ffffff; text-decoration: none; padding: 16px 0; border-radius: 8px; font-weight: 600; margin-top: 35px; font-size: 15px;">
                             ${t('email.loginToDashboard', 'Log in to Dashboard &rarr;')}
                         </a>
 

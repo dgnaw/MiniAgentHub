@@ -144,6 +144,14 @@ const userService = {
         };
     },
 
+    getUserApiKeys: async (id) => {
+        const user = await User.findByPk(id, { attributes: ['groq_api_key', 'flowise_api_url'] });
+        return {
+            groq_api_key: user?.groq_api_key || null,
+            flowise_api_url: user?.flowise_api_url || null
+        };
+    },
+
     updateUser: async (id, updateData) => {
         const user = await User.findByPk(id, {
             include: [{ model: Role, attributes: ['name'] }]
@@ -152,12 +160,14 @@ const userService = {
             throw new AppError('user.notFound', 404);
         }
 
-        const { full_name, phone, address, role_id, role_name, role, is_active, group_ids } = updateData;
+        const { full_name, phone, address, role_id, role_name, role, is_active, group_ids, groq_api_key, flowise_api_url } = updateData;
 
         if (full_name !== undefined) user.full_name = full_name.trim();
         if (phone !== undefined) user.phone = phone?.trim() || null;
         if (address !== undefined) user.address = address?.trim() || null;
         if (is_active !== undefined) user.is_active = is_active;
+        if (groq_api_key !== undefined) user.groq_api_key = groq_api_key?.trim() || null;
+        if (flowise_api_url !== undefined) user.flowise_api_url = flowise_api_url?.trim() || null;
 
         let targetRoleId = role_id;
         const targetRoleName = role_name || role;

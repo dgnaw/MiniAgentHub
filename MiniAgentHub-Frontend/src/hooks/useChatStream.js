@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCustomKey } from '../components/ApiKeyModal';
 import axiosClient from '../services/axiosClient';
 
 const getBase64 = (file) => new Promise((resolve, reject) => {
@@ -106,17 +105,10 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     setLocalError('');
 
     try {
-      const token = localStorage.getItem('agentHub_token');
-      const customGroqKey = getCustomKey('groq');
-      const customFlowiseUrl = getCustomKey('flowise');
-
       let fetchOptions = {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Groq-Api-Key': customGroqKey,
-          'X-Flowise-Api-Url': customFlowiseUrl
-        },
+        credentials: 'include',
+        headers: {},
         signal: controller.signal
       };
 
@@ -307,17 +299,11 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   useEffect(() => {
     const checkApiKeyStatus = async () => {
       try {
-        const token = localStorage.getItem('agentHub_token');
-        const customGroqKey = getCustomKey('groq');
-        const customFlowiseUrl = getCustomKey('flowise');
-
         const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-Groq-Api-Key': customGroqKey,
-            'X-Flowise-Api-Url': customFlowiseUrl
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({ message: "ping", isPing: true })
         });
@@ -337,11 +323,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         try {
           const modelsRes = await fetch(`${import.meta.env.VITE_API_URL}/models`, {
             method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-Groq-Api-Key': customGroqKey,
-              'X-Flowise-Api-Url': customFlowiseUrl
-            }
+            credentials: 'include'
           });
           if (modelsRes.ok) {
             const modelsList = await modelsRes.json();

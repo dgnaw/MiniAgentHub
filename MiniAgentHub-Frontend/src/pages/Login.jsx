@@ -76,10 +76,7 @@ function Login() {
       const data = await axiosClient.post('/login', { email, password });
 
 
-      localStorage.setItem('agentHub_token', data.token);
-      if (data.refreshToken) {
-        localStorage.setItem('agentHub_refreshToken', data.refreshToken);
-      }
+
 
       setLoginData(data.user, data.permissions, data.must_change_password);
 
@@ -132,10 +129,7 @@ function Login() {
     try {
       const loginData = await axiosClient.post('/login', { email: forgotEmail.trim(), password: tempPassword });
       
-      localStorage.setItem('agentHub_token', loginData.token);
-      if (loginData.refreshToken) {
-        localStorage.setItem('agentHub_refreshToken', loginData.refreshToken);
-      }
+
 
       await axiosClient.put('/users/change-password', { old_password: tempPassword, new_password: newPassword });
 
