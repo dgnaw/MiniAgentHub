@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const authController = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+
 
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
@@ -30,6 +30,6 @@ router.post('/forgot-password', [
 ], handleValidationErrors, authController.forgotPassword);
 
 router.post('/refresh-token', authController.refreshToken);
-router.post('/logout', authenticateToken, authController.logout);
+router.post('/logout', authController.logout);
 
 module.exports = router;

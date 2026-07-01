@@ -172,5 +172,17 @@
     "resendEdit": "Resend",
     "copiedMessage": "Copied message!",
     "edit": "Edit"
+  },
+
+  "groupManagement": {
+    "deleteConfirmTitle": "Confirm Deletion",
+    "deleteConfirm": "Are you sure you want to delete this group?"
+  },
+
+  "userManagement": {
+    "deleteConfirmTitle": "Confirm Deletion",
+    "deleteConfirm": "Are you sure you want to delete this user?",
+    "deleteMultipleConfirmTitle": "Confirm Deletion",
+    "deleteMultipleConfirm": "Are you sure you want to delete {{count}} selected users?"
   }
 }

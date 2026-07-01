@@ -16,6 +16,10 @@ axiosClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const language = localStorage.getItem('language') || localStorage.getItem('i18nextLng') || 'vi';
+    config.headers['Accept-Language'] = language;
+
     return config;
   },
   (error) => {

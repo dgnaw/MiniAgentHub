@@ -6,12 +6,12 @@ const groupController = {
         try {
             const result = await groupService.createGroup(req.body);
             if (result.error) {
-                return res.status(result.status || 400).json({ message: result.error });
+                return res.status(result.status || 400).json({ message: req.t(result.error, result.errorParams) });
             }
             return res.status(result.status || 201).json(result.data);
         } catch (error) {
             console.error('Error in groupController.createGroup:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -22,7 +22,7 @@ const groupController = {
             return res.status(result.status || 200).json(result.data);
         } catch (error) {
             console.error('Error in groupController.getAllGroups:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -31,12 +31,12 @@ const groupController = {
         try {
             const result = await groupService.getGroupById(req.params.id);
             if (result.error) {
-                return res.status(result.status || 404).json({ message: result.error });
+                return res.status(result.status || 404).json({ message: req.t(result.error, result.errorParams) });
             }
             return res.status(result.status || 200).json(result.data);
         } catch (error) {
             console.error('Error in groupController.getGroupById:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -46,12 +46,12 @@ const groupController = {
             // Truyền thêm mảng quyền của user hiện tại xuống service để chặn leo thang đặc quyền
             const result = await groupService.updateGroup(req.params.id, req.body, req.userPermissions);
             if (result.error) {
-                return res.status(result.status || 400).json({ message: result.error });
+                return res.status(result.status || 400).json({ message: req.t(result.error, result.errorParams) });
             }
             return res.status(result.status || 200).json(result.data);
         } catch (error) {
             console.error('Error in groupController.updateGroup:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -60,12 +60,12 @@ const groupController = {
         try {
             const result = await groupService.deleteGroup(req.params.id);
             if (result.error) {
-                return res.status(result.status || 400).json({ message: result.error });
+                return res.status(result.status || 400).json({ message: req.t(result.error, result.errorParams) });
             }
-            return res.status(result.status || 200).json(result.data);
+            return res.status(result.status || 200).json({ message: req.t(result.data.message) });
         } catch (error) {
             console.error('Error in groupController.deleteGroup:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -75,12 +75,12 @@ const groupController = {
             const { userIds } = req.body;
             const result = await groupService.addUsersToGroup(req.params.id, userIds);
             if (result.error) {
-                return res.status(result.status || 400).json({ message: result.error });
+                return res.status(result.status || 400).json({ message: req.t(result.error, result.errorParams) });
             }
-            return res.status(result.status || 200).json(result.data);
+            return res.status(result.status || 200).json({ message: req.t(result.data.message) });
         } catch (error) {
             console.error('Error in groupController.addUsersToGroup:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -89,12 +89,12 @@ const groupController = {
         try {
             const result = await groupService.removeUserFromGroup(req.params.id, req.params.userId);
             if (result.error) {
-                return res.status(result.status || 400).json({ message: result.error });
+                return res.status(result.status || 400).json({ message: req.t(result.error, result.errorParams) });
             }
-            return res.status(result.status || 200).json(result.data);
+            return res.status(result.status || 200).json({ message: req.t(result.data.message) });
         } catch (error) {
             console.error('Error in groupController.removeUserFromGroup:', error);
-            return res.status(500).json({ message: 'Internal server error' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     }
 };

@@ -10,7 +10,7 @@ const ChatMessage = require('../models/chatMessage');
 const getGroqClient = (customKey) => {
     const key = customKey || process.env.GROQ_API_KEY;
     if (!key || key.trim() === '') {
-        throw new Error('API Key của hệ thống AI (Groq) không hợp lệ hoặc chưa được cấu hình.');
+        throw new Error('ai.apiKeyInvalid');
     }
     return new Groq({
         apiKey: key
@@ -359,9 +359,7 @@ const aiService = {
                 }
             }
 
-            const error = new Error();
-            error.status = 500;
-            error.message = 'Lỗi đọc file. Có thể thư viện đọc file bị lỗi hoặc file bị hỏng.';
+            error.message = 'ai.fileReadError';
             throw error;
         }
 

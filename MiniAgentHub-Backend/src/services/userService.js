@@ -8,7 +8,7 @@ const userService = {
     createUser: async ({ email, full_name, phone, address, role_id, role_name, group_ids }) => {
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-            return { error: 'User with this email already exists', status: 409 };
+            return { error: 'user.emailExists', status: 409 };
         }
 
         let targetRoleId = role_id;
@@ -23,7 +23,7 @@ const userService = {
         if (targetRoleId && isValidUUID) {
             const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
-                return { error: 'Role not found', status: 404 };
+                return { error: 'user.roleNotFound', status: 404 };
             }
         } else {
             const defaultRole = await Role.findOne({ where: { name: 'User' } });
@@ -45,7 +45,7 @@ const userService = {
         if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
             const groupCount = await Group.count({ where: { id: group_ids } });
             if (groupCount !== group_ids.length) {
-                return { error: 'Một hoặc nhiều Group ID không hợp lệ.', status: 400 };
+                return { error: 'user.invalidGroupId', status: 400 };
             }
             const userGroupRecords = group_ids.map(gId => ({ user_id: newUser.id, group_id: gId }));
             await UserGroup.bulkCreate(userGroupRecords);
@@ -60,7 +60,7 @@ const userService = {
             await UserGroup.destroy({ where: { user_id: newUser.id } });
             await User.destroy({ where: { id: newUser.id } });
 
-            return { error: 'Không thể gửi email chứa mật khẩu. Quá trình tạo người dùng đã bị hủy (rollback). Vui lòng kiểm tra lại cấu hình SMTP (.env).', status: 500 };
+            return { error: 'user.emailSendFailed', status: 500 };
         }
 
         return {
@@ -104,7 +104,7 @@ const userService = {
             ]
         });
         if (!user) {
-            return { error: 'User not found', status: 404 };
+            return { error: 'user.notFound', status: 404 };
         }
 
         const roleId = user.role_id;
@@ -144,9 +144,11 @@ const userService = {
     },
 
     updateUser: async (id, updateData) => {
-        const user = await User.findByPk(id);
+        const user = await User.findByPk(id, {
+            include: [{ model: Role, attributes: ['name'] }]
+        });
         if (!user) {
-            return { error: 'User not found', status: 404 };
+            return { error: 'user.notFound', status: 404 };
         }
 
         const { full_name, phone, address, role_id, role_name, role, is_active, group_ids } = updateData;
@@ -159,6 +161,12 @@ const userService = {
         let targetRoleId = role_id;
         const targetRoleName = role_name || role;
 
+        if (user.Role && user.Role.name === 'Admin') {
+            if (targetRoleId || targetRoleName || is_active === false) {
+                return { error: 'user.cannotDemoteAdmin', status: 403 };
+            }
+        }
+
         if (targetRoleName) {
             const roleRecord = await Role.findOne({ where: { name: targetRoleName } });
             if (roleRecord) targetRoleId = roleRecord.id;
@@ -169,7 +177,7 @@ const userService = {
         if (targetRoleId !== undefined && isValidUUID) {
             const roleExist = await Role.findByPk(targetRoleId);
             if (!roleExist) {
-                return { error: 'Role not found', status: 404 };
+                return { error: 'user.roleNotFound', status: 404 };
             }
             user.role_id = targetRoleId;
         }
@@ -180,7 +188,7 @@ const userService = {
             if (group_ids.length > 0) {
                 const groupCount = await Group.count({ where: { id: group_ids } });
                 if (groupCount !== group_ids.length) {
-                    return { error: 'Một hoặc nhiều Group ID không hợp lệ.', status: 400 };
+                    return { error: 'user.invalidGroupId', status: 400 };
                 }
             }
             await UserGroup.destroy({ where: { user_id: id } });
@@ -195,26 +203,32 @@ const userService = {
     },
 
     deleteUser: async (id) => {
-        const user = await User.findByPk(id);
+        const user = await User.findByPk(id, {
+            include: [{ model: Role, attributes: ['name'] }]
+        });
         if (!user) {
-            return { error: 'User not found', status: 404 };
+            return { error: 'user.notFound', status: 404 };
+        }
+
+        if (user.Role && user.Role.name === 'Admin') {
+            return { error: 'user.cannotDeleteAdmin', status: 403 };
         }
 
         await user.destroy();
-        return { data: { message: 'User deleted successfully' }, status: 200 };
+        return { data: { message: 'user.deleteSuccess' }, status: 200 };
     },
 
     changePassword: async (userId, oldPassword, newPassword) => {
         const user = await User.findByPk(userId);
         if (!user) {
-            const error = new Error('Người dùng không tồn tại!');
+            const error = new Error('user.notFound');
             error.status = 404;
             throw error;
         }
 
         const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
         if (!isMatch) {
-            const error = new Error('Mật khẩu cũ không chính xác!');
+            const error = new Error('auth.oldPasswordIncorrect');
             error.status = 400;
             throw error;
         }

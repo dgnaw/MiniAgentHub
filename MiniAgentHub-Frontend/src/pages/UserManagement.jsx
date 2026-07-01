@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Filter, Eye, Trash2, RefreshCw, ChevronLeft, ChevronRight, Loader2, AlertCircle, X } from 'lucide-react';
 import UserFormModal from '../components/UserFormModal';
+import ConfirmModal from '../components/ConfirmModal';
 import axiosClient from '../services/axiosClient';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/Sidebar';
@@ -25,6 +26,7 @@ const UserManagement = () => {
   const [addGroupError, setAddGroupError] = useState('');
 
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: 'create', data: null });
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
   const [sortOrder, setSortOrder] = useState('newest');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -64,14 +66,20 @@ const UserManagement = () => {
       toast.error(t('userManagement.alertSelfDelete', 'Bạn không thể tự xóa chính tài khoản của mình!'));
       return;
     }
-    if (!window.confirm(t('userManagement.deleteConfirm', 'Bạn có chắc chắn muốn xóa người dùng này?'))) return;
-    try {
-      await axiosClient.delete(`/users/${id}`);
-      setUsers(users.filter(u => u.id !== id));
-      toast.success(t('userManagement.deleteSuccess', 'Xóa người dùng thành công!'));
-    } catch (err) {
-      toast.error(err.response?.data?.message || t('userManagement.deleteError', 'Xóa thất bại.'));
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: t('userManagement.deleteConfirmTitle', 'Xác nhận xóa'),
+      message: t('userManagement.deleteConfirm', 'Bạn có chắc chắn muốn xóa người dùng này?'),
+      onConfirm: async () => {
+        try {
+          await axiosClient.delete(`/users/${id}`);
+          setUsers(users.filter(u => u.id !== id));
+          toast.success(t('userManagement.deleteSuccess', 'Xóa người dùng thành công!'));
+        } catch (err) {
+          toast.error(err.response?.data?.message || t('userManagement.deleteError', 'Xóa thất bại.'));
+        }
+      }
+    });
   };
 
   const sortedUsers = [...users].sort((a, b) => {
@@ -109,21 +117,27 @@ const UserManagement = () => {
       toast.error(t('userManagement.alertSelfDelete', 'Bạn không thể tự xóa chính tài khoản của mình!'));
       return;
     }
-    if (!window.confirm(t('userManagement.deleteMultipleConfirm', { count: selectedUserIds.length }))) return;
     
-    try {
-      setIsLoading(true);
-      await Promise.all(selectedUserIds.map(id => axiosClient.delete(`/users/${id}`)));
-      setUsers(users.filter(u => !selectedUserIds.includes(u.id)));
-      setSelectedUserIds([]);
-      toast.success(t('userManagement.deleteMultipleSuccess', 'Đã xóa các người dùng được chọn!'));
-    } catch (err) {
-      console.error('Lỗi khi xóa nhiều users:', err);
-      toast.error(t('userManagement.deleteMultipleError', 'Có lỗi xảy ra khi xóa một số người dùng.'));
-      fetchUsers();
-    } finally {
-      setIsLoading(false);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: t('userManagement.deleteMultipleConfirmTitle', 'Xác nhận xóa'),
+      message: t('userManagement.deleteMultipleConfirm', { count: selectedUserIds.length }),
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          await Promise.all(selectedUserIds.map(id => axiosClient.delete(`/users/${id}`)));
+          setUsers(users.filter(u => !selectedUserIds.includes(u.id)));
+          setSelectedUserIds([]);
+          toast.success(t('userManagement.deleteMultipleSuccess', 'Đã xóa các người dùng được chọn!'));
+        } catch (err) {
+          console.error('Lỗi khi xóa nhiều users:', err);
+          toast.error(t('userManagement.deleteMultipleError', 'Có lỗi xảy ra khi xóa một số người dùng.'));
+          fetchUsers();
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
   };
 
   const handleOpenAddGroupModal = async () => {
@@ -431,6 +445,14 @@ const UserManagement = () => {
         </div>
       )}
     </div>
+      <ConfirmModal 
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        isDanger={true}
+      />
     </div>
   );
 };

@@ -3,7 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const userController = require('../controllers/userController');
 
-const { authenticateToken, checkPermission } = require('../middleware/authMiddleware');
+const { checkPermission } = require('../middleware/authMiddleware');
 
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
@@ -35,28 +35,26 @@ const updateUserValidationRules = [
         .notEmpty().withMessage('Họ và tên không được để trống.')
 ];
 
-router.get('/users', authenticateToken, checkPermission('USER_R'), userController.getAllUsers);
+router.get('/users', checkPermission('USER_R'), userController.getAllUsers);
 
 router.post('/users', 
-    authenticateToken, 
     checkPermission('USER_C'), 
     createUserValidationRules, 
     handleValidationErrors, 
     userController.createUser
 );
 
-router.put('/users/change-password', authenticateToken, userController.changePassword);
+router.put('/users/change-password', userController.changePassword);
 
-router.get('/users/:id', authenticateToken, checkPermission('USER_R'), userController.getUserById);
+router.get('/users/:id', checkPermission('USER_R'), userController.getUserById);
 
 router.put('/users/:id', 
-    authenticateToken, 
     checkPermission('USER_U'), 
     updateUserValidationRules, 
     handleValidationErrors, 
     userController.updateUser
 );
 
-router.delete('/users/:id', authenticateToken, checkPermission('USER_D'), userController.deleteUser);
+router.delete('/users/:id', checkPermission('USER_D'), userController.deleteUser);
 
 module.exports = router;

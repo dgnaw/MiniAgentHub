@@ -11,6 +11,8 @@ const userRoutes = require('./routes/userRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const path = require('path');
+const { i18next, middleware } = require('./config/i18n');
+const { authenticateToken } = require('./middleware/authMiddleware');
     
 const app = express();
 app.use(cors());
@@ -18,6 +20,10 @@ app.use(cors());
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use(express.json());
+app.use(middleware.handle(i18next));
+
+// Áp dụng middleware kiểm tra token toàn cục
+app.use(authenticateToken);
 
 app.use('/api', authRoutes);
 app.use('/api', groupRoutes);

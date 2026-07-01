@@ -22,7 +22,7 @@ const chatService = {
             if (parsedEditIndex === undefined) {
                 const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId } });
                 if (messageCount >= 100) {
-                    const limitError = new Error('Phiên trò chuyện này đã đạt giới hạn tối đa 100 tin nhắn. Vui lòng tạo phiên trò chuyện mới.');
+                    const limitError = new Error('chat.limitExceeded');
                     limitError.status = 400;
                     throw limitError;
                 }
@@ -93,36 +93,36 @@ const chatService = {
             await ChatMessage.destroy({ where: { session_id: sessionIds } });
             await ChatSession.destroy({ where: { user_id: userId } });
         }
-        return { message: 'Đã xóa toàn bộ lịch sử trò chuyện.' };
+        return { message: 'chat.deleteAllSuccess' };
     },
 
     deleteSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) return { error: 'Không tìm thấy phiên trò chuyện.', status: 404 };
+        if (!session) return { error: 'chat.notFound', status: 404 };
         await ChatMessage.destroy({ where: { session_id: sessionId } });
         await ChatSession.destroy({ where: { id: sessionId } });
-        return { message: 'Đã xóa phiên trò chuyện.' };
+        return { message: 'chat.deleteSuccess' };
     },
 
     renameSession: async (sessionId, userId, title) => {
-        if (!title || !title.trim()) return { error: 'Tiêu đề không được để trống.', status: 400 };
+        if (!title || !title.trim()) return { error: 'chat.titleRequired', status: 400 };
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) return { error: 'Không tìm thấy phiên trò chuyện.', status: 404 };
+        if (!session) return { error: 'chat.notFound', status: 404 };
         await ChatSession.update({ title: title.trim() }, { where: { id: sessionId }, silent: true });
-        return { message: 'Đã đổi tên phiên trò chuyện.', title: title.trim() };
+        return { message: 'chat.renameSuccess', title: title.trim() };
     },
 
     shareSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) return { error: 'Không tìm thấy phiên trò chuyện.', status: 404 };
+        if (!session) return { error: 'chat.notFound', status: 404 };
         await ChatSession.update({ is_shared: true }, { where: { id: sessionId } });
-        return { message: 'Đã chia sẻ phiên trò chuyện công khai.', is_shared: true };
+        return { message: 'chat.shareSuccess', is_shared: true };
     },
 
     getPublicSession: async (sessionId) => {
         const session = await ChatSession.findByPk(sessionId);
         if (!session || !session.is_shared) {
-            return { error: 'Phiên trò chuyện không tồn tại hoặc chưa được chia sẻ công khai.', status: 404 };
+            return { error: 'chat.publicSessionNotFound', status: 404 };
         }
         const messages = await ChatMessage.findAll({
             where: { session_id: sessionId },

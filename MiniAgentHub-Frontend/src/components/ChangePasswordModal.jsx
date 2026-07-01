@@ -83,20 +83,19 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
     setConfirmPasswordError('');
     setApiError('');
     setPasswordSuccess('');
+    useAuthStore.getState().setMustChangePassword(false);
     if (onClose) onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
       <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-        {!isForced && (
-          <button
-            onClick={handleClose}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
-        )}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <X size={20} />
+        </button>
 
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('change-password-modal.title')}</h3>
         <p className="text-sm text-gray-400 mb-6">{t('change-password-modal.description')}</p>

@@ -1,0 +1,70 @@
+{
+  "server": {
+    "internalError": "Lỗi server nội bộ",
+    "initError": "Lỗi server khi xác thực quyền.",
+    "configError": "Lỗi cấu hình server"
+  },
+  "auth": {
+    "unauthenticated": "Người dùng chưa được xác thực.",
+    "forbidden": "Forbidden: Bạn không có quyền thực hiện hành động này.",
+    "tokenNotFound": "Truy cập bị từ chối. Không tìm thấy Token xác thực.",
+    "tokenInvalid": "Token không hợp lệ hoặc đã hết hạn.",
+    "oldPasswordRequired": "Vui lòng nhập mật khẩu cũ.",
+    "oldPasswordIncorrect": "Mật khẩu cũ không chính xác!",
+    "passwordTooShort": "Mật khẩu mới phải có ít nhất 6 ký tự.",
+    "changePasswordSuccess": "Đổi mật khẩu thành công! Tài khoản của bạn đã được kích hoạt",
+    "invalidCredentials": "Email hoặc mật khẩu không chính xác",
+    "accountLocked": "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên.",
+    "refreshTokenMissing": "Không tìm thấy Refresh Token.",
+    "refreshTokenInvalid": "Refresh Token không hợp lệ hoặc đã hết hạn.",
+    "refreshTokenNotFound": "Refresh Token không tồn tại trong hệ thống.",
+    "logoutSuccess": "Đăng xuất thành công",
+    "loginSuccess": "Đăng nhập thành công",
+    "emailNotFound": "Tài khoản với email này không tồn tại.",
+    "newPasswordSent": "Mật khẩu mới đã được gửi tới email của bạn."
+  },
+  "user": {
+    "notFound": "Người dùng không tồn tại!",
+    "cannotDemoteAdmin": "Không thể hạ quyền hoặc khoá tài khoản Admin gốc.",
+    "cannotDeleteAdmin": "Hành động bị từ chối: Không thể xóa tài khoản Admin gốc của hệ thống.",
+    "emailExists": "User with this email already exists",
+    "createSuccess": "Tạo tài khoản thành công.",
+    "roleNotFound": "Role not found",
+    "emailSendFailed": "Không thể gửi email chứa mật khẩu. Quá trình tạo người dùng đã bị hủy (rollback).",
+    "invalidGroupId": "Một hoặc nhiều Group ID không hợp lệ.",
+    "deleteSuccess": "User deleted successfully"
+  },
+  "validation": {
+    "emailRequired": "Email không được để trống.",
+    "emailInvalid": "Email không đúng định dạng.",
+    "nameRequired": "Họ và tên không được để trống."
+  },
+  "group": {
+    "nameRequired": "Tên nhóm không được để trống.",
+    "nameExists": "Tên nhóm này đã tồn tại.",
+    "notFound": "Không tìm thấy nhóm.",
+    "deleteHasUsers": "Không thể xóa! Đang có {{count}} người dùng thuộc nhóm này. Hãy chuyển họ sang nhóm khác trước.",
+    "deleteSuccess": "Xóa nhóm thành công.",
+    "invalidUserIds": "Danh sách người dùng không hợp lệ.",
+    "addUsersSuccess": "Đã thêm người dùng vào nhóm thành công.",
+    "userNotInGroup": "Người dùng này không thuộc nhóm.",
+    "removeUserSuccess": "Đã xóa người dùng khỏi nhóm."
+  },
+  "chat": {
+    "limitExceeded": "Phiên trò chuyện này đã đạt giới hạn tối đa 100 tin nhắn. Vui lòng tạo phiên trò chuyện mới.",
+    "deleteAllSuccess": "Đã xóa toàn bộ lịch sử trò chuyện.",
+    "notFound": "Không tìm thấy phiên trò chuyện.",
+    "deleteSuccess": "Đã xóa phiên trò chuyện.",
+    "titleRequired": "Tiêu đề không được để trống.",
+    "renameSuccess": "Đã đổi tên phiên trò chuyện.",
+    "shareSuccess": "Đã chia sẻ phiên trò chuyện công khai.",
+    "publicSessionNotFound": "Phiên trò chuyện không tồn tại hoặc chưa được chia sẻ công khai."
+  },
+  "ai": {
+    "apiKeyInvalid": "API Key của hệ thống AI (Groq) không hợp lệ hoặc chưa được cấu hình. Vui lòng kiểm tra cấu hình.",
+    "fileReadError": "Lỗi đọc file. Có thể thư viện đọc file bị lỗi hoặc file bị hỏng.",
+    "emptyMessage": "Vui lòng cung cấp nội dung câu hỏi hoặc ít nhất 1 file đính kèm.",
+    "messageTooLong": "Nội dung tin nhắn quá dài. Vui lòng nhập tối đa 5000 ký tự.",
+    "modelFetchError": "Không thể lấy danh sách model từ Groq API."
+  }
+}

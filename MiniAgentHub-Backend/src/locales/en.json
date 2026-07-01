@@ -1,0 +1,70 @@
+{
+  "server": {
+    "internalError": "Internal server error",
+    "initError": "Server error during permission validation.",
+    "configError": "Server configuration error"
+  },
+  "auth": {
+    "unauthenticated": "User is not authenticated.",
+    "forbidden": "Forbidden: You do not have permission to perform this action.",
+    "tokenNotFound": "Access denied. Authentication token not found.",
+    "tokenInvalid": "Invalid or expired token.",
+    "oldPasswordRequired": "Please enter your old password.",
+    "oldPasswordIncorrect": "Old password is incorrect!",
+    "passwordTooShort": "New password must be at least 6 characters.",
+    "changePasswordSuccess": "Password changed successfully! Your account is now active.",
+    "invalidCredentials": "Incorrect email or password",
+    "accountLocked": "Your account has been locked. Please contact the Administrator.",
+    "refreshTokenMissing": "Refresh Token not found.",
+    "refreshTokenInvalid": "Refresh Token is invalid or expired.",
+    "refreshTokenNotFound": "Refresh Token does not exist in the system.",
+    "logoutSuccess": "Logged out successfully",
+    "loginSuccess": "Logged in successfully",
+    "emailNotFound": "Account with this email does not exist.",
+    "newPasswordSent": "A new password has been sent to your email."
+  },
+  "user": {
+    "notFound": "User does not exist!",
+    "cannotDemoteAdmin": "Cannot demote or deactivate the root Admin account.",
+    "cannotDeleteAdmin": "Action denied: Cannot delete the root Admin account.",
+    "emailExists": "User with this email already exists.",
+    "createSuccess": "Account created successfully.",
+    "roleNotFound": "Role not found.",
+    "emailSendFailed": "Failed to send email with password. User creation rollback triggered.",
+    "invalidGroupId": "One or more Group IDs are invalid.",
+    "deleteSuccess": "User deleted successfully."
+  },
+  "validation": {
+    "emailRequired": "Email is required.",
+    "emailInvalid": "Invalid email format.",
+    "nameRequired": "Full name is required."
+  },
+  "group": {
+    "nameRequired": "Group name is required.",
+    "nameExists": "Group with this name already exists.",
+    "notFound": "Group not found.",
+    "deleteHasUsers": "Cannot delete! There are {{count}} users in this group. Move them first.",
+    "deleteSuccess": "Group deleted successfully.",
+    "invalidUserIds": "Invalid list of users.",
+    "addUsersSuccess": "Users added to group successfully.",
+    "userNotInGroup": "User is not in this group.",
+    "removeUserSuccess": "User removed from group."
+  },
+  "chat": {
+    "limitExceeded": "This session has reached the maximum limit of 100 messages. Please create a new session.",
+    "deleteAllSuccess": "All chat history has been deleted.",
+    "notFound": "Chat session not found.",
+    "deleteSuccess": "Chat session deleted.",
+    "titleRequired": "Title cannot be empty.",
+    "renameSuccess": "Chat session renamed.",
+    "shareSuccess": "Chat session shared publicly.",
+    "publicSessionNotFound": "Chat session does not exist or has not been shared publicly."
+  },
+  "ai": {
+    "apiKeyInvalid": "AI System (Groq) API Key is invalid or not configured. Please check the configuration.",
+    "fileReadError": "Error reading file. The file reading library might be bugged or the file is corrupted.",
+    "emptyMessage": "Please provide a question or at least 1 attachment.",
+    "messageTooLong": "Message is too long. Please enter a maximum of 5000 characters.",
+    "modelFetchError": "Unable to fetch model list from Groq API."
+  }
+}

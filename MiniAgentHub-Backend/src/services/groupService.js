@@ -6,13 +6,13 @@ const groupService = {
         const { name, description, userIds, permissions, entityType = 'users' } = groupData;
         
         if (!name || !name.trim()) {
-            return { error: 'Group name is required', status: 400 };
+            return { error: 'group.nameRequired', status: 400 };
         }
 
         const trimmedName = name.trim();
         const existingGroup = await Group.findOne({ where: { name: trimmedName } });
         if (existingGroup) {
-            return { error: 'Group with this name already exists', status: 409 };
+            return { error: 'group.nameExists', status: 409 };
         }
 
         const cleanDescription = description?.trim() || null;
@@ -112,7 +112,7 @@ const groupService = {
         const group = await Group.findByPk(id);
 
         if (!group) {
-            return { error: 'Group not found', status: 404 };
+            return { error: 'group.notFound', status: 404 };
         }
 
         const userGroups = await UserGroup.findAll({ where: { group_id: id } });
@@ -138,14 +138,14 @@ const groupService = {
         const group = await Group.findByPk(id);
 
         if (!group) {
-            return { error: 'Group not found', status: 404 };
+            return { error: 'group.notFound', status: 404 };
         }
 
         if (name && name.trim()) {
             const trimmedName = name.trim();
             const existingGroup = await Group.findOne({ where: { name: trimmedName } });
             if (existingGroup && existingGroup.id.toString() !== id.toString()) {
-                return { error: 'Another group with this name already exists', status: 409 };
+                return { error: 'group.nameExists', status: 409 };
             }
             group.name = trimmedName;
         }
@@ -189,30 +189,31 @@ const groupService = {
         const group = await Group.findByPk(id);
 
         if (!group) {
-            return { error: 'Group not found', status: 404 };
+            return { error: 'group.notFound', status: 404 };
         }
 
         const userCount = await UserGroup.count({ where: { group_id: id } });
         
         if (userCount > 0) {
             return { 
-                error: `Không thể xóa! Đang có ${userCount} người dùng thuộc nhóm này. Hãy chuyển họ sang nhóm khác trước.`,
+                error: 'group.deleteHasUsers', 
+                errorParams: { count: userCount },
                 status: 400 
             };
         }
 
         await group.destroy();
-        return { data: { message: 'Group deleted successfully' }, status: 200 };
+        return { data: { message: 'group.deleteSuccess' }, status: 200 };
     },
 
     addUsersToGroup: async (id, userIds) => {
         const group = await Group.findByPk(id);
         if (!group) {
-            return { error: 'Group not found', status: 404 };
+            return { error: 'group.notFound', status: 404 };
         }
 
         if (!Array.isArray(userIds) || userIds.length === 0) {
-            return { error: 'Danh sách userIds không hợp lệ', status: 400 };
+            return { error: 'group.invalidUserIds', status: 400 };
         }
 
         const existingMembers = await UserGroup.findAll({ where: { group_id: id } });
@@ -225,13 +226,13 @@ const groupService = {
             await UserGroup.bulkCreate(records);
         }
 
-        return { data: { message: 'Đã thêm người dùng vào nhóm thành công' }, status: 200 };
+        return { data: { message: 'group.addUsersSuccess' }, status: 200 };
     },
 
     removeUserFromGroup: async (id, userId) => {
         const group = await Group.findByPk(id);
         if (!group) {
-            return { error: 'Group not found', status: 404 };
+            return { error: 'group.notFound', status: 404 };
         }
 
         const deletedCount = await UserGroup.destroy({
@@ -239,10 +240,10 @@ const groupService = {
         });
 
         if (deletedCount === 0) {
-            return { error: 'Người dùng này không thuộc nhóm', status: 400 };
+            return { error: 'group.userNotInGroup', status: 400 };
         }
 
-        return { data: { message: 'Đã// Xóa trắng thành viên cũ xóa người dùng khỏi nhóm' }, status: 200 };
+        return { data: { message: 'group.removeUserSuccess' }, status: 200 };
     }
 };
 

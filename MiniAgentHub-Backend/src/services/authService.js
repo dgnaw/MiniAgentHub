@@ -11,27 +11,27 @@ const { sendResetPasswordEmail } = require('../utils/emailService');
 const loginUser = async (email, password) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-        const error = new Error('Email hoặc mật khẩu không chính xác');
+        const error = new Error('auth.invalidCredentials');
         error.statusCode = 401;
         throw error;
     }
 
     if (!user.is_active) {
-        const error = new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên.');
+        const error = new Error('auth.accountLocked');
         error.statusCode = 403; 
         throw error;
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-        const error = new Error('Email hoặc mật khẩu không chính xác');
+        const error = new Error('auth.invalidCredentials');
         error.statusCode = 401;
         throw error;
     }
 
     if (!process.env.JWT_SECRET) {
         console.error('Lỗi: JWT_SECRET chưa được cấu hình trong file .env');
-        const error = new Error('Lỗi cấu hình server');
+        const error = new Error('server.configError');
         error.statusCode = 500;
         throw error;
     }
@@ -95,7 +95,7 @@ const loginUser = async (email, password) => {
 
 const refreshAccessToken = async (refreshToken) => {
     if (!refreshToken) {
-        const error = new Error('Không tìm thấy Refresh Token.');
+        const error = new Error('auth.refreshTokenMissing');
         error.statusCode = 401;
         throw error;
     }
@@ -105,20 +105,20 @@ const refreshAccessToken = async (refreshToken) => {
     try {
         decoded = jwt.verify(refreshToken, refreshSecret);
     } catch (err) {
-        const error = new Error('Refresh Token không hợp lệ hoặc đã hết hạn.');
+        const error = new Error('auth.refreshTokenInvalid');
         error.statusCode = 403;
         throw error;
     }
 
     const user = await User.findOne({ where: { id: decoded.id, refresh_token: refreshToken } });
     if (!user) {
-        const error = new Error('Refresh Token không tồn tại trong hệ thống.');
+        const error = new Error('auth.refreshTokenNotFound');
         error.statusCode = 403;
         throw error;
     }
 
     if (!user.is_active) {
-        const error = new Error('Tài khoản của bạn đã bị khóa.');
+        const error = new Error('auth.accountLocked');
         error.statusCode = 403;
         throw error;
     }
@@ -142,19 +142,19 @@ const logoutUser = async (userId) => {
         user.refresh_token = null;
         await user.save();
     }
-    return { message: 'Đăng xuất thành công' };
+    return { message: 'auth.logoutSuccess' };
 };
 
 const forgotPassword = async (email) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-        const error = new Error('Tài khoản với email này không tồn tại.');
+        const error = new Error('auth.emailNotFound');
         error.statusCode = 404;
         throw error;
     }
 
     if (!user.is_active) {
-        const error = new Error('Tài khoản của bạn đã bị khóa.');
+        const error = new Error('auth.accountLocked');
         error.statusCode = 403;
         throw error;
     }
@@ -170,7 +170,7 @@ const forgotPassword = async (email) => {
 
     await sendResetPasswordEmail(user.email, user.full_name, tempPassword);
 
-    return { message: 'Mật khẩu mới đã được gửi tới email của bạn.' };
+    return { message: 'auth.newPasswordSent' };
 };
 
 module.exports = {

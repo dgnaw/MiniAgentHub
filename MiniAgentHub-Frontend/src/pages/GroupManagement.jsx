@@ -3,6 +3,7 @@ import { UserPlus, Info, Users, Settings, Trash2, Loader2, AlertCircle } from 'l
 import axiosClient from '../services/axiosClient';
 import Sidebar from '../components/Sidebar';
 import GroupFormModal from '../components/GroupFormModal';
+import ConfirmModal from '../components/ConfirmModal';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ const GroupManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
   const fetchGroups = async () => {
     try {
@@ -68,16 +70,22 @@ const GroupManagement = () => {
     fetchGroups();
   }, []);
 
-  const handleDeleteGroup = async (id) => {
-    if (!window.confirm(t('groupManagement.deleteConfirm', 'Bạn có chắc chắn muốn xóa nhóm này không?'))) return;
-    try {
-      await axiosClient.delete(`/groups/${id}`);
-      setGroups((prev) => prev.filter((g) => g.id !== id));
-      toast.success(t('groupManagement.deleteSuccess', 'Xóa nhóm thành công!'));
-    } catch (err) {
-      console.error('Lỗi khi xóa nhóm:', err);
-      toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError', 'Xóa nhóm thất bại. Vui lòng thử lại sau.'));
-    }
+  const handleDeleteGroup = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: t('groupManagement.deleteConfirmTitle', 'Xác nhận xóa'),
+      message: t('groupManagement.deleteConfirm', 'Bạn có chắc chắn muốn xóa nhóm này không?'),
+      onConfirm: async () => {
+        try {
+          await axiosClient.delete(`/groups/${id}`);
+          setGroups((prev) => prev.filter((g) => g.id !== id));
+          toast.success(t('groupManagement.deleteSuccess', 'Xóa nhóm thành công!'));
+        } catch (err) {
+          console.error('Lỗi khi xóa nhóm:', err);
+          toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError', 'Xóa nhóm thất bại. Vui lòng thử lại sau.'));
+        }
+      }
+    });
   };
 
   const handleOpenCreateModal = () => {
@@ -247,6 +255,14 @@ const GroupManagement = () => {
         onSave={handleSaveGroup}
       />
       </div>
+      <ConfirmModal 
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        isDanger={true}
+      />
     </div>
   );
 };

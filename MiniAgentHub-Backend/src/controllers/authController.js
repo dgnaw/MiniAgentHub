@@ -7,7 +7,7 @@ const login = async (req, res) => {
         const result = await authService.loginUser(email, password);
 
         return res.status(200).json({
-            message: 'Đăng nhập thành công',
+            message: req.t('auth.loginSuccess'),
             token: result.token,
             refreshToken: result.refreshToken,
             user: result.user,
@@ -18,7 +18,7 @@ const login = async (req, res) => {
     } catch (error) {
         console.error('Lỗi API Login:', error);
         const statusCode = error.statusCode || 500;
-        const message = statusCode === 500 ? 'Lỗi server nội bộ' : error.message;
+        const message = statusCode === 500 ? req.t('server.internalError') : req.t(error.message);
         return res.status(statusCode).json({ message });
     }
 };
@@ -27,16 +27,16 @@ const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) {
-            return res.status(400).json({ message: 'Vui lòng cung cấp email.' });
+            return res.status(400).json({ message: req.t('validation.emailRequired') });
         }
 
         const result = await authService.forgotPassword(email);
-        return res.status(200).json(result);
+        return res.status(200).json({ message: req.t(result.message) });
 
     } catch (error) {
         console.error('Lỗi API Forgot Password:', error);
         const statusCode = error.statusCode || 500;
-        const message = statusCode === 500 ? 'Lỗi server nội bộ' : error.message;
+        const message = statusCode === 500 ? req.t('server.internalError') : req.t(error.message);
         return res.status(statusCode).json({ message });
     }
 };
@@ -45,7 +45,7 @@ const refreshToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
         if (!refreshToken) {
-            return res.status(400).json({ message: 'Refresh token là bắt buộc.' });
+            return res.status(400).json({ message: req.t('auth.refreshTokenMissing') });
         }
         
         const result = await authService.refreshAccessToken(refreshToken);
@@ -53,7 +53,7 @@ const refreshToken = async (req, res) => {
     } catch (error) {
         console.error('Lỗi API Refresh Token:', error);
         const statusCode = error.statusCode || 500;
-        const message = statusCode === 500 ? 'Lỗi server nội bộ' : error.message;
+        const message = statusCode === 500 ? req.t('server.internalError') : req.t(error.message);
         return res.status(statusCode).json({ message });
     }
 };
@@ -62,10 +62,10 @@ const logout = async (req, res) => {
     try {
         const userId = req.user.id; // Lấy từ authMiddleware
         const result = await authService.logoutUser(userId);
-        return res.status(200).json(result);
+        return res.status(200).json({ message: req.t(result.message) });
     } catch (error) {
         console.error('Lỗi API Logout:', error);
-        return res.status(500).json({ message: 'Lỗi server nội bộ' });
+        return res.status(500).json({ message: req.t('server.internalError') });
     }
 };
 

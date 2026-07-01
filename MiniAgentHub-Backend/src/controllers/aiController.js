@@ -36,11 +36,11 @@ const aiController = {
             const userId = req.user.id;
 
             if (!message && files.length === 0) {
-                return res.status(400).json({ message: 'Vui lòng cung cấp nội dung câu hỏi hoặc ít nhất 1 file đính kèm.' });
+                return res.status(400).json({ message: req.t('ai.emptyMessage') });
             }
 
             if (message && message.length > 5000) {
-                return res.status(400).json({ message: 'Nội dung tin nhắn quá dài. Vui lòng nhập tối đa 5000 ký tự.' });
+                return res.status(400).json({ message: req.t('ai.messageTooLong') });
             }
 
             const cleanMessage = cleanBase64Images(message) || '';
@@ -101,9 +101,9 @@ const aiController = {
                     console.error('Lỗi khi gọi Groq (fallback):', groqError.message);
                     let errMsg;
                     if (groqError.message?.includes('API Key') || groqError.status === 401) {
-                        errMsg = 'No key found. Please provide a key and try again.';
+                        errMsg = req.t('ai.apiKeyInvalid');
                     } else {
-                        errMsg = `Lỗi hệ thống: ${groqError.message || 'Không thể kết nối tới AI.'}`;
+                        errMsg = `${req.t('server.internalError')}: ${groqError.message || 'Không thể kết nối tới AI.'}`;
                     }
                     const groqErrChunk = (flowiseFailed ? '' : '') + errMsg;
                     aiResponse += groqErrChunk;
@@ -143,13 +143,13 @@ const aiController = {
 
             let errorMessage = '\n\nĐã xảy ra lỗi trong quá trình xử lý.';
             if (error.status === 401 || (error.message && error.message.includes('Invalid API Key'))) {
-                errorMessage = '\n\nLỗi hệ thống: API Key của hệ thống AI (Groq) không hợp lệ hoặc chưa được cấu hình. Vui lòng kiểm tra lại file .env của backend.';
+                errorMessage = '\n\n' + req.t('ai.apiKeyInvalid');
             } else if (error.status === 400 || error.status === 500) {
-                errorMessage = `\n\nLỗi hệ thống: ${error.message}`;
+                errorMessage = `\n\n${req.t('server.internalError')}: ${error.message}`;
             }
 
             if (!res.headersSent) {
-                return res.status(error.status || 500).json({ message: error.message || 'Lỗi server khi xử lý yêu cầu AI.' });
+                return res.status(error.status || 500).json({ message: error.message ? req.t(error.message) : req.t('server.internalError') });
             } else {
                 res.write(`data: ${JSON.stringify({ chunk: errorMessage })}\n\n`);
                 res.write(`data: [DONE]\n\n`);
@@ -164,8 +164,7 @@ const aiController = {
             const models = await aiService.getAvailableModels(customGroqKey);
             return res.status(200).json(models);
         } catch (error) {
-            console.error('Lỗi khi lấy danh sách model:', error.message);
-            return res.status(500).json({ message: 'Không thể lấy danh sách model từ Groq API.' });
+            return res.status(500).json({ message: req.t('ai.modelFetchError') });
         }
     }
 };

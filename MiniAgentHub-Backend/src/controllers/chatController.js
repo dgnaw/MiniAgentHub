@@ -7,7 +7,7 @@ const chatController = {
             return res.status(200).json(sessions);
         } catch (error) {
             console.error('Lỗi tại chatController.getSessions:', error);
-            return res.status(500).json({ message: 'Lỗi server lấy danh sách chat.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
@@ -17,61 +17,61 @@ const chatController = {
             return res.status(200).json(messages);
         } catch (error) {
             console.error('Lỗi tại chatController.getSessionMessages:', error);
-            return res.status(500).json({ message: 'Lỗi server lấy tin nhắn.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
     deleteAllSessions: async (req, res) => {
         try {
             const result = await chatService.deleteAllSessions(req.user.id);
-            return res.status(200).json(result);
+            return res.status(200).json({ message: req.t(result.message) });
         } catch (error) {
             console.error('Lỗi tại chatController.deleteAllSessions:', error);
-            return res.status(500).json({ message: 'Lỗi server khi xóa lịch sử chat.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
     deleteSession: async (req, res) => {
         try {
             const result = await chatService.deleteSession(req.params.id, req.user.id);
-            if (result.error) return res.status(result.status).json({ message: result.error });
-            return res.status(200).json(result);
+            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
+            return res.status(200).json({ message: req.t(result.message) });
         } catch (error) {
             console.error('Lỗi tại chatController.deleteSession:', error);
-            return res.status(500).json({ message: 'Lỗi server khi xóa phiên trò chuyện.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
     renameSession: async (req, res) => {
         try {
             const result = await chatService.renameSession(req.params.id, req.user.id, req.body.title);
-            if (result.error) return res.status(result.status).json({ message: result.error });
-            return res.status(200).json(result);
+            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
+            return res.status(200).json({ message: req.t(result.message), title: result.title });
         } catch (error) {
             console.error('Lỗi tại chatController.renameSession:', error);
-            return res.status(500).json({ message: 'Lỗi server khi đổi tên phiên trò chuyện.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
     shareSession: async (req, res) => {
         try {
             const result = await chatService.shareSession(req.params.id, req.user.id);
-            if (result.error) return res.status(result.status).json({ message: result.error });
-            return res.status(200).json(result);
+            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
+            return res.status(200).json({ message: req.t(result.message), is_shared: result.is_shared });
         } catch (error) {
             console.error('Lỗi tại chatController.shareSession:', error);
-            return res.status(500).json({ message: 'Lỗi server khi chia sẻ phiên trò chuyện.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     },
 
     getPublicSession: async (req, res) => {
         try {
             const result = await chatService.getPublicSession(req.params.id);
-            if (result.error) return res.status(result.status).json({ message: result.error });
+            if (result.error) return res.status(result.status).json({ message: req.t(result.error) });
             return res.status(200).json(result.data);
         } catch (error) {
             console.error('Lỗi tại chatController.getPublicSession:', error);
-            return res.status(500).json({ message: 'Lỗi server khi lấy phiên trò chuyện công khai.' });
+            return res.status(500).json({ message: req.t('server.internalError') });
         }
     }
 };
