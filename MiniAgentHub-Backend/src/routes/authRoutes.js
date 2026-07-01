@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const authController = require('../controllers/authController');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
@@ -27,5 +28,8 @@ router.post('/forgot-password', [
         .notEmpty().withMessage('Email không được để trống.')
         .isEmail().withMessage('Email không đúng định dạng.')
 ], handleValidationErrors, authController.forgotPassword);
+
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authenticateToken, authController.logout);
 
 module.exports = router;

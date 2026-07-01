@@ -163,9 +163,15 @@ function Sidebar() {
 
   const executeConfirm = async () => {
     if (confirmConfig.type === 'logout') {
-      logout(); 
-      navigate('/login'); 
-      setConfirmConfig({ isOpen: false, type: '', data: null });
+      try {
+        await axiosClient.post('/logout');
+      } catch (error) {
+        console.error('Lỗi khi đăng xuất:', error);
+      } finally {
+        logout(); 
+        navigate('/login');
+        setConfirmConfig({ isOpen: false, type: '', data: null });
+      }
     } else if (confirmConfig.type === 'deleteSession') {
       const sessionId = confirmConfig.data;
       try {

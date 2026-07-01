@@ -44,6 +44,10 @@ const User = sequelize.define('User', {
     is_first_login: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+    },
+    refresh_token: {
+        type: DataTypes.TEXT,
+        allowNull: true,
     }
 }, {
     tableName: 'users',

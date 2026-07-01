@@ -61,7 +61,20 @@
     "sending": "Đang gửi...",
     "sendNewPassword": "Gửi mật khẩu mới",
     "resetPasswordSuccess": "Một mật khẩu mới đã được gửi đến email của bạn!",
-    "resetPasswordError": "Có lỗi xảy ra. Vui lòng thử lại."
+    "resetPasswordError": "Có lỗi xảy ra. Vui lòng thử lại.",
+    "changePasswordTitle": "Đổi mật khẩu mới",
+    "changePasswordDesc1": "Mật khẩu đã được gửi đến email ",
+    "changePasswordDesc2": ". Vui lòng nhập mật khẩu đó và thiết lập mật khẩu mới.",
+    "tempPasswordLabel": "Mật khẩu từ email",
+    "newPasswordLabel": "Mật khẩu mới",
+    "confirmPasswordLabel": "Xác nhận mật khẩu mới",
+    "updating": "Đang cập nhật...",
+    "updateAndLoginBtn": "Cập nhật mật khẩu và Đăng nhập",
+    "fillAllFields": "Vui lòng điền đầy đủ các trường.",
+    "passwordMismatch": "Mật khẩu xác nhận không khớp.",
+    "passwordTooShort": "Mật khẩu mới phải có ít nhất 6 ký tự.",
+    "changePasswordSuccess": "Đổi mật khẩu thành công! Bạn đã được đăng nhập.",
+    "changePasswordError": "Có lỗi xảy ra. Mật khẩu gửi từ email không đúng."
   },
 
   "roles": {
@@ -301,5 +314,16 @@
     "alertNoNameEmail": "Vui lòng nhập tên và email!",
     "alertSaveError": "Có lỗi xảy ra khi lưu người dùng!",
     "members": "thành viên"
+  },
+
+  "chat": {
+    "copiedResponse": "Đã copy phản hồi!",
+    "copied": "Đã copy!",
+    "copy": "Sao chép",
+    "regenerate": "Tạo lại",
+    "cancelEdit": "Hủy",
+    "resendEdit": "Gửi lại",
+    "copiedMessage": "Đã copy tin nhắn!",
+    "edit": "Chỉnh sửa"
   }
 }

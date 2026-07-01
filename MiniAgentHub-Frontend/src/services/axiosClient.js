@@ -23,14 +23,68 @@ axiosClient.interceptors.request.use(
   }
 );
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 axiosClient.interceptors.response.use(
   (response) => {
     return response.data;
   },
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn("Token không hợp lệ hoặc đã hết hạn!");
-      useAuthStore.getState().logout();
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      if (originalRequest.url.includes('/login') || originalRequest.url.includes('/refresh-token')) {
+        return Promise.reject(error);
+      }
+
+      const refreshToken = localStorage.getItem('agentHub_refreshToken');
+      if (!refreshToken) {
+        useAuthStore.getState().logout();
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return axiosClient(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/refresh-token`, { refreshToken });
+        localStorage.setItem('agentHub_token', data.token);
+        
+        axiosClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.token;
+        originalRequest.headers['Authorization'] = 'Bearer ' + data.token;
+        
+        processQueue(null, data.token);
+        return axiosClient(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        useAuthStore.getState().logout();
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
+      }
     }
     
     return Promise.reject(error);

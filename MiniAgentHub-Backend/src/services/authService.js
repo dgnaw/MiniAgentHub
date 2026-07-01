@@ -45,7 +45,12 @@ const loginUser = async (email, password) => {
         role_name: role ? role.name : 'User'
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' }); 
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }); 
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    const refreshToken = jwt.sign({ id: user.id }, refreshSecret, { expiresIn: '7d' });
+
+    user.refresh_token = refreshToken;
+    await user.save();
 
 
     const rolePerms = await RolePermission.findAll({
@@ -71,6 +76,7 @@ const loginUser = async (email, password) => {
 
     return {
         token,
+        refreshToken,
         user: {
             id: user.id,
             email: user.email,
@@ -86,6 +92,58 @@ const loginUser = async (email, password) => {
 };
 
 
+
+const refreshAccessToken = async (refreshToken) => {
+    if (!refreshToken) {
+        const error = new Error('Không tìm thấy Refresh Token.');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+    let decoded;
+    try {
+        decoded = jwt.verify(refreshToken, refreshSecret);
+    } catch (err) {
+        const error = new Error('Refresh Token không hợp lệ hoặc đã hết hạn.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const user = await User.findOne({ where: { id: decoded.id, refresh_token: refreshToken } });
+    if (!user) {
+        const error = new Error('Refresh Token không tồn tại trong hệ thống.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    if (!user.is_active) {
+        const error = new Error('Tài khoản của bạn đã bị khóa.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const role = await Role.findByPk(user.role_id);
+    const payload = {
+        id: user.id,
+        email: user.email,
+        role_id: user.role_id,
+        role_name: role ? role.name : 'User'
+    };
+
+    const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return { token: newAccessToken };
+};
+
+const logoutUser = async (userId) => {
+    if (!userId) return;
+    const user = await User.findByPk(userId);
+    if (user) {
+        user.refresh_token = null;
+        await user.save();
+    }
+    return { message: 'Đăng xuất thành công' };
+};
 
 const forgotPassword = async (email) => {
     const user = await User.findOne({ where: { email } });
@@ -117,5 +175,7 @@ const forgotPassword = async (email) => {
 
 module.exports = {
     loginUser,
+    refreshAccessToken,
+    logoutUser,
     forgotPassword
 };

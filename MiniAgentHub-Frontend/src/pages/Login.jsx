@@ -27,6 +27,13 @@ function Login() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [isSendingForgot, setIsSendingForgot] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  
+  const [forgotStep, setForgotStep] = useState(1);
+  const [tempPassword, setTempPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const validateEmail = (val) => {
     if (!val) {
@@ -70,6 +77,9 @@ function Login() {
 
 
       localStorage.setItem('agentHub_token', data.token);
+      if (data.refreshToken) {
+        localStorage.setItem('agentHub_refreshToken', data.refreshToken);
+      }
 
       setLoginData(data.user, data.permissions, data.must_change_password);
 
@@ -94,12 +104,50 @@ function Login() {
     try {
       const data = await axiosClient.post('/forgot-password', { email: forgotEmail.trim() });
       toast.success(data.message || t('login.resetPasswordSuccess', 'A new password has been sent to your email!'));
-      setIsForgotModalOpen(false);
-      setForgotEmail('');
+      setForgotStep(2);
     } catch (err) {
       setForgotError(err.response?.data?.message || t('login.resetPasswordError', 'An error occurred. Please try again.'));
     } finally {
       setIsSendingForgot(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    if (!tempPassword || !newPassword || !confirmPassword) {
+      setResetError(t('login.fillAllFields', 'Vui lòng điền đầy đủ các trường.'));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError(t('login.passwordMismatch', 'Mật khẩu xác nhận không khớp.'));
+      return;
+    }
+    if (newPassword.length < 6) {
+      setResetError(t('login.passwordTooShort', 'Mật khẩu mới phải có ít nhất 6 ký tự.'));
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const loginData = await axiosClient.post('/login', { email: forgotEmail.trim(), password: tempPassword });
+      
+      localStorage.setItem('agentHub_token', loginData.token);
+      if (loginData.refreshToken) {
+        localStorage.setItem('agentHub_refreshToken', loginData.refreshToken);
+      }
+
+      await axiosClient.put('/users/change-password', { old_password: tempPassword, new_password: newPassword });
+
+      toast.success(t('login.changePasswordSuccess', 'Đổi mật khẩu thành công! Bạn đã được đăng nhập.'));
+      setIsForgotModalOpen(false);
+      setLoginData(loginData.user, loginData.permissions, false);
+      navigate('/');
+
+    } catch (err) {
+      setResetError(err.response?.data?.message || t('login.changePasswordError', 'Có lỗi xảy ra. Mật khẩu gửi từ email không đúng.'));
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -209,47 +257,114 @@ function Login() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#1a1b20] w-full max-w-md p-6 rounded-2xl border border-gray-200 dark:border-[#26272b] shadow-2xl relative">
             <button 
-              onClick={() => { setIsForgotModalOpen(false); setForgotError(''); setForgotEmail(''); }}
+              onClick={() => { 
+                setIsForgotModalOpen(false); 
+                setForgotError(''); 
+                setResetError('');
+                setForgotEmail(''); 
+                setTempPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setForgotStep(1);
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <X size={20} />
             </button>
             
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.resetPasswordTitle', 'Reset Password')}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('login.resetPasswordDesc', 'Enter your email address. We will generate a temporary password and send it to you.')}
-              </p>
-            </div>
+            {forgotStep === 1 ? (
+              <>
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.resetPasswordTitle', 'Quên mật khẩu')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('login.resetPasswordDesc', 'Nhập địa chỉ email của bạn. Chúng tôi sẽ gửi một mật khẩu tạm thời vào email đó.')}
+                  </p>
+                </div>
 
-            <form onSubmit={handleForgotPassword} className="space-y-4" noValidate>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={forgotEmail}
-                  onChange={(e) => { setForgotEmail(e.target.value); setForgotError(''); }}
-                  placeholder={t('login.emailPlaceholder', 'name@company.com')}
-                  className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
-                  autoFocus
-                />
-                {forgotError && <p className="text-red-500 dark:text-red-400 text-xs mt-1.5">{forgotError}</p>}
-              </div>
-              <button
-                type="submit"
-                disabled={isSendingForgot}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
-              >
-                {isSendingForgot ? t('login.sending', 'Sending...') : (
-                  <>
-                    <Mail size={16} />
-                    {t('login.sendNewPassword', 'Send New Password')}
-                  </>
-                )}
-              </button>
-            </form>
+                <form onSubmit={handleForgotPassword} className="space-y-4" noValidate>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => { setForgotEmail(e.target.value); setForgotError(''); }}
+                      placeholder={t('login.emailPlaceholder', 'name@company.com')}
+                      className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
+                      autoFocus
+                    />
+                    {forgotError && <p className="text-red-500 dark:text-red-400 text-xs mt-1.5">{forgotError}</p>}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSendingForgot}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                  >
+                    {isSendingForgot ? t('login.sending', 'Đang gửi...') : (
+                      <>
+                        <Mail size={16} />
+                        {t('login.sendNewPassword', 'Gửi mật khẩu mới')}
+                      </>
+                    )}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.changePasswordTitle', 'Đổi mật khẩu mới')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('login.changePasswordDesc1', 'Mật khẩu đã được gửi đến email ')}<strong>{forgotEmail}</strong>{t('login.changePasswordDesc2', '. Vui lòng nhập mật khẩu đó và thiết lập mật khẩu mới.')}
+                  </p>
+                </div>
+
+                <form onSubmit={handleResetPassword} className="space-y-4" noValidate>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      {t('login.tempPasswordLabel', 'Mật khẩu từ email')} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={tempPassword}
+                      onChange={(e) => { setTempPassword(e.target.value); setResetError(''); }}
+                      className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      {t('login.newPasswordLabel', 'Mật khẩu mới')} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => { setNewPassword(e.target.value); setResetError(''); }}
+                      className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      {t('login.confirmPasswordLabel', 'Xác nhận mật khẩu mới')} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => { setConfirmPassword(e.target.value); setResetError(''); }}
+                      className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
+                    />
+                    {resetError && <p className="text-red-500 dark:text-red-400 text-xs mt-1.5">{resetError}</p>}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isResettingPassword}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                  >
+                    {isResettingPassword ? t('login.updating', 'Đang cập nhật...') : t('login.updateAndLoginBtn', 'Cập nhật mật khẩu và Đăng nhập')}
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -3,9 +3,11 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import toast from 'react-hot-toast';
 import { Check, Copy, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const PreBlock = ({ children, ...props }) => {
   const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
 
   let textContent = '';
   let language = '';
@@ -46,7 +48,7 @@ const PreBlock = ({ children, ...props }) => {
           title="Copy code"
         >
           {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-          <span className="text-xs">{copied ? 'Copied!' : 'Copy'}</span>
+          <span className="text-xs">{copied ? t('chat.copied', 'Copied!') : t('chat.copy', 'Copy')}</span>
         </button>
       </div>
       <pre className="p-4 overflow-x-auto text-[13px] font-mono text-gray-300 m-0" {...props}>
@@ -57,6 +59,8 @@ const PreBlock = ({ children, ...props }) => {
 };
 
 const AiMessage = React.memo(({ content, index }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col items-start w-full">
       <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm break-words overflow-x-auto">
@@ -90,17 +94,17 @@ const AiMessage = React.memo(({ content, index }) => {
           onClick={() => {
             if (!content) return;
             navigator.clipboard.writeText(content);
-            toast.success('Đã copy phản hồi!');
+            toast.success(t('chat.copiedResponse', 'Đã copy phản hồi!'));
           }}
           className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
-          <Copy size={13} /> Copy
+          <Copy size={13} /> {t('chat.copy', 'Copy')}
         </button>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('regenerate-message', { detail: { index } }))}
           className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
-          <RefreshCw size={13} /> Regenerate
+          <RefreshCw size={13} /> {t('chat.regenerate', 'Regenerate')}
         </button>
       </div>
     </div>

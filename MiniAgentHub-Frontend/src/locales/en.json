@@ -40,7 +40,20 @@
     "sending": "Sending...",
     "sendNewPassword": "Send New Password",
     "resetPasswordSuccess": "A new password has been sent to your email!",
-    "resetPasswordError": "An error occurred. Please try again."
+    "resetPasswordError": "An error occurred. Please try again.",
+    "changePasswordTitle": "Set New Password",
+    "changePasswordDesc1": "A temporary password was sent to ",
+    "changePasswordDesc2": ". Please enter it and set your new password.",
+    "tempPasswordLabel": "Password from email",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "updating": "Updating...",
+    "updateAndLoginBtn": "Update Password and Login",
+    "fillAllFields": "Please fill all fields.",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "New password must be at least 6 characters.",
+    "changePasswordSuccess": "Password updated successfully! You are now logged in.",
+    "changePasswordError": "An error occurred. Incorrect temporary password."
   },
 
   "dashboard": {
@@ -148,5 +161,16 @@
     "clear": "Clear",
     "signOut": "Sign Out",
     "signOutDescription": "End your current session and securely log out of the interface."
+  },
+
+  "chat": {
+    "copiedResponse": "Copied response!",
+    "copied": "Copied!",
+    "copy": "Copy",
+    "regenerate": "Regenerate",
+    "cancelEdit": "Cancel",
+    "resendEdit": "Resend",
+    "copiedMessage": "Copied message!",
+    "edit": "Edit"
   }
 }
