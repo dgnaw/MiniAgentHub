@@ -1,8 +1,8 @@
 const aiService = require('../services/aiService');
 const chatService = require('../services/chatService');
 const userService = require('../services/userService');
+const catchAsync = require('../utils/catchAsync');
 
-// Hàm gỡ bỏ hình ảnh Base64 khổng lồ ra khỏi văn bản trước khi đưa cho AI đọc
 const cleanBase64Images = (text) => {
     if (!text) return text;
     return text.replace(/!\[(.*?)\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[🖼️ Hình ảnh đính kèm: $1]');
@@ -159,17 +159,13 @@ const aiController = {
         }
     },
 
-    getModels: async (req, res, next) => {
-        try {
-            const userId = req.user.id;
-            const userKeys = await userService.getUserApiKeys(userId);
-            const customGroqKey = userKeys.groq_api_key;
-            const models = await aiService.getAvailableModels(customGroqKey);
-            return res.status(200).json(models);
-        } catch (error) {
-            next(error);
-        }
-    }
+    getModels: catchAsync(async (req, res, next) => {
+        const userId = req.user.id;
+        const userKeys = await userService.getUserApiKeys(userId);
+        const customGroqKey = userKeys.groq_api_key;
+        const models = await aiService.getAvailableModels(customGroqKey);
+        return res.status(200).json(models);
+    })
 };
 
 module.exports = aiController;

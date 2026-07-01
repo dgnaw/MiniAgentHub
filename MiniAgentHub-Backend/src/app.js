@@ -1,3 +1,9 @@
+process.on('uncaughtException', err => {
+    console.error('UNCAUGHT EXCEPTION! Shutting down...');
+    console.error(err.name, err.message);
+    process.exit(1);
+});
+
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -42,13 +48,27 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async() => {
-    console.log(`Server dang chay tai cong ${PORT}`);
-    await connectDB();
-
+const startServer = async () => {
     try {
+        await connectDB();
+        
         await sequelize.sync({ alter: true });
+        
+        const server = app.listen(PORT, () => {
+            console.log(`Server dang chay tai cong ${PORT}`);
+        });
+
+        process.on('unhandledRejection', err => {
+            console.error('UNHANDLED REJECTION! Shutting down...');
+            console.error(err.name, err.message);
+            server.close(() => {
+                process.exit(1);
+            });
+        });
     } catch (error) {
-        console.error('Lỗi khi sync database:', error);
+        console.error('Lỗi nghiêm trọng khi khởi động server:', error);
+        process.exit(1); 
     }
-});
+};
+
+startServer();

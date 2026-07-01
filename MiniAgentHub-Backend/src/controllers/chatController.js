@@ -1,68 +1,41 @@
 const chatService = require('../services/chatService');
+const catchAsync = require('../utils/catchAsync');
 
 const chatController = {
-    getSessions: async (req, res, next) => {
-        try {
-            const sessions = await chatService.getSessions(req.user.id);
-            return res.status(200).json(sessions);
-        } catch (error) {
-            next(error);
-        }
-    },
+    getSessions: catchAsync(async (req, res, next) => {
+        const sessions = await chatService.getSessions(req.user.id);
+        return res.status(200).json(sessions);
+    }),
 
-    getSessionMessages: async (req, res, next) => {
-        try {
-            const messages = await chatService.getSessionMessages(req.params.id);
-            return res.status(200).json(messages);
-        } catch (error) {
-            next(error);
-        }
-    },
+    getSessionMessages: catchAsync(async (req, res, next) => {
+        const messages = await chatService.getSessionMessages(req.params.id);
+        return res.status(200).json(messages);
+    }),
 
-    deleteAllSessions: async (req, res, next) => {
-        try {
-            const result = await chatService.deleteAllSessions(req.user.id);
-            return res.status(200).json({ message: req.t(result.message) });
-        } catch (error) {
-            next(error);
-        }
-    },
+    deleteAllSessions: catchAsync(async (req, res, next) => {
+        const result = await chatService.deleteAllSessions(req.user.id);
+        return res.status(200).json({ message: req.t(result.message) });
+    }),
 
-    deleteSession: async (req, res, next) => {
-        try {
-            const result = await chatService.deleteSession(req.params.id, req.user.id);
-            return res.status(200).json({ message: req.t(result.message) });
-        } catch (error) {
-            next(error);
-        }
-    },
+    deleteSession: catchAsync(async (req, res, next) => {
+        const result = await chatService.deleteSession(req.params.id, req.user.id);
+        return res.status(200).json({ message: req.t(result.message) });
+    }),
 
-    renameSession: async (req, res, next) => {
-        try {
-            const result = await chatService.renameSession(req.params.id, req.user.id, req.body.title);
-            return res.status(200).json({ message: req.t(result.message), title: result.title });
-        } catch (error) {
-            next(error);
-        }
-    },
+    renameSession: catchAsync(async (req, res, next) => {
+        const result = await chatService.renameSession(req.params.id, req.user.id, req.body.title);
+        return res.status(200).json({ message: req.t(result.message), title: result.title });
+    }),
 
-    shareSession: async (req, res, next) => {
-        try {
-            const result = await chatService.shareSession(req.params.id, req.user.id);
-            return res.status(200).json({ message: req.t(result.message), is_shared: result.is_shared });
-        } catch (error) {
-            next(error);
-        }
-    },
+    shareSession: catchAsync(async (req, res, next) => {
+        const result = await chatService.shareSession(req.params.id, req.user.id);
+        return res.status(200).json({ message: req.t(result.message), is_shared: result.is_shared });
+    }),
 
-    getPublicSession: async (req, res, next) => {
-        try {
-            const result = await chatService.getPublicSession(req.params.id);
-            return res.status(200).json(result.data);
-        } catch (error) {
-            next(error);
-        }
-    }
+    getPublicSession: catchAsync(async (req, res, next) => {
+        const result = await chatService.getPublicSession(req.params.id);
+        return res.status(200).json(result.data);
+    })
 };
 
 module.exports = chatController;
