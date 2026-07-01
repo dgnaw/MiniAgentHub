@@ -62,9 +62,8 @@ const aiController = {
             if (model === "Data Analyst") {
                 const flowiseStream = aiService.chatWithFlowiseStream(fileData.processedMessage, currentSessionId, fileData.flowiseUploads, customFlowiseUrl);
                 for await (const event of flowiseStream) {
-                    if (clientDisconnected || req.socket?.destroyed) {
+                    if (req.socket?.destroyed) {
                         clientDisconnected = true;
-                        break;
                     }
                     if (event.failed) {
                         flowiseFailed = true;
@@ -72,7 +71,9 @@ const aiController = {
                     }
                     if (event.chunk) {
                         aiResponse += event.chunk;
-                        res.write(`data: ${JSON.stringify({ chunk: event.chunk })}\n\n`);
+                        if (!clientDisconnected) {
+                            res.write(`data: ${JSON.stringify({ chunk: event.chunk })}\n\n`);
+                        }
                     }
                 }
             }
@@ -88,14 +89,15 @@ const aiController = {
                     const fallbackModel = flowiseFailed ? 'llama-3.1-8b-instant' : model;
                     const stream = await aiService.chatWithAIStream(messagesForAI, fallbackModel, customGroqKey);
                     for await (const chunk of stream) {
-                        if (clientDisconnected || req.socket?.destroyed) {
+                        if (req.socket?.destroyed) {
                             clientDisconnected = true;
-                            break;
                         }
                         const content = chunk.choices[0]?.delta?.content || "";
                         if (content) {
                             aiResponse += content;
-                            res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+                            if (!clientDisconnected) {
+                                res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+                            }
                         }
                     }
                 } catch (groqError) {
@@ -113,7 +115,7 @@ const aiController = {
             }
 
             if (clientDisconnected || req.socket?.destroyed) {
-                console.log('Client ngắt kết nối trước khi kết thúc stream. Lưu câu trả lời AI nhận được...');
+                console.log('Client ngắt kết nối giao diện, AI chạy ngầm hoàn tất. Lưu câu trả lời...');
                 if (aiResponse) {
                     await chatService.saveAIMessage(currentSessionId, aiResponse);
                 }

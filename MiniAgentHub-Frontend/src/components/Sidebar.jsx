@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useAuthStore from '../store/authStore';
 import useSidebarStore from '../store/sidebarStore';
-import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight, Download, Clock } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import useGenerationStore from '../store/useGenerationStore';
+import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight, Download, Clock, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
 import { useTranslation } from 'react-i18next';
@@ -18,9 +19,11 @@ function Sidebar() {
   const role = useAuthStore((state) => state.role);
   const permissions = useAuthStore((state) => state.permissions) || [];
   const { isCollapsed, toggleSidebar } = useSidebarStore();
+  const generatingSessions = useGenerationStore((state) => state.generatingSessions);
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: currentSessionId } = useParams();
   const { t } = useTranslation();
   
   useThemeStore();
@@ -70,6 +73,9 @@ function Sidebar() {
     if (user?.id) {
       fetchSessions();
     }
+    
+    window.addEventListener('sessions-updated', fetchSessions);
+    return () => window.removeEventListener('sessions-updated', fetchSessions);
   }, [user, location.pathname]); 
 
   useEffect(() => {
@@ -363,6 +369,10 @@ function Sidebar() {
                       <>
                         <span className={`font-medium text-sm truncate flex-1 ${isCollapsed ? 'md:hidden' : ''}`}>{session.title}</span>
                         
+                        {generatingSessions.has(session.id) && session.id !== currentSessionId && (
+                          <Loader2 size={14} className={`animate-spin text-blue-500 shrink-0 ${isCollapsed ? 'md:hidden' : ''} mr-1`} />
+                        )}
+
                         <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''} ${isCollapsed ? 'md:hidden' : ''}`}>
                           <button 
                             onClick={(e) => {
@@ -481,6 +491,9 @@ function Sidebar() {
               ) : (
                 <>
                   <span className="truncate flex-1">{session.title}</span>
+                  {generatingSessions.has(session.id) && session.id !== currentSessionId && (
+                    <Loader2 size={14} className="animate-spin text-blue-500 shrink-0 mr-1" />
+                  )}
                   <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
                     <button 
                       onClick={(e) => {

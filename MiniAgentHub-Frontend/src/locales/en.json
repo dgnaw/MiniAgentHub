@@ -171,7 +171,9 @@
     "cancelEdit": "Cancel",
     "resendEdit": "Resend",
     "copiedMessage": "Copied message!",
-    "edit": "Edit"
+    "edit": "Edit",
+    "generationComplete": "The previous session's response is complete!",
+    "generationStopped": "Response generation stopped."
   },
 
   "groupManagement": {

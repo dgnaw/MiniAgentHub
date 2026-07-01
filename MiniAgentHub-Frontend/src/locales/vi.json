@@ -335,6 +335,8 @@
     "cancelEdit": "Hủy",
     "resendEdit": "Gửi lại",
     "copiedMessage": "Đã copy tin nhắn!",
-    "edit": "Chỉnh sửa"
+    "edit": "Chỉnh sửa",
+    "generationComplete": "Câu trả lời ở phiên trước đã hoàn thành!",
+    "generationStopped": "Đã dừng tạo câu trả lời."
   }
 }

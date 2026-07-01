@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../services/axiosClient';
+import useGenerationStore from '../store/useGenerationStore';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const getBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -11,6 +14,7 @@ const getBase64 = (file) => new Promise((resolve, reject) => {
 
 export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKeyChanged, setGroqModels) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
@@ -23,6 +27,16 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   const [isFlowiseConfigured, setIsFlowiseConfigured] = useState(true);
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [triggerReload, setTriggerReload] = useState(0);
+  
+  const currentSessionIdRef = useRef(sessionId);
+  useEffect(() => { currentSessionIdRef.current = sessionId; }, [sessionId]);
+  
+  const isUnmountedRef = useRef(false);
+  useEffect(() => {
+    isUnmountedRef.current = false;
+    return () => { isUnmountedRef.current = true; };
+  }, []);
   
   const abortControllerRef = useRef(null);
   const readerRef = useRef(null);
@@ -40,6 +54,11 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     }
     isStoppedRef.current = true;
     setIsLoading(false);
+    
+    if (sessionId) {
+      useGenerationStore.getState().stopGeneration(sessionId);
+    }
+    toast.success(t('chat.generationStopped', 'Đã dừng tạo câu trả lời.'));
   };
 
   const handleSend = async (customMessage, isEdit = false, editIdx = null) => {
@@ -49,6 +68,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     isStoppedRef.current = false;
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    const originalSessionId = sessionId;
+    useGenerationStore.getState().addGeneration(originalSessionId, controller);
 
     if (selectedModel === 'Data Analyst' && !isFlowiseConfigured) {
       const userMsg = { role: 'user', content: typeof customMessage === 'string' ? customMessage : input };
@@ -90,8 +111,17 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     }
 
     const userMessage = { role: 'user', content: finalContent };
-    if (isEdit) {
+    
+    // Kiểm tra xem tin nhắn được edit có phải là tin nhắn cuối cùng (hoặc áp chót nếu đã có AI trả lời) không
+    const isLastMessage = isEdit && (editIdx >= messages.length - 2);
+
+    if (isLastMessage) {
+      // Nếu là tin nhắn cuối: cập nhật tại chỗ (xóa tin nhắn cũ và câu trả lời AI cũ tương ứng)
       setMessages((prev) => [...prev.slice(0, editIdx), userMessage]);
+      setEditingIndex(null);
+    } else if (isEdit) {
+      // Nếu là tin nhắn ở giữa lịch sử: copy xuống dưới cùng thành một cuộc hội thoại mới
+      setMessages((prev) => [...prev, userMessage]);
       setEditingIndex(null);
     } else {
       setMessages((prev) => [...prev, userMessage]);
@@ -103,6 +133,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     }
     setIsLoading(true);
     setLocalError('');
+
+    let newSessionId = null;
+    let isDetached = false;
 
     try {
       let fetchOptions = {
@@ -126,7 +159,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
           message: userMessage.content,
           sessionId: sessionId,
           model: selectedModel,
-          ...(isEdit && { editIndex: editIdx })
+          ...(isLastMessage && { editIndex: editIdx })
         });
       }
 
@@ -148,12 +181,18 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       const decoder = new TextDecoder('utf-8');
       let aiResponseText = '';
       let buffer = '';
-      let newSessionId = null;
       let isAiMessageAdded = false;
       let isDone = false;
 
       try {
         while (true) {
+          if (
+            (currentSessionIdRef.current !== originalSessionId && currentSessionIdRef.current !== newSessionId) ||
+            isUnmountedRef.current
+          ) {
+             isDetached = true;
+          }
+
           const { value, done } = await reader.read();
           if (done) break;
 
@@ -169,12 +208,21 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                 const parsed = JSON.parse(dataStr);
                 if (parsed.sessionId) {
                   newSessionId = parsed.sessionId;
+                  if (!sessionId) {
+                    useGenerationStore.getState().removeGeneration(undefined);
+                    useGenerationStore.getState().addGeneration(newSessionId, controller);
+                    window.dispatchEvent(new CustomEvent('sessions-updated'));
+                  }
                 }
                 if (parsed.flowiseUnavailable) {
-                  setIsFlowiseAvailable(false);
-                  setSelectedModel('llama-3.1-8b-instant');
-                  if (!isAiMessageAdded) {
-                    setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
+                  if (currentSessionIdRef.current === originalSessionId && !isDetached) {
+                    setIsFlowiseAvailable(false);
+                    setSelectedModel('llama-3.1-8b-instant');
+                    if (!isAiMessageAdded) {
+                      setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
+                      isAiMessageAdded = true;
+                    }
+                  } else {
                     isAiMessageAdded = true;
                   }
                   aiResponseText += "*(Hệ thống phân tích dữ liệu đang bận hoặc lỗi, tự động chuyển sang AI thường)*\n\n";
@@ -187,7 +235,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                   }
 
                   if (!isAiMessageAdded) {
-                    setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
+                    if ((currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId) && !isDetached) {
+                        setMessages((prev) => [...prev, { role: 'ai', content: '' }]);
+                    }
                     isAiMessageAdded = true;
                   }
 
@@ -197,16 +247,20 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                       if (isStoppedRef.current || isDone) break;
 
                       aiResponseText += word;
-                      setMessages((prev) => {
-                        const newMsgs = [...prev];
-                        if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
-                          newMsgs[newMsgs.length - 1].content = aiResponseText;
-                        }
-                        return newMsgs;
-                      });
+                      if ((currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId) && !isDetached) {
+                          setMessages((prev) => {
+                            const newMsgs = [...prev];
+                            if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+                              newMsgs[newMsgs.length - 1].content = aiResponseText;
+                            }
+                            return newMsgs;
+                          });
+                      }
 
-                      const delayTime = selectedModel === 'Data Analyst' ? 10 : 10;
-                      await new Promise(resolve => setTimeout(resolve, delayTime));
+                      if (!isDetached) {
+                        const delayTime = selectedModel === 'Data Analyst' ? 10 : 10;
+                        await new Promise(resolve => setTimeout(resolve, delayTime));
+                      }
                     }
                   }
                 }
@@ -223,7 +277,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         readerRef.current = null;
       }
 
-      if (newSessionId && !sessionId) {
+      if (!isDetached && newSessionId && !sessionId) {
         navigate(`/chat/${newSessionId}`);
       }
     } catch (error) {
@@ -244,8 +298,20 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       setLocalError(error.message || 'Đã xảy ra lỗi khi kết nối server.');
       setTimeout(() => setLocalError(''), 7000);
     } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
+      useGenerationStore.getState().removeGeneration(originalSessionId);
+      if (newSessionId) useGenerationStore.getState().removeGeneration(newSessionId);
+
+      if (isDetached) {
+        toast.success(t('chat.generationComplete', 'Câu trả lời của phiên trước đã hoàn thành!'), { duration: 5000, position: 'top-right' });
+        if (currentSessionIdRef.current === (newSessionId || originalSessionId)) {
+          window.dispatchEvent(new CustomEvent('reload-messages', { detail: (newSessionId || originalSessionId) }));
+        }
+      }
+      
+      if (!isDetached) {
+        setIsLoading(false);
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -280,6 +346,22 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   };
 
   useEffect(() => {
+    const handleReload = (e) => {
+      if (e.detail === sessionId) {
+        setTriggerReload(prev => prev + 1);
+      }
+    };
+    window.addEventListener('reload-messages', handleReload);
+    return () => window.removeEventListener('reload-messages', handleReload);
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (useGenerationStore.getState().generatingSessions.has(sessionId)) {
+      setIsLoading(true);
+    } else {
+      setIsLoading(false);
+    }
+
     if (sessionId) {
       const fetchMessages = async () => {
         try {
@@ -294,7 +376,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     } else {
       setMessages([]);
     }
-  }, [sessionId]);
+    // Không dùng handleStop ở đây nữa để giữ kết nối ngầm khi chuyển trang
+  }, [sessionId, triggerReload]);
 
   useEffect(() => {
     const checkApiKeyStatus = async () => {
@@ -345,17 +428,30 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     checkApiKeyStatus();
   }, [apiKeyChanged, setGroqModels, setSelectedModel]);
 
+  // Dùng useRef để giữ giá trị mới nhất của messages và handleSend
+  // Giúp event listener luôn lấy được data mới nhất mà không bị gỡ ra/cài lại liên tục
+  const latestMessages = useRef(messages);
+  const latestHandleSend = useRef(handleSend);
+
+  useEffect(() => {
+    latestMessages.current = messages;
+    latestHandleSend.current = handleSend;
+  }, [messages, handleSend]);
+
   useEffect(() => {
     const handleRegenerateEvent = (e) => {
       const aiIndex = e.detail.index;
       const userIndex = aiIndex - 1;
-      if (userIndex >= 0 && messages[userIndex] && messages[userIndex].role === 'user') {
-        handleSend(messages[userIndex].content, true, userIndex);
+      const currentMsgs = latestMessages.current;
+      
+      if (userIndex >= 0 && currentMsgs[userIndex] && currentMsgs[userIndex].role === 'user') {
+        latestHandleSend.current(currentMsgs[userIndex].content, true, userIndex);
       }
     };
+    
     window.addEventListener('regenerate-message', handleRegenerateEvent);
     return () => window.removeEventListener('regenerate-message', handleRegenerateEvent);
-  }, [messages, handleSend]);
+  }, []); // Dependency array rỗng: Chỉ cài đặt 1 lần duy nhất lúc load trang!
 
   return {
     input, setInput,

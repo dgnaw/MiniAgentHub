@@ -11,6 +11,7 @@ import ModelSelector from '../components/chat/ModelSelector';
 import ChatInput from '../components/chat/ChatInput';
 import UserMessage from '../components/chat/UserMessage';
 import { useChatStream } from '../hooks/useChatStream';
+import useGenerationStore from '../store/useGenerationStore';
 
 const DEFAULT_GROQ_MODELS = [
   { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', desc: 'Nhanh, nhẹ, xử lý cơ bản' },
@@ -34,6 +35,9 @@ const Dashboard = () => {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
   
+  const generatingSessions = useGenerationStore((state) => state.generatingSessions);
+  const isGeneratingBackground = sessionId && generatingSessions.has(sessionId);
+
   const messagesEndRef = useRef(null);
 
   const {
@@ -140,7 +144,7 @@ const Dashboard = () => {
                   )}
                 </div>
               ))}
-              {isLoading && (!messages.length || messages[messages.length - 1].role !== 'ai') && (
+              {(isLoading || isGeneratingBackground) && (!messages.length || messages[messages.length - 1].role !== 'ai') && (
                 <div className="flex flex-col items-start">
                   <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-3">
                     <Sparkles size={16} className="text-blue-500 animate-pulse" />
