@@ -1,6 +1,7 @@
 const { Group, UserGroup, Permission, GroupPermission, User } = require('../models');
 const { Sequelize } = require('sequelize');
 const AppError = require('../utils/AppError');
+const { sequelize } = require('../config/database');
 
 const groupService = {
     createGroup: async (groupData) => {
@@ -17,41 +18,51 @@ const groupService = {
         }
 
         const cleanDescription = description?.trim() || null;
-        const newGroup = await Group.create({ name: trimmedName, description: cleanDescription });
 
-        let keysToFind = ['CHAT']; 
-        const prefix = entityType === 'groups' ? 'GROUP' : 'USER';
+        const transaction = await sequelize.transaction();
+        let newGroup;
+        try {
+            newGroup = await Group.create({ name: trimmedName, description: cleanDescription }, { transaction });
 
-        if (permissions) {
-            if (permissions.create) keysToFind.push(`${prefix}_C`);
-            if (permissions.read) keysToFind.push(`${prefix}_R`);
-            if (permissions.update) keysToFind.push(`${prefix}_U`);
-            if (permissions.delete) keysToFind.push(`${prefix}_D`);
-        } else {
-            keysToFind = ['CHAT', `${prefix}_C`, `${prefix}_R`, `${prefix}_U`, `${prefix}_D`];
-        }
+            let keysToFind = ['CHAT']; 
+            const prefix = entityType === 'groups' ? 'GROUP' : 'USER';
 
-        const assignedPermissions = await Permission.findAll({
-            where: {
-                permission_key: keysToFind
-            },
-            attributes: ['id']
-        });
+            if (permissions) {
+                if (permissions.create) keysToFind.push(`${prefix}_C`);
+                if (permissions.read) keysToFind.push(`${prefix}_R`);
+                if (permissions.update) keysToFind.push(`${prefix}_U`);
+                if (permissions.delete) keysToFind.push(`${prefix}_D`);
+            } else {
+                keysToFind = ['CHAT', `${prefix}_C`, `${prefix}_R`, `${prefix}_U`, `${prefix}_D`];
+            }
 
-        if (assignedPermissions.length > 0) {
-            const groupPermissionRecords = assignedPermissions.map(p => ({
-                group_id: newGroup.id,
-                permission_id: p.id
-            }));
-            await GroupPermission.bulkCreate(groupPermissionRecords);
-        }
+            const assignedPermissions = await Permission.findAll({
+                where: {
+                    permission_key: keysToFind
+                },
+                attributes: ['id']
+            });
 
-        if (Array.isArray(userIds) && userIds.length > 0) {
-            const userGroupRecords = userIds.map(userId => ({
-                group_id: newGroup.id,
-                user_id: userId
-            }));
-            await UserGroup.bulkCreate(userGroupRecords);
+            if (assignedPermissions.length > 0) {
+                const groupPermissionRecords = assignedPermissions.map(p => ({
+                    group_id: newGroup.id,
+                    permission_id: p.id
+                }));
+                await GroupPermission.bulkCreate(groupPermissionRecords, { transaction });
+            }
+
+            if (Array.isArray(userIds) && userIds.length > 0) {
+                const userGroupRecords = userIds.map(userId => ({
+                    group_id: newGroup.id,
+                    user_id: userId
+                }));
+                await UserGroup.bulkCreate(userGroupRecords, { transaction });
+            }
+
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
 
         return { data: newGroup, status: 201 };
@@ -142,45 +153,56 @@ const groupService = {
             throw new AppError('group.notFound', 404);
         }
 
-        if (name && name.trim()) {
-            const trimmedName = name.trim();
-            const existingGroup = await Group.findOne({ where: { name: trimmedName } });
-            if (existingGroup && existingGroup.id.toString() !== id.toString()) {
-                throw new AppError('group.nameExists', 409);
+        const transaction = await sequelize.transaction();
+        try {
+            if (name && name.trim()) {
+                const trimmedName = name.trim();
+                const existingGroup = await Group.findOne({ where: { name: trimmedName } });
+                if (existingGroup && existingGroup.id.toString() !== id.toString()) {
+                    throw new AppError('group.nameExists', 409);
+                }
+                group.name = trimmedName;
             }
-            group.name = trimmedName;
-        }
-        if (description !== undefined) {
-            group.description = description?.trim() || null;
-        }
-
-        await group.save();
-
-        if (permissions) {
-            let keysToFind = ['CHAT'];
-            const prefix = entityType === 'groups' ? 'GROUP' : 'USER';
-            if (permissions.create) keysToFind.push(`${prefix}_C`);
-            if (permissions.read) keysToFind.push(`${prefix}_R`);
-            if (permissions.update) keysToFind.push(`${prefix}_U`);
-            if (permissions.delete) keysToFind.push(`${prefix}_D`);
-
-            const assignedPermissions = await Permission.findAll({
-                where: { permission_key: keysToFind },
-                attributes: ['id']
-            });
-
-            await GroupPermission.destroy({ where: { group_id: id } });
-            if (assignedPermissions.length > 0) {
-                await GroupPermission.bulkCreate(assignedPermissions.map(p => ({ group_id: id, permission_id: p.id })));
+            if (description !== undefined) {
+                group.description = description?.trim() || null;
             }
-        }
 
-        if (Array.isArray(userIds)) {
-            await UserGroup.destroy({ where: { group_id: id } }); 
-            if (userIds.length > 0) {
-                const records = userIds.map(uid => ({ group_id: id, user_id: uid }));
-                await UserGroup.bulkCreate(records);
+            await group.save({ transaction });
+
+            if (permissions) {
+                let keysToFind = ['CHAT'];
+                const prefix = entityType === 'groups' ? 'GROUP' : 'USER';
+                if (permissions.create) keysToFind.push(`${prefix}_C`);
+                if (permissions.read) keysToFind.push(`${prefix}_R`);
+                if (permissions.update) keysToFind.push(`${prefix}_U`);
+                if (permissions.delete) keysToFind.push(`${prefix}_D`);
+
+                const assignedPermissions = await Permission.findAll({
+                    where: { permission_key: keysToFind },
+                    attributes: ['id']
+                });
+
+                await GroupPermission.destroy({ where: { group_id: id }, transaction });
+                if (assignedPermissions.length > 0) {
+                    await GroupPermission.bulkCreate(
+                        assignedPermissions.map(p => ({ group_id: id, permission_id: p.id })),
+                        { transaction }
+                    );
+                }
             }
+
+            if (Array.isArray(userIds)) {
+                await UserGroup.destroy({ where: { group_id: id }, transaction }); 
+                if (userIds.length > 0) {
+                    const records = userIds.map(uid => ({ group_id: id, user_id: uid }));
+                    await UserGroup.bulkCreate(records, { transaction });
+                }
+            }
+
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
 
         return { data: group, status: 200 };

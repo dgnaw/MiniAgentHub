@@ -136,6 +136,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
 
     let newSessionId = null;
     let isDetached = false;
+    let isDone = false;
+    let didAutoNavigate = false;
 
     try {
       let fetchOptions = {
@@ -172,7 +174,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
           if (errJson && errJson.message) {
             errMsg = errJson.message;
           }
-        } catch (_) { }
+        } catch (_) {
+          console.warn("Không thể parse JSON phản hồi lỗi từ server.");
+        }
         throw new Error(errMsg);
       }
 
@@ -182,7 +186,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       let aiResponseText = '';
       let buffer = '';
       let isAiMessageAdded = false;
-      let isDone = false;
+      isDone = false;
 
       try {
         while (true) {
@@ -264,7 +268,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                     }
                   }
                 }
-              } catch (e) { }
+              } catch (e) {
+                console.debug("Bỏ qua dòng dữ liệu stream lỗi parse JSON:", e.message);
+              }
             }
           }
           if (isStoppedRef.current || isDone) break;
@@ -277,8 +283,10 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         readerRef.current = null;
       }
 
+      didAutoNavigate = false;
       if (!isDetached && newSessionId && !sessionId) {
         navigate(`/chat/${newSessionId}`);
+        didAutoNavigate = true;
       }
     } catch (error) {
       if (error.name === 'AbortError' || error.message?.includes('aborted')) {
@@ -301,14 +309,29 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       useGenerationStore.getState().removeGeneration(originalSessionId);
       if (newSessionId) useGenerationStore.getState().removeGeneration(newSessionId);
 
-      if (isDetached) {
-        toast.success(t('chat.generationComplete', 'Câu trả lời của phiên trước đã hoàn thành!'), { duration: 5000, position: 'top-right' });
-        if (currentSessionIdRef.current === (newSessionId || originalSessionId)) {
-          window.dispatchEvent(new CustomEvent('reload-messages', { detail: (newSessionId || originalSessionId) }));
+      const finalPath = window.location.pathname;
+      const targetSessionId = newSessionId || originalSessionId;
+      const isPathDetached = !didAutoNavigate && targetSessionId && finalPath !== `/chat/${targetSessionId}`;
+      const shouldShowToast = isDetached || isUnmountedRef.current || isPathDetached;
+
+      // Chỉ hiện thông báo nếu hoàn thành thành công và đang ở trang khác
+      if (shouldShowToast && isDone) {
+        toast.success(
+          t('chat.generationComplete'),
+          { duration: 7000, position: 'top-right', id: `gen-complete-${targetSessionId}` }
+        );
+        
+        if (currentSessionIdRef.current === targetSessionId) {
+          window.dispatchEvent(new CustomEvent('reload-messages', { detail: targetSessionId }));
         }
       }
+
+      // Cập nhật lại danh sách conversation trong sidebar sau mỗi lần chat xong
+      if (isDone) {
+        window.dispatchEvent(new CustomEvent('sessions-updated'));
+      }
       
-      if (!isDetached) {
+      if (!shouldShowToast) {
         setIsLoading(false);
         abortControllerRef.current = null;
       }

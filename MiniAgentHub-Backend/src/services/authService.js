@@ -1,16 +1,17 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const User = require('../models/user');
-const Role = require('../models/role');
-const Permission = require('../models/permission');
-const RolePermission = require('../models/rolePermission');
-const { UserGroup, GroupPermission } = require('../models');
 const { sendResetPasswordEmail } = require('../utils/emailService');
 const AppError = require('../utils/AppError');
 
+const { User, Role, Group, Permission } = require('../models');
+
 const loginUser = async (email, password) => {
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ 
+        where: { email },
+        include: [{ model: Role, as: 'Role'}] 
+    });
+
     if (!user) {
         throw new AppError('auth.invalidCredentials', 401);
     }
@@ -29,13 +30,13 @@ const loginUser = async (email, password) => {
         throw new AppError('server.configError', 500);
     }
 
-    const role = await Role.findByPk(user.role_id);
+    const roleName = user?.Role.name || 'User';
 
     const payload = {
         id: user.id,
         email: user.email,
         role_id: user.role_id,
-        role_name: role ? role.name : 'User'
+        role_name: roleName
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }); 
@@ -43,29 +44,23 @@ const loginUser = async (email, password) => {
     const refreshToken = jwt.sign({ id: user.id }, refreshSecret, { expiresIn: '7d' });
 
     user.refresh_token = refreshToken;
-    await user.save();
-
-
-    const rolePerms = await RolePermission.findAll({
-        where: { role_id: user.role_id }
-    });
-
-    const rolePermissionIds = rolePerms.map(rp => rp.permission_id);
     
-    const userGroups = await UserGroup.findAll({
-        where: { user_id: user.id }
-    });
-    const groupIds = userGroups.map(ug => ug.group_id);
+    const [rolewithPerms, userWithGroups] = await Promise.all([
+        Role.findByPk(user.role_id, {
+            include: [{model: Permission}]
+        }),
+        User.findByPk(user.id, {
+            include: [{
+                model: Group,
+                include: [{model: Permission}]
+            }]
+        }),
+        user.save()
+    ]);
     
-    let groupPermissionIds = [];
-    if (groupIds.length > 0) {
-        const groupPerms = await GroupPermission.findAll({ where: { group_id: groupIds } });
-        groupPermissionIds = groupPerms.map(gp => gp.permission_id);
-    }
-
-    const allPermissionIds = [...new Set([...rolePermissionIds, ...groupPermissionIds])];
-    const permissionsList = await Permission.findAll({ where: { id: allPermissionIds } });
-    const permissions = permissionsList.map(p => p.permission_key);
+    const rolePermissions = rolewithPerms?.Permissions?.map(p => p.permission_key) || [];
+    const groupPermissions = userWithGroups?.Groups?.flatMap(g => g.Permissions?.map(p => p.permission_key) || []) || [];
+    const permissions = [...new Set([...rolePermissions, ...groupPermissions])];
 
     return {
         token,
@@ -76,15 +71,13 @@ const loginUser = async (email, password) => {
             full_name: user.full_name,
             phone: user.phone,
             address: user.address,
-            role: role ? role.name : 'User',
+            role: roleName,
             role_id: user.role_id
         },
         permissions,
         must_change_password: user.is_first_login
     };
 };
-
-
 
 const refreshAccessToken = async (refreshToken) => {
     if (!refreshToken) {
@@ -99,7 +92,10 @@ const refreshAccessToken = async (refreshToken) => {
         throw new AppError('auth.refreshTokenInvalid', 403);
     }
 
-    const user = await User.findOne({ where: { id: decoded.id, refresh_token: refreshToken } });
+    const user = await User.findOne({
+        where: { id: decoded.id, refresh_token: refreshToken },
+        include: [{ model: Role }]
+    });
     if (!user) {
         throw new AppError('auth.refreshTokenNotFound', 403);
     }
@@ -108,12 +104,11 @@ const refreshAccessToken = async (refreshToken) => {
         throw new AppError('auth.accountLocked', 403);
     }
 
-    const role = await Role.findByPk(user.role_id);
     const payload = {
         id: user.id,
         email: user.email,
         role_id: user.role_id,
-        role_name: role ? role.name : 'User'
+        role_name: user.Role ? user.Role.name : 'User'
     };
 
     const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -122,11 +117,7 @@ const refreshAccessToken = async (refreshToken) => {
 
 const logoutUser = async (userId) => {
     if (!userId) return;
-    const user = await User.findByPk(userId);
-    if (user) {
-        user.refresh_token = null;
-        await user.save();
-    }
+    await User.update({refresh_token: null}, {where: {id: userId}});
     return { message: 'auth.logoutSuccess' };
 };
 

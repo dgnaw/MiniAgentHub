@@ -30,6 +30,9 @@ function Sidebar() {
 
   const [isInGroup, setIsInGroup] = useState(false);
   const [sessions, setSessions] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -60,23 +63,46 @@ function Sidebar() {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const res = await axiosClient.get('/chat-sessions');
-        const data = Array.isArray(res) ? res : (res.data || []);
+  const fetchSessions = async (reset = false) => {
+    try {
+      const targetPage = reset ? 1 : page;
+      if (reset) setIsLoadingMore(false);
+      
+      const res = await axiosClient.get(`/chat-sessions?page=${targetPage}&limit=20`);
+      const data = res.data || (Array.isArray(res) ? res : []);
+      const totalPages = res.totalPages || 1;
+      
+      if (reset) {
         setSessions(data);
-      } catch (error) {
-        console.error("Lỗi lấy danh sách chat:", error);
+        setPage(1);
+        setHasMore(totalPages > 1);
+      } else {
+        setSessions(prev => {
+           const newSessions = [...prev, ...data];
+           return newSessions.filter((s, index, self) => index === self.findIndex(t => t.id === s.id));
+        });
+        setHasMore(targetPage < totalPages);
       }
-    };
+    } catch (error) {
+      console.error("Lỗi lấy danh sách chat:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchSessions(false).finally(() => setIsLoadingMore(false));
+    }
+  }, [page]);
+
+  useEffect(() => {
     if (user?.id) {
-      fetchSessions();
+      fetchSessions(true);
     }
     
-    window.addEventListener('sessions-updated', fetchSessions);
-    return () => window.removeEventListener('sessions-updated', fetchSessions);
-  }, [user, location.pathname]); 
+    const handleUpdate = () => fetchSessions(true);
+    window.addEventListener('sessions-updated', handleUpdate);
+    return () => window.removeEventListener('sessions-updated', handleUpdate);
+  }, [user]); 
 
   useEffect(() => {
     const checkUserGroups = async () => {
@@ -336,8 +362,13 @@ function Sidebar() {
                   {isHistoryExpanded && (
                 <div 
                   className="space-y-1 mb-2 overflow-y-auto pr-1 flex-1"
-                  onScroll={() => {
+                  onScroll={(e) => {
                     if (activeMenuId) setActiveMenuId(null);
+                    const bottom = e.target.scrollHeight - e.target.scrollTop - e.target.clientHeight < 50;
+                    if (bottom && hasMore && !isLoadingMore) {
+                      setIsLoadingMore(true);
+                      setPage(p => p + 1);
+                    }
                   }}
                 >
                 {sessions.map((session) => (
@@ -407,6 +438,11 @@ function Sidebar() {
                     )}
                   </div>
                 ))}
+                  {isLoadingMore && (
+                    <div className="py-2 text-center text-xs text-gray-500">
+                      Đang tải thêm...
+                    </div>
+                  )}
                 </div>
               )}
               </>

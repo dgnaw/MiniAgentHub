@@ -1,7 +1,7 @@
 const ChatSession = require('../models/chatSession');
 const ChatMessage = require('../models/chatMessage');
-const aiService = require('./aiService');
 const AppError = require('../utils/AppError');
+const { sequelize } = require('../config/database');
 
 const chatService = {
     prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
@@ -12,6 +12,7 @@ const chatService = {
         if (!currentSessionId) {
             let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : ""); 
             try {
+                const aiService = require('./aiService'); // Lazy load to avoid circular dependency
                 const aiTitle = await aiService.generateTitle(cleanMessage, customGroqKey);
                 if (aiTitle) title = aiTitle;
             } catch (error) {}
@@ -20,13 +21,19 @@ const chatService = {
             currentSessionId = newSession.id;
             isNewSession = true;
         } else {
+            const session = await ChatSession.findOne({ where: { id: currentSessionId, user_id: userId } });
+            if (!session) throw new AppError('chat.notFound', 404);
+
             if (parsedEditIndex === undefined) {
                 const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId } });
                 if (messageCount >= 100) {
                     throw new AppError('chat.limitExceeded', 400);
                 }
             }
-            await ChatSession.update({ updated_at: new Date() }, { where: { id: currentSessionId } });
+            await ChatSession.update(
+                { updated_at: sequelize.literal('CURRENT_TIMESTAMP') },
+                { where: { id: currentSessionId } }
+            );
         }
 
         if (parsedEditIndex !== undefined && !isNaN(parsedEditIndex) && currentSessionId && !isNewSession) {
@@ -71,26 +78,55 @@ const chatService = {
         }
     },
 
-    getSessions: async (userId) => {
-        return await ChatSession.findAll({
+    getSessions: async (userId, page = 1, limit = 20) => {
+        const offset = (page - 1) * limit;
+        return await ChatSession.findAndCountAll({
             where: { user_id: userId, is_archived: false },
-            order: [['updated_at', 'DESC']]
+            order: [['updated_at', 'DESC']],
+            limit,
+            offset
         });
     },
 
-    getSessionMessages: async (sessionId) => {
+    getSessionMessages: async (sessionId, userId) => {
+        const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
+        if (!session) throw new AppError('chat.notFound', 404);
+
         return await ChatMessage.findAll({
             where: { session_id: sessionId },
             order: [['created_at', 'ASC']]
         });
     },
 
+    getAllUserSessionIds: async (userId) => {
+        const sessions = await ChatSession.findAll({ where: { user_id: userId }, attributes: ['id'] });
+        return sessions.map(s => s.id);
+    },
+
+    getGlobalContextMessages: async (sessionIds, limit = 10) => {
+        return await ChatMessage.findAll({
+            where: { session_id: sessionIds },
+            order: [['created_at', 'DESC']],
+            limit
+        });
+    },
+
     deleteAllSessions: async (userId) => {
-        const sessions = await ChatSession.findAll({ where: { user_id: userId } });
+        const sessions = await ChatSession.findAll({ 
+            where: { user_id: userId },
+            attributes: ['id']
+        });
         const sessionIds = sessions.map(s => s.id);
         if (sessionIds.length > 0) {
-            await ChatMessage.destroy({ where: { session_id: sessionIds } });
-            await ChatSession.destroy({ where: { user_id: userId } });
+            const transaction = await sequelize.transaction();
+            try {
+                await ChatMessage.destroy({ where: { session_id: sessionIds }, transaction });
+                await ChatSession.destroy({ where: { user_id: userId }, transaction });
+                await transaction.commit();
+            } catch (error) {
+                await transaction.rollback();
+                throw error;
+            }
         }
         return { message: 'chat.deleteAllSuccess' };
     },
@@ -98,8 +134,15 @@ const chatService = {
     deleteSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
         if (!session) throw new AppError('chat.notFound', 404);
-        await ChatMessage.destroy({ where: { session_id: sessionId } });
-        await ChatSession.destroy({ where: { id: sessionId } });
+        const transaction = await sequelize.transaction();
+        try {
+            await ChatMessage.destroy({ where: { session_id: sessionId }, transaction });
+            await ChatSession.destroy({ where: { id: sessionId }, transaction });
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
         return { message: 'chat.deleteSuccess' };
     },
 

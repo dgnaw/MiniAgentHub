@@ -45,7 +45,10 @@ const aiController = {
             }
 
             const cleanMessage = cleanBase64Images(message) || '';
-            const fileData = await aiService.processChatAttachments(files, message, cleanMessage, model);
+
+            const [fileData] = await Promise.all([
+                aiService.processChatAttachment(files, message, cleanMessage, model)
+            ]);
 
             aiProcessData = await chatService.prepareChatSessionAndMessage(userId, sessionId, cleanMessage, fileData.messageToSave, parsedEditIndex, customGroqKey);
             const { currentSessionId } = aiProcessData;

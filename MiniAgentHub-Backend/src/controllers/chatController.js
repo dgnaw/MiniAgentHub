@@ -3,12 +3,19 @@ const catchAsync = require('../utils/catchAsync');
 
 const chatController = {
     getSessions: catchAsync(async (req, res, next) => {
-        const sessions = await chatService.getSessions(req.user.id);
-        return res.status(200).json(sessions);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const sessions = await chatService.getSessions(req.user.id, page, limit);
+        return res.status(200).json({
+            data: sessions.rows,
+            total: sessions.count,
+            page,
+            totalPages: Math.ceil(sessions.count / limit)
+        });
     }),
 
     getSessionMessages: catchAsync(async (req, res, next) => {
-        const messages = await chatService.getSessionMessages(req.params.id);
+        const messages = await chatService.getSessionMessages(req.params.id, req.user.id);
         return res.status(200).json(messages);
     }),
 

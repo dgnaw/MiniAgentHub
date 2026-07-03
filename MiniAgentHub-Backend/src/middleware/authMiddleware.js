@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { Permission, RolePermission, UserGroup, GroupPermission } = require('../models');
+const { Permission, RolePermission, UserGroup, GroupPermission, User } = require('../models');
 const AppError = require('../utils/AppError');
 
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
     // whitelist some public paths
     const publicPaths = ['/api/login', '/api/forgot-password', '/api/refresh-token'];
     if (publicPaths.includes(req.path)) {
@@ -18,25 +18,43 @@ const authenticateToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        req.user = decoded;
+        const user = await User.findByPk(decoded.id, {
+            attributes: ['id', 'is_active', 'role_id']
+        });
+
+        if (!user) {
+            return next(new AppError('auth.userNotFound', 401));
+        }
+
+        if (!user.is_active) {
+            return next(new AppError('auth.accountInactive', 403));
+        }
+        
+        req.user = {
+            ...decoded,
+            role_id: user.role_id,
+            is_active: user.is_active
+        };
         
         next();
     } catch (error) {
-        return next(new AppError('auth.tokenInvalid', 401));
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return next(new AppError('auth.tokenInvalid', 401));
+        }
+        console.error('Lỗi xác thực token:', error);
+        return next(error);
     }
 };
 
 const checkPermission = (requiredPermission) => {
     return async (req, res, next) => {
         try {
-            // Safety check: Đảm bảo req.user tồn tại (tránh lỗi crash trên các route public vô tình gọi checkPermission)
             if (!req.user) {
                 return next(new AppError('auth.unauthenticated', 401));
             }
 
             const roleId = req.user.role_id; 
 
-            // Chạy song song truy vấn RolePermission và UserGroup để tối ưu hiệu suất
             const [rolePerms, userGroups] = await Promise.all([
                 roleId ? RolePermission.findAll({
                     attributes: ['permission_id'],

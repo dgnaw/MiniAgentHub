@@ -1,6 +1,7 @@
 const { User, Group, Role, UserGroup, Permission, RolePermission, GroupPermission } = require('../models');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const { sequelize } = require('../config/database');
 
 const { sendWelcomeEmail } = require('../utils/emailService');
 const AppError = require('../utils/AppError');
@@ -34,47 +35,49 @@ const userService = {
         const rawPassword = crypto.randomBytes(4).toString('hex');
         const password_hash = await bcrypt.hash(rawPassword, 10);
 
-        const newUser = await User.create({
-            email,
-            full_name,
-            phone: phone || null,
-            address: address || null,
-            role_id: targetRoleId || null,
-            password_hash
-        });
-
-        if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
-            const groupCount = await Group.count({ where: { id: group_ids } });
-            if (groupCount !== group_ids.length) {
-                throw new AppError('user.invalidGroupId', 400);
-            }
-            const userGroupRecords = group_ids.map(gId => ({ user_id: newUser.id, group_id: gId }));
-            await UserGroup.bulkCreate(userGroupRecords);
-        }
-
-        let emailSent = true;
+        const transaction = await sequelize.transaction();
         try {
-            await sendWelcomeEmail(email, full_name, rawPassword, lng);
-        } catch (mailError) {
-            console.error('Lỗi gửi email cấp phát:', mailError);
+            const newUser = await User.create({
+                email,
+                full_name,
+                phone: phone || null,
+                address: address || null,
+                role_id: targetRoleId || null,
+                password_hash
+            }, { transaction });
 
-            await UserGroup.destroy({ where: { user_id: newUser.id } });
-            await User.destroy({ where: { id: newUser.id } });
+            if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
+                const groupCount = await Group.count({ where: { id: group_ids } });
+                if (groupCount !== group_ids.length) {
+                    throw new AppError('user.invalidGroupId', 400);
+                }
+                const userGroupRecords = group_ids.map(gId => ({ user_id: newUser.id, group_id: gId }));
+                await UserGroup.bulkCreate(userGroupRecords, { transaction });
+            }
 
-            throw new AppError('user.emailSendFailed', 500);
+            try {
+                await sendWelcomeEmail(email, full_name, rawPassword, lng);
+            } catch (mailError) {
+                console.error('Lỗi gửi email cấp phát:', mailError);
+                throw new AppError('user.emailSendFailed', 500);
+            }
+
+            await transaction.commit();
+
+            return {
+                user: {
+                    id: newUser.id,
+                    email: newUser.email,
+                    full_name: newUser.full_name,
+                    role_id: newUser.role_id,
+                    is_active: newUser.is_active,
+                },
+                emailSent: true
+            };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
-
-        return {
-            user: {
-                id: newUser.id,
-                email: newUser.email,
-                full_name: newUser.full_name,
-                role_id: newUser.role_id,
-                is_active: newUser.is_active,
-            },
-            emailSent,
-            rawPassword
-        };
     },
 
     getAllUsers: async () => {
@@ -162,13 +165,6 @@ const userService = {
 
         const { full_name, phone, address, role_id, role_name, role, is_active, group_ids, groq_api_key, flowise_api_url } = updateData;
 
-        if (full_name !== undefined) user.full_name = full_name.trim();
-        if (phone !== undefined) user.phone = phone?.trim() || null;
-        if (address !== undefined) user.address = address?.trim() || null;
-        if (is_active !== undefined) user.is_active = is_active;
-        if (groq_api_key !== undefined) user.groq_api_key = groq_api_key?.trim() || null;
-        if (flowise_api_url !== undefined) user.flowise_api_url = flowise_api_url?.trim() || null;
-
         let targetRoleId = role_id;
         const targetRoleName = role_name || role;
 
@@ -190,24 +186,42 @@ const userService = {
             if (!roleExist) {
                 throw new AppError('user.roleNotFound', 404);
             }
-            user.role_id = targetRoleId;
         }
 
-        await user.save();
+        const transaction = await sequelize.transaction();
+        try {
+            if (full_name !== undefined) user.full_name = full_name.trim();
+            if (phone !== undefined) user.phone = phone?.trim() || null;
+            if (address !== undefined) user.address = address?.trim() || null;
+            if (is_active !== undefined) user.is_active = is_active;
+            if (groq_api_key !== undefined) user.groq_api_key = groq_api_key?.trim() || null;
+            if (flowise_api_url !== undefined) user.flowise_api_url = flowise_api_url?.trim() || null;
 
-        if (group_ids && Array.isArray(group_ids)) {
-            if (group_ids.length > 0) {
-                const groupCount = await Group.count({ where: { id: group_ids } });
-                if (groupCount !== group_ids.length) {
-                    throw new AppError('user.invalidGroupId', 400);
+            if (targetRoleId !== undefined && isValidUUID) {
+                user.role_id = targetRoleId;
+            }
+
+            await user.save({ transaction });
+
+            if (group_ids && Array.isArray(group_ids)) {
+                if (group_ids.length > 0) {
+                    const groupCount = await Group.count({ where: { id: group_ids } });
+                    if (groupCount !== group_ids.length) {
+                        throw new AppError('user.invalidGroupId', 400);
+                    }
+                }
+                await UserGroup.destroy({ where: { user_id: id }, transaction });
+
+                if (group_ids.length > 0) {
+                    const userGroupRecords = group_ids.map(gId => ({ user_id: id, group_id: gId }));
+                    await UserGroup.bulkCreate(userGroupRecords, { transaction });
                 }
             }
-            await UserGroup.destroy({ where: { user_id: id } });
 
-            if (group_ids.length > 0) {
-                const userGroupRecords = group_ids.map(gId => ({ user_id: id, group_id: gId }));
-                await UserGroup.bulkCreate(userGroupRecords);
-            }
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
 
         return { data: user, status: 200 };
