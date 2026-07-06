@@ -30,7 +30,11 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   const [triggerReload, setTriggerReload] = useState(0);
   
   const currentSessionIdRef = useRef(sessionId);
-  useEffect(() => { currentSessionIdRef.current = sessionId; }, [sessionId]);
+  const activeSessionIdRef = useRef(sessionId);
+  useEffect(() => { 
+    currentSessionIdRef.current = sessionId; 
+    activeSessionIdRef.current = sessionId;
+  }, [sessionId]);
   
   const isUnmountedRef = useRef(false);
   useEffect(() => {
@@ -55,10 +59,26 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     isStoppedRef.current = true;
     setIsLoading(false);
     
-    if (sessionId) {
-      useGenerationStore.getState().stopGeneration(sessionId);
+    const targetSessionId = activeSessionIdRef.current;
+    if (targetSessionId) {
+      useGenerationStore.getState().stopGeneration(targetSessionId);
+      
+      const currentMsgs = latestMessages.current;
+      if (currentMsgs && currentMsgs.length > 0 && currentMsgs[currentMsgs.length - 1].role === 'ai') {
+        const truncatedContent = currentMsgs[currentMsgs.length - 1].content;
+        
+        setTimeout(async () => {
+          try {
+            await axiosClient.put(`/chat-sessions/${targetSessionId}/truncate-last-message`, {
+              content: truncatedContent
+            });
+          } catch (error) {
+            console.error('Lỗi khi truncate tin nhắn AI:', error);
+          }
+        }, 1000);
+      }
     }
-    toast.success(t('chat.generationStopped', 'Đã dừng tạo câu trả lời.'));
+    toast.success(t('chat.generationStopped'));
   };
 
   const handleSend = async (customMessage, isEdit = false, editIdx = null) => {
@@ -208,15 +228,20 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') { isDone = true; break; }
+              let streamError = null;
               try {
                 const parsed = JSON.parse(dataStr);
                 if (parsed.sessionId) {
                   newSessionId = parsed.sessionId;
+                  activeSessionIdRef.current = parsed.sessionId;
                   if (!sessionId) {
                     useGenerationStore.getState().removeGeneration(undefined);
                     useGenerationStore.getState().addGeneration(newSessionId, controller);
                     window.dispatchEvent(new CustomEvent('sessions-updated'));
                   }
+                }
+                if (parsed.error) {
+                  streamError = parsed.error;
                 }
                 if (parsed.flowiseUnavailable) {
                   if (currentSessionIdRef.current === originalSessionId && !isDetached) {
@@ -262,7 +287,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                       }
 
                       if (!isDetached) {
-                        const delayTime = selectedModel === 'Data Analyst' ? 10 : 10;
+                        const delayTime = selectedModel === 'Data Analyst' ? 5 : 5;
                         await new Promise(resolve => setTimeout(resolve, delayTime));
                       }
                     }
@@ -271,6 +296,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
               } catch (e) {
                 console.debug("Bỏ qua dòng dữ liệu stream lỗi parse JSON:", e.message);
               }
+              if (streamError) {
+                  throw new Error(streamError);
+              }
             }
           }
           if (isStoppedRef.current || isDone) break;
@@ -278,6 +306,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       } catch (readErr) {
         if (readErr.name !== 'AbortError' && readErr.message !== 'BodyStreamBuffer was aborted') {
           console.warn('Stream reader bị ngắt:', readErr.message);
+          throw readErr;
         }
       } finally {
         readerRef.current = null;
@@ -293,10 +322,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         return;
       }
       console.error("Lỗi khi chat:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'ai', content: `**Lỗi hệ thống:** ${error.message || 'Đã xảy ra lỗi khi kết nối server.'}` }
-      ]);
+      
+      // Khôi phục lại input của người dùng nhưng KHÔNG lưu error vào messages
       if (isEdit) {
         setEditInput(textToSend.trim());
         setEditingIndex(editIdx);

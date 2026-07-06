@@ -135,9 +135,9 @@ MiniAgentHub/
    ```bash
    npm run seed
    ```
-   *Lệnh này sẽ tự động tạo tài khoản quản trị hệ thống mặc định:*
-   - **Email:** `admin@agenthub.com`
-   - **Mật khẩu:** `Admin@123`
+   *Lệnh này sẽ tự động tạo tài khoản quản trị hệ thống dựa trên cấu hình trong file `.env`:*
+   - Đảm bảo bạn đã thiết lập `DEFAULT_ADMIN_EMAIL` và `DEFAULT_ADMIN_PASSWORD` trong file `.env` trước khi chạy lệnh này.
+   - Tài khoản Admin tạo ra sẽ có quyền cao nhất để truy cập toàn bộ hệ thống.
 6. Chạy server chính thức:
    ```bash
    npm run dev

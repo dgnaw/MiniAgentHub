@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
-import axiosClient from '../services/axiosClient';
-import useAuthStore from '../store/authStore';
+import axiosClient from '../../services/axiosClient';
+import useAuthStore from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 
 const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData = null }) => {
@@ -108,7 +108,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   const handleTogglePermission = (key) => {
     if (user?.role !== 'Admin' && key === 'read' && permissions.read) {
-      setFormError(t('groupFormModal.alertReadRequired', 'You cannot disable Read permission. This is required to see and manage the group!'));
+      setFormError(t('groupFormModal.alertReadRequired'));
       return;
     }
     setFormError('');
@@ -117,7 +117,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
   const handleRemoveMember = (id) => {
     if (user?.role !== 'Admin' && id === user?.id) {
-      setFormError(t('groupFormModal.alertSelfRemove', 'You cannot remove yourself from the group to avoid losing access!'));
+      setFormError(t('groupFormModal.alertSelfRemove'));
       return;
     }
     setFormError('');
@@ -127,7 +127,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
   const handleSubmit = async () => {
     setFormError('');
     if (mode !== 'members' && !groupName.trim()) {
-      setFormError(t('groupFormModal.alertNoName', 'Vui lòng nhập tên nhóm!'));
+      setFormError(t('groupFormModal.alertNoName'));
       return;
     }
     
@@ -148,7 +148,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
       }
     } catch (error) {
       console.error('Lỗi khi lưu modal:', error);
-      setFormError(error.response?.data?.message || t('groupManagement.saveError', 'Có lỗi xảy ra khi lưu nhóm.'));
+      setFormError(error.response?.data?.message || t('groupManagement.saveError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -167,16 +167,16 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             <X size={24} />
           </button>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {mode === 'create' ? t('groupFormModal.createTitle', 'Create New Group') : mode === 'members' ? t('groupFormModal.membersTitle', 'Manage Members') : mode === 'info' ? t('groupFormModal.infoTitle', 'Group Info') : t('groupFormModal.updateTitle', 'Update Group')}
+            {mode === 'create' ? t('groupFormModal.createTitle') : mode === 'members' ? t('groupFormModal.membersTitle') : mode === 'info' ? t('groupFormModal.infoTitle') : t('groupFormModal.updateTitle')}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             {mode === 'create' 
-              ? t('groupFormModal.createDesc', 'Define identity and access control for your new workspace.') 
+              ? t('groupFormModal.createDesc') 
               : mode === 'members'
-                ? t('groupFormModal.membersDesc', 'Add or remove members from this group.')
+                ? t('groupFormModal.membersDesc')
                 : mode === 'info'
-                  ? t('groupFormModal.infoDesc', 'View and update group details.')
-                  : t('groupFormModal.updateDesc', 'Modify identity and access control for this group.')}
+                  ? t('groupFormModal.infoDesc')
+                  : t('groupFormModal.updateDesc')}
           </p>
         </div>
 
@@ -186,7 +186,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             <section>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.groupNameLabel', 'Group Name')}</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.groupNameLabel')}</label>
                   <input 
                     type="text" 
                     value={groupName}
@@ -195,13 +195,13 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.descriptionLabel', 'Description')}</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.descriptionLabel')}</label>
                   <textarea 
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     readOnly={!canUpdate}
                     rows={4}
-                    placeholder={t('groupFormModal.descriptionPlaceholder', 'Enter group description...')}
+                    placeholder={t('groupFormModal.descriptionPlaceholder')}
                     className={`w-full bg-white dark:bg-[#1e1f24] border border-gray-300 dark:border-transparent focus:border-[#3b82f6] rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white outline-none transition-colors resize-none ${
                       !canUpdate && 'bg-gray-50 dark:bg-[#1e1f24] !border-gray-300 dark:!border-[#26272b] text-gray-500 dark:text-gray-400 cursor-not-allowed'
                     }`}
@@ -213,23 +213,23 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
           
           {mode !== 'members' && mode !== 'info' && (
           <section>
-            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.identity', 'Identity')}</h3>
+            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.identity')}</h3>
             <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2 md:col-span-1">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  {t('groupFormModal.groupNameLabel', 'Group Name')} <span className="text-red-500">*</span>
+                  {t('groupFormModal.groupNameLabel')} <span className="text-red-500">*</span>
                 </label>
                 <input 
                   type="text" 
                   value={groupName}
                   onChange={(e) => { setGroupName(e.target.value); setFormError(''); }}
-                  placeholder={mode === 'create' ? t('groupFormModal.groupNamePlaceholder', 'e.g. Quantum Research Team') : ""}
+                  placeholder={mode === 'create' ? t('groupFormModal.groupNamePlaceholder') : ""}
                   className={`w-full bg-white dark:bg-[#1e1f24] border ${formError && !groupName.trim() ? 'border-red-500' : 'border-gray-300 dark:border-transparent focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
                 />
               </div>
 
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.targetEntity', 'Target Entity')}</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('groupFormModal.targetEntity')}</label>
                 <div className="flex bg-gray-50 dark:bg-[#1a1b20] p-1 rounded-xl border border-gray-200 dark:border-[#26272b]">
                   <button 
                     onClick={() => setEntityType('users')}
@@ -239,7 +239,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                     }`}
                   >
-                    {t('groupFormModal.users', 'Users')}
+                    {t('groupFormModal.users')}
                   </button>
                   <button 
                     onClick={() => setEntityType('groups')}
@@ -249,7 +249,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                     }`}
                   >
-                    {t('groupFormModal.groups', 'Groups')}
+                    {t('groupFormModal.groups')}
                   </button>
                 </div>
               </div>
@@ -260,51 +260,51 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
           {mode !== 'members' && mode !== 'info' && (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">{t('groupFormModal.rbacMatrix', 'RBAC Permissions Matrix')}</h3>
-              <span className="text-xs italic text-gray-500">{t('groupFormModal.rbacDesc', 'Role-Based Access Control')}</span>
+              <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">{t('groupFormModal.rbacMatrix')}</h3>
+              <span className="text-xs italic text-gray-500">{t('groupFormModal.rbacDesc')}</span>
             </div>
             
             <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-[#26272b]">
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300">{t('groupFormModal.action', 'Action')}</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300">{t('groupFormModal.description', 'Description')}</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300 text-center">{t('groupFormModal.grant', 'Grant')}</th>
+                    <th className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300">{t('groupFormModal.action')}</th>
+                    <th className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300">{t('groupFormModal.description')}</th>
+                    <th className="py-4 px-6 text-xs font-semibold text-gray-700 dark:text-gray-300 text-center">{t('groupFormModal.grant')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-[#26272b]">
                   <tr className="hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors">
-                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionCreate', 'Create')}</td>
-                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permCreateDesc', 'New Resources')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionCreate')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permCreateDesc')}</td>
                     <td className="py-4 px-6 text-center">
                       <input type="checkbox" checked={permissions.create} onChange={() => handleTogglePermission('create')} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer" />
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors">
-                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionRead', 'Read')}</td>
-                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permReadDesc', 'Resource Data')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionRead')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permReadDesc')}</td>
                     <td className="py-4 px-6 text-center">
                       <input 
                         type="checkbox" 
                         checked={permissions.read} 
                         onChange={() => handleTogglePermission('read')} 
                         disabled={user?.role !== 'Admin' && permissions.read}
-                        title={user?.role !== 'Admin' && permissions.read ? t('groupFormModal.readRequiredTitle', 'Quyền Read là bắt buộc') : ""}
+                        title={user?.role !== 'Admin' && permissions.read ? t('groupFormModal.readRequiredTitle') : ""}
                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
                       />
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors">
-                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionUpdate', 'Update')}</td>
-                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permUpdateDesc', 'Edit Content')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionUpdate')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permUpdateDesc')}</td>
                     <td className="py-4 px-6 text-center">
                       <input type="checkbox" checked={permissions.update} onChange={() => handleTogglePermission('update')} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer" />
                     </td>
                   </tr>
                   <tr className="hover:bg-gray-50 dark:hover:bg-[#1e1f25] transition-colors">
-                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionDelete', 'Delete')}</td>
-                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permDeleteDesc', 'Remove Assets')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-900 dark:text-gray-200">{t('groupFormModal.actionDelete')}</td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{t('groupFormModal.permDeleteDesc')}</td>
                     <td className="py-4 px-6 text-center">
                       <input type="checkbox" checked={permissions.delete} onChange={() => handleTogglePermission('delete')} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] text-blue-500 focus:ring-0 cursor-pointer" />
                     </td>
@@ -317,7 +317,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
           {mode !== 'update' && mode !== 'info' && (
             <section>
-            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.membersManagement', 'Members Management')}</h3>
+            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.membersManagement')}</h3>
               
               <div className="relative mb-4" ref={dropdownRef}>
                 <div 
@@ -334,7 +334,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                     }}
                     onClick={(e) => e.stopPropagation()}
                     onFocus={() => setShowSuggestions(true)}
-                    placeholder={t('groupFormModal.searchPlaceholder', 'Select or search user...')} 
+                    placeholder={t('groupFormModal.searchPlaceholder')} 
                     className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none cursor-text"
                   />
                   {showSuggestions ? (
@@ -349,12 +349,12 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                     {filteredUsers.length > 0 ? (
                       filteredUsers.map(user => (
                         <div key={user.id} onClick={() => handleSelectUser(user)} className="flex flex-col px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#2a2b30] cursor-pointer border-b border-gray-100 dark:border-[#26272b] last:border-0 transition-colors">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-200">{user.full_name || t('groupFormModal.noName', 'No Name')}</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-200">{user.full_name || t('groupFormModal.noName')}</span>
                           <span className="text-xs text-gray-500">{user.email}</span>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('groupFormModal.noUsersFound', 'No users found')}</div>
+                      <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('groupFormModal.noUsersFound')}</div>
                     )}
                   </div>
                 )}
@@ -368,7 +368,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
                     <div key={member.id} className="flex items-center gap-2 bg-blue-50 dark:bg-[#1a233a] border border-blue-200 dark:border-[#2a3b63] rounded-full pl-1 pr-3 py-1">
                       <img src={member.avatar} alt="avatar" className="w-5 h-5 rounded-full object-cover" />
                       <span className="text-xs text-blue-700 dark:text-[#a5c6f7] font-medium">
-                        {member.name} {isCurrentUser ? t('groupFormModal.you', '(You)') : ''}
+                        {member.name} {isCurrentUser ? t('groupFormModal.you') : ''}
                       </span>
                       {canRemove && (
                         <button onClick={() => handleRemoveMember(member.id)} className="text-blue-600 dark:text-[#a5c6f7] hover:text-blue-800 dark:hover:text-white ml-1">
@@ -393,7 +393,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
             onClick={onClose}
             className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors px-4 py-2"
           >
-            {mode === 'info' && !canUpdate ? t('userFormModal.close', 'Close') : t('groupFormModal.cancel', 'Cancel')}
+            {mode === 'info' && !canUpdate ? t('userFormModal.close') : t('groupFormModal.cancel')}
           </button>
           {(mode !== 'info' || canUpdate) && (
             <button 
@@ -401,7 +401,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
               disabled={isSubmitting}
               className="bg-[#b5d6ff] hover:bg-[#9cc4f5] text-[#0b1c3f] px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50"
             >
-              {isSubmitting ? t('groupFormModal.saving', 'Saving...') : (mode === 'create' ? t('groupFormModal.btnCreate', 'Initialize Group') : mode === 'members' ? t('groupFormModal.btnUpdateMembers', 'Update Members') : mode === 'info' ? t('groupFormModal.btnUpdateInfo', 'Update Info') : t('groupFormModal.btnUpdate', 'Update Group'))}
+              {isSubmitting ? t('groupFormModal.saving') : (mode === 'create' ? t('groupFormModal.btnCreate') : mode === 'members' ? t('groupFormModal.btnUpdateMembers') : mode === 'info' ? t('groupFormModal.btnUpdateInfo') : t('groupFormModal.btnUpdate'))}
             </button>
           )}
         </div>

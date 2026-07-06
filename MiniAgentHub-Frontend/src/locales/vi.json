@@ -109,6 +109,10 @@
     "card2Desc": "Sửa lỗi hiệu suất hoặc tái cấu trúc thành phần",
     "promptPlaceholder": "Nhập yêu cầu tại đây...",
     "footerNote": "Neural Hub có thể hiển thị thông tin không chính xác, vì vậy hãy kiểm tra kỹ các câu trả lời.",
+    "dataAnalyst": "Chuyên viên dữ liệu",
+    "groqModels": "Mô hình Groq",
+    "generalChatModels": "Mô hình trò chuyện chung",
+    "setApiKey": "Cài đặt API Key",
     "flowiseUnavailable": "Hệ thống phân tích dữ liệu (Flowise) đang bận hoặc hết lượt. Hãy quay lại vào lúc khác!",
     "flowiseBusy": "Đã hết lượt hoặc đang bận.",
     "errorConnect": "Xin lỗi, đã có lỗi xảy ra khi kết nối với máy chủ AI.",
@@ -177,7 +181,8 @@
     "signOut": "Đăng xuất",
     "signOutDescription": "Kết thúc phiên hiện tại của bạn và đăng xuất khỏi giao diện một cách an toàn.",
     "english": "Tiếng Anh (US)",
-    "vietnamese": "Tiếng Việt"
+    "vietnamese": "Tiếng Việt",
+    "noChatHistory": "Bạn không có bất kỳ phiên trò chuyện nào để xóa."
   },
 
   "groupManagement": {
@@ -196,6 +201,9 @@
     "members": "thành viên",
     "deleteConfirmTitle": "Xác nhận xóa",
     "deleteConfirm": "Bạn có chắc chắn muốn xóa nhóm này không?",
+    "deleteSuccess": "Xóa nhóm thành công!",
+    "createSuccess": "Tạo nhóm thành công!",
+    "updateSuccess": "Cập nhật nhóm thành công!",
     "deleteError": "Xóa nhóm thất bại. Vui lòng thử lại sau.",
     "saveError": "Có lỗi xảy ra khi lưu nhóm.",
     "tooltipInfo": "Thông tin nhóm",
@@ -278,9 +286,11 @@
     "errorLoad": "Không thể tải danh sách người dùng.",
     "deleteConfirmTitle": "Xác nhận xóa",
     "deleteConfirm": "Bạn có chắc chắn muốn xóa người dùng này?",
+    "deleteSuccess": "Xóa người dùng thành công!",
     "deleteError": "Xóa thất bại.",
     "deleteMultipleConfirmTitle": "Xác nhận xóa",
     "deleteMultipleConfirm": "Bạn có chắc chắn muốn xóa {{count}} người dùng đã chọn?",
+    "deleteMultipleSuccess": "Đã xóa các người dùng được chọn!",
     "deleteMultipleError": "Có lỗi xảy ra khi xóa một số người dùng.",
     "errorLoadGroups": "Không thể tải danh sách nhóm.",
     "alertSelectGroup": "Vui lòng chọn một nhóm!",
@@ -338,5 +348,12 @@
     "edit": "Chỉnh sửa",
     "generationComplete": "Câu trả lời ở phiên trước đã hoàn thành!",
     "generationStopped": "Đã dừng tạo câu trả lời."
+  },
+  "errorBoundary": {
+    "title": "Đã có lỗi xảy ra!",
+    "description": "Thành phần giao diện này vừa gặp sự cố không mong muốn. Đừng lo lắng, dữ liệu của bạn vẫn an toàn.",
+    "reloadPage": "Tải lại trang",
+    "errorDetails": "Chi tiết lỗi (Chỉ hiện ở Dev):",
+    "loggedError": "Lỗi được bắt bởi ErrorBoundary:"
   }
 }

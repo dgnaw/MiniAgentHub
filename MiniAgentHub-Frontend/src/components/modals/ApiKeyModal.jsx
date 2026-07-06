@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import axiosClient from '../services/axiosClient';
+import axiosClient from '../../services/axiosClient';
 
 const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
   const { t } = useTranslation();
@@ -57,7 +57,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
       }
 
       await axiosClient.put(`/users/${user.id}`, payload);
-      toast.success(type === 'groq' ? 'Đã lưu cấu hình API Key Groq cá nhân!' : 'Đã lưu cấu hình API URL Flowise cá nhân!');
+      toast.success(type === 'groq' ? t('dashboard.saveGroqKeySuccess') : t('dashboard.saveFlowiseUrlSuccess'));
       onSuccess();
       onClose();
     } catch (error) {
@@ -83,7 +83,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
       if (type === 'groq') setTempApiKey('');
       else setTempApiUrl('');
 
-      toast.success(type === 'groq' ? 'Đã xóa API Key Groq cá nhân.' : 'Đã xóa API URL Flowise cá nhân.');
+      toast.success(type === 'groq' ? t('dashboard.deleteGroqKeySuccess') : t('dashboard.deleteFlowiseUrlSuccess'));
       onSuccess();
       onClose();
     } catch (error) {
@@ -109,20 +109,20 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
             <Settings size={20} />
           </div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            {type === 'groq' ? t('dashboard.configApiKeyGroq', 'Cấu hình API Key (Groq)') : t('dashboard.configApiUrlFlowise', 'Cấu hình API URL (Flowise)')}
+            {type === 'groq' ? t('dashboard.configApiKeyGroq') : t('dashboard.configApiUrlFlowise')}
           </h3>
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
           {type === 'groq'
-            ? t('dashboard.configApiKeyGroqDesc', 'Nhập API Key Groq cá nhân của bạn để sử dụng các model Llama, Mixtral... Key được lưu bảo mật trong Database.')
-            : t('dashboard.configApiUrlFlowiseDesc', 'Nhập địa chỉ URL Prediction API của Flowise để thực hiện phân tích dữ liệu chuyên sâu. URL được lưu bảo mật trong Database.')}
+            ? t('dashboard.configApiKeyGroqDesc')
+            : t('dashboard.configApiUrlFlowiseDesc')}
         </p>
 
         <div className="space-y-4 mb-6">
           {type === 'groq' ? (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.groqApiKeyLabel', 'Groq API Key')}</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.groqApiKeyLabel')}</label>
               <input
                 type="text"
                 value={tempApiKey}
@@ -135,7 +135,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.flowiseApiUrlLabel', 'Flowise API Endpoint URL')}</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.flowiseApiUrlLabel')}</label>
               <input
                 type="text"
                 value={tempApiUrl}
@@ -155,7 +155,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
             disabled={isLoading}
             className="px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
           >
-            {t('dashboard.clearConfig', 'Xóa cấu hình')}
+            {t('dashboard.clearConfig')}
           </button>
           <div className="flex gap-2">
             <button
@@ -163,14 +163,14 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
               disabled={isLoading}
               className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] rounded-xl transition-colors disabled:opacity-50"
             >
-              {t('dashboard.cancel', 'Hủy')}
+              {t('dashboard.cancel')}
             </button>
             <button
               onClick={saveApiKeyConfig}
               disabled={isLoading}
               className={`px-5 py-2.5 text-sm font-medium text-white rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 ${type === 'groq' ? 'bg-[#3b82f6] hover:bg-[#2563eb]' : 'bg-[#10b981] hover:bg-[#059669]'}`}
             >
-              {t('dashboard.saveConfig', 'Lưu cấu hình')}
+              {t('dashboard.saveConfig')}
             </button>
           </div>
         </div>

@@ -48,7 +48,7 @@ const PreBlock = ({ children, ...props }) => {
           title="Copy code"
         >
           {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-          <span className="text-xs">{copied ? t('chat.copied', 'Copied!') : t('chat.copy', 'Copy')}</span>
+          <span className="text-xs">{copied ? t('chat.copied') : t('chat.copy')}</span>
         </button>
       </div>
       <pre className="p-4 overflow-x-auto text-[13px] font-mono text-gray-300 m-0" {...props}>
@@ -94,17 +94,17 @@ const AiMessage = React.memo(({ content, index }) => {
           onClick={() => {
             if (!content) return;
             navigator.clipboard.writeText(content);
-            toast.success(t('chat.copiedResponse', 'Đã copy phản hồi!'));
+            toast.success(t('chat.copiedResponse'));
           }}
           className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
-          <Copy size={13} /> {t('chat.copy', 'Copy')}
+          <Copy size={13} /> {t('chat.copy')}
         </button>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('regenerate-message', { detail: { index } }))}
           className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
-          <RefreshCw size={13} /> {t('chat.regenerate', 'Regenerate')}
+          <RefreshCw size={13} /> {t('chat.regenerate')}
         </button>
       </div>
     </div>

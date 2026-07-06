@@ -32,6 +32,7 @@
     "roleNotFound": "Không tìm thấy quyền (role) này.",
     "emailSendFailed": "Không thể gửi email chứa mật khẩu. Quá trình tạo người dùng đã bị hủy (rollback).",
     "invalidGroupId": "Một hoặc nhiều Group ID không hợp lệ.",
+    "deleteHasGroups": "Không thể xóa! Người dùng này đang thuộc một số nhóm. Hãy gỡ họ khỏi nhóm trước.",
     "deleteSuccess": "Xóa người dùng thành công."
   },
   "validation": {

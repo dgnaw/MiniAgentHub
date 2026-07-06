@@ -123,24 +123,19 @@ const logoutUser = async (userId) => {
 
 const forgotPassword = async (email, lng = 'vi') => {
     const user = await User.findOne({ where: { email } });
-    if (!user) {
-        throw new AppError('auth.emailNotFound', 404);
+    
+    if (user && user.is_active) {
+        const tempPassword = crypto.randomBytes(16).toString('hex');
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(tempPassword, salt);
+
+        user.password_hash = passwordHash;
+        user.is_first_login = true;
+        await user.save();
+
+        await sendResetPasswordEmail(user.email, user.full_name, tempPassword, lng);
     }
-
-    if (!user.is_active) {
-        throw new AppError('auth.accountLocked', 403);
-    }
-
-    const tempPassword = crypto.randomBytes(4).toString('hex');
-
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(tempPassword, salt);
-
-    user.password_hash = passwordHash;
-    user.is_first_login = true;
-    await user.save();
-
-    await sendResetPasswordEmail(user.email, user.full_name, tempPassword, lng);
 
     return { message: 'auth.newPasswordSent' };
 };

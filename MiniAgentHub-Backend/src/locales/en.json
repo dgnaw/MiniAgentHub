@@ -32,6 +32,7 @@
     "roleNotFound": "Role not found.",
     "emailSendFailed": "Failed to send email with password. User creation rollback triggered.",
     "invalidGroupId": "One or more Group IDs are invalid.",
+    "deleteHasGroups": "Cannot delete! This user is in one or more groups. Remove them first.",
     "deleteSuccess": "User deleted successfully."
   },
   "validation": {

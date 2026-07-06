@@ -7,8 +7,8 @@ import GroupManagement from './pages/GroupManagement';
 import UserManagement from './pages/UserManagement';
 import SharedChat from './pages/SharedChat';
 import { Toaster } from 'react-hot-toast';
-import ChangePasswordModal from './components/ChangePasswordModal';
-import ErrorBoundary from './components/ErrorBoundary';
+import ChangePasswordModal from './components/modals/ChangePasswordModal';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

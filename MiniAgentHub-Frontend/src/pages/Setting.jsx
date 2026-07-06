@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 import axiosClient from '../services/axiosClient';
-import ThemeToggle from '../components/ThemeToggle';
+import ThemeToggle from '../components/common/ThemeToggle';
 import { useTranslation } from 'react-i18next';
-import LanguageToggle from '../components/LanguageToggle';
-import ChangePasswordModal from '../components/ChangePasswordModal';
+import LanguageToggle from '../components/common/LanguageToggle';
+import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../components/modals/ConfirmModal';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
@@ -36,17 +36,28 @@ const Settings = () => {
   };
 
   const handleClearHistory = async () => {
-    setConfirmDeleteHistory(true);
+    try {
+      const res = await axiosClient.get('/chat-sessions?page=1&limit=1');
+      const data = res.data || (Array.isArray(res) ? res : []);
+      if (data.length === 0) {
+        toast.error(t('settings.noChatHistory'));
+        return;
+      }
+      setConfirmDeleteHistory(true);
+    } catch (error) {
+      console.error(error);
+      setConfirmDeleteHistory(true);
+    }
   };
 
   const executeClearHistory = async () => {
     try {
       await axiosClient.delete('/chat-sessions');
       window.dispatchEvent(new Event('sessions-cleared'));
-      toast.success(t('settings.clearSuccess', 'Chat history cleared successfully!'));
+      toast.success(t('settings.clearSuccess'));
     } catch (error) {
       console.error('Lỗi khi xóa lịch sử:', error);
-      toast.error(t('settings.clearError', 'Error clearing chat history.'));
+      toast.error(t('settings.clearError'));
     }
   };
 
@@ -58,7 +69,7 @@ const Settings = () => {
   const validatePhone = (val) => {
     const trimmedPhone = val.trim();
     if (trimmedPhone !== '' && !/^[0-9]{10}$/.test(trimmedPhone)) {
-      return t('settings.invalidPhone', 'Invalid phone number (exactly 10 digits).');
+      return t('settings.invalidPhone');
     }
     return '';
   };
@@ -82,10 +93,10 @@ const Settings = () => {
       await axiosClient.put(`/users/${user.id}`, { phone: trimmedPhone });
       updateUser({ phone: trimmedPhone }); 
       setIsEditingPhone(false);
-      toast.success(t('settings.save', 'Lưu thành công'));
+      toast.success(t('settings.save'));
     } catch (error) {
       console.error(error);
-      toast.error(t('settings.updatePhoneError', 'Error updating phone number.'));
+      toast.error(t('settings.updatePhoneError'));
     } finally {
       setIsSavingPhone(false);
     }
@@ -98,10 +109,10 @@ const Settings = () => {
       await axiosClient.put(`/users/${user.id}`, { address: addressInput });
       updateUser({ address: addressInput });
       setIsEditingAddress(false);
-      toast.success(t('settings.save', 'Lưu thành công'));
+      toast.success(t('settings.save'));
     } catch (error) {
       console.error(error);
-      toast.error(t('settings.updateAddressError', 'Error updating address.'));
+      toast.error(t('settings.updateAddressError'));
     } finally {
       setIsSavingAddress(false);
     }
@@ -131,7 +142,7 @@ const Settings = () => {
                   <div className="flex-1 mr-4">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.phoneNumber')}</h4>
                     {!isEditingPhone && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated', 'Not updated')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{user?.phone || t('settings.notUpdated')}</p>
                     )}
                   </div>
                 </div>
@@ -156,14 +167,14 @@ const Settings = () => {
                       }}
                       onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
                       className={`w-full bg-gray-50 dark:bg-[#131417] border ${phoneError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-[#333] focus:border-blue-500'} rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none transition-colors`}
-                      placeholder={t('settings.phonePlaceholder', 'Enter phone number...')}
+                      placeholder={t('settings.phonePlaceholder')}
                       autoFocus
                     />
                     {phoneError && <p className="text-red-500 dark:text-red-400 text-xs mt-1.5">{phoneError}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
                     <button onClick={handleUpdatePhone} disabled={isSavingPhone} className="flex-1 sm:flex-none bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
-                      {isSavingPhone ? t('settings.saving', 'Saving...') : t('settings.save')}
+                      {isSavingPhone ? t('settings.saving') : t('settings.save')}
                     </button>
                     <button onClick={() => { setIsEditingPhone(false); setPhoneInput(user?.phone || ''); setPhoneError(''); }} className="flex-1 sm:flex-none bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-5 py-2 rounded-lg text-sm font-semibold transition-colors">
                       {t('settings.cancel')}
@@ -182,7 +193,7 @@ const Settings = () => {
                   <div className="flex-1 mr-4">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-200">{t('settings.address')}</h4>
                     {!isEditingAddress && (
-                      <p className="text-xs text-gray-500 mt-0.5">{user?.address || t('settings.notUpdated', 'Not updated')}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{user?.address || t('settings.notUpdated')}</p>
                     )}
                   </div>
                 </div>
@@ -203,13 +214,13 @@ const Settings = () => {
                       value={addressInput} 
                       onChange={(e) => setAddressInput(e.target.value)}
                       className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#333] rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
-                      placeholder={t('settings.addressPlaceholder', 'Enter address...')}
+                      placeholder={t('settings.addressPlaceholder')}
                       autoFocus
                     />
                   </div>
                   <div className="flex gap-2 shrink-0 w-full sm:w-auto mt-1 sm:mt-0">
                     <button onClick={handleUpdateAddress} disabled={isSavingAddress} className="flex-1 sm:flex-none bg-[#006ecf] hover:bg-[#005bb1] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
-                      {isSavingAddress ? t('settings.saving', 'Saving...') : t('settings.save')}
+                      {isSavingAddress ? t('settings.saving') : t('settings.save')}
                     </button>
                     <button onClick={() => { setIsEditingAddress(false); setAddressInput(user?.address || ''); }} className="flex-1 sm:flex-none bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-5 py-2 rounded-lg text-sm font-semibold transition-colors">
                       {t('settings.cancel')}
@@ -329,9 +340,9 @@ const Settings = () => {
         isOpen={confirmDeleteHistory}
         onClose={() => setConfirmDeleteHistory(false)}
         onConfirm={executeClearHistory}
-        title={t('settings.clearChatHistory', 'Clear chat history')}
-        message={t('settings.clearChatHistoryConfirm', 'Are you sure you want to delete this chat history?')}
-        confirmText={t('settings.clear', 'Clear')}
+        title={t('settings.clearChatHistory')}
+        message={t('settings.clearChatHistoryConfirm')}
+        confirmText={t('settings.clear')}
       />
     </div>
   );

@@ -24,8 +24,8 @@ const LanguageToggle = () => {
         onChange={handleLanguageChange}
         className="appearance-none flex items-center justify-between w-full bg-gray-50 dark:bg-[#131417] border border-gray-200 dark:border-[#26272b] hover:border-gray-300 dark:hover:border-[#444] rounded-xl px-4 py-3 text-xs text-gray-700 dark:text-gray-300 transition-colors focus:outline-none cursor-pointer"
       >
-        <option value="en">{t('settings.english', 'English (US)')}</option>
-        <option value="vi">{t('settings.vietnamese', 'Vietnamese')}</option>
+        <option value="en">{t('settings.english')}</option>
+        <option value="vi">{t('settings.vietnamese')}</option>
       </select>
       <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
         <ChevronDown size={14} className="text-gray-500" />

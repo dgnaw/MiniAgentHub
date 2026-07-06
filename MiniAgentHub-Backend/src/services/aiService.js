@@ -1,16 +1,30 @@
 const Groq = require('groq-sdk');
-
-
 const fs = require('fs');
+const fsp = fs.promises;
 const pdfParse = require('pdf-parse-new');
 const Tesseract = require('tesseract.js');
 const AppError = require('../utils/AppError');
+const aiPrompts = require('../utils/aiPrompts');
 const chatService = require('./chatService');
+const { createParser } = require('eventsource-parser');
+
+let tesseractWorkerPromise = null;
+const getTesseractWorker = () => {
+    if (!tesseractWorkerPromise) {
+        tesseractWorkerPromise = (async () => {
+            console.log("Khởi tạo Tesseract OCR Worker (vie+eng)...");
+            const worker = await Tesseract.createWorker('vie+eng');
+            console.log("Tesseract OCR Worker đã sẵn sàng.");
+            return worker;
+        })(); 
+    }
+    return tesseractWorkerPromise;
+}
 
 const getGroqClient = (customKey) => {
     const key = customKey || process.env.GROQ_API_KEY;
     if (!key || key.trim() === '') {
-        throw new AppError('ai.apiKeyInvalid', 500);
+        throw new AppError('ai.apiKeyInvalid', 400);
     }
     return new Groq({
         apiKey: key
@@ -24,25 +38,26 @@ const aiService = {
 
         try {
             if (file.mimetype === 'application/pdf') {
-                const dataBuffer = fs.readFileSync(filePath);
+                const dataBuffer = await fsp.readFile(filePath);
 
                 try {
                     const pdfData = await pdfParse(dataBuffer);
                     fileContent = pdfData.text;
                 } catch (pdfErr) {
                     console.error("Lỗi khi parse PDF:", pdfErr);
-                    fileContent = "(Hệ thống không thể đọc được nội dung văn bản từ file PDF này. Có thể đây là file ảnh scan hoặc bị hỏng định dạng.)";
+                    fileContent = aiPrompts.FILE_READ_ERRORS.PDF_PARSE_ERROR;
                 }
             } else if (file.mimetype.startsWith('image/')) {
                 try {
-                    const result = await Tesseract.recognize(filePath, 'vie+eng');
+                    const worker = await getTesseractWorker();
+                    const result = await worker.recognize(filePath);
                     fileContent = result.data.text;
                     if (!fileContent.trim()) {
-                        fileContent = "(Không tìm thấy chữ/văn bản nào trong hình ảnh.)";
+                        fileContent = aiPrompts.FILE_READ_ERRORS.OCR_NO_TEXT;
                     }
                 } catch (ocrErr) {
                     console.error("Lỗi khi nhận diện ảnh (OCR):", ocrErr);
-                    fileContent = "(Hệ thống không thể trích xuất văn bản từ hình ảnh này do lỗi định dạng.)";
+                    fileContent = aiPrompts.FILE_READ_ERRORS.OCR_FORMAT_ERROR;
                 }
             } else if (
                 file.mimetype.includes('text') ||
@@ -50,13 +65,14 @@ const aiService = {
                 file.mimetype === 'application/json' ||
                 /\.(csv|txt|json|md|xml|html|js|jsx|ts|tsx|py|java|c|cpp|cs|h|css|scss|sql|sh|bat)$/i.test(file.originalname)
             ) {
-                fileContent = fs.readFileSync(filePath, 'utf8');
+                const rawContent = await fsp.readFile(filePath, 'utf8');
+                fileContent = rawContent.length > 10000000 ? rawContent.substring(0, 10000000) + '\n\n[Nội dung đã bị cắt bớt do quá dài...]' : rawContent;
             } else {
-                fileContent = `(Hệ thống không thể đọc nội dung chi tiết của định dạng file này. Tên file đính kèm: ${file.originalname})`;
+                fileContent = aiPrompts.FILE_READ_ERRORS.UNSUPPORTED_FORMAT(file.originalname);
             }
         } catch (err) {
             console.error("Lỗi extract file content:", err);
-            fileContent = "(Hệ thống không thể đọc nội dung file này)";
+            fileContent = aiPrompts.FILE_READ_ERRORS.GENERAL_ERROR;
         }
 
         return fileContent;
@@ -69,7 +85,7 @@ const aiService = {
                 messages: messagesHistory,
                 model: modelId || 'llama-3.1-8b-instant',
                 temperature: 1,
-                max_tokens: 1024,
+                max_tokens: 4096,
                 top_p: 1,
                 stream: true,
             });
@@ -85,7 +101,7 @@ const aiService = {
             const localClient = getGroqClient(customKey);
             const response = await localClient.chat.completions.create({
                 messages: [
-                    { role: 'system', content: 'Bạn là AI chuyên tóm tắt tin nhắn thành tiêu đề ngắn (tối đa 4 từ). CHỈ trả về phần tiêu đề, không có tiền tố như "Tiêu đề:", không giải thích, không dùng dấu ngoặc kép hay markdown.' },
+                    { role: 'system', content: aiPrompts.SYSTEM_PROMPTS.GENERATE_TITLE },
                     { role: 'user', content: message }
                 ],
                 model: 'llama-3.1-8b-instant',
@@ -154,12 +170,21 @@ const aiService = {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
-        let buffer = '';
 
         const FLOWISE_STATUS_STRINGS = new Set([
             'INProgress', 'done', 'start', 'end', 'error',
             '[DONE]', 'true', 'false', 'null', ''
         ]);
+
+        let streamFailed = false;
+        let errorMessage = null;
+        let parsedEvents = [];
+
+        const parser = createParser({
+            onEvent: (event) => {
+                parsedEvents.push(event);
+            }
+        });
 
         try {
             while (true) {
@@ -167,49 +192,39 @@ const aiService = {
                 if (done) break;
 
                 const rawChunk = decoder.decode(value, { stream: true });
-                buffer += rawChunk;
+                parser.feed(rawChunk);
 
-                const blocks = buffer.split('\n\n');
-                buffer = blocks.pop();
-                for (const block of blocks) {
-                    if (!block.trim()) continue;
-
-                    let eventType = null;
-                    let dataStr = null;
-
-                    const lines = block.split('\n');
-                    for (const line of lines) {
-                        if (line.startsWith('event:')) {
-                            eventType = line.substring(6).trim();
-                        } else if (line.startsWith('data:')) {
-                            dataStr = line.substring(5).trim();
-                        }
-                    }
-
-                    if (!dataStr) continue;
-
-                    if (eventType === 'error') {
+                for (const event of parsedEvents) {
+                    if (event.event === 'error') {
                         try {
-                            const errParsed = JSON.parse(dataStr);
-                            const errMsg = errParsed.data || errParsed.message || 'Flowise error';
-                            yield { failed: true, errorMessage: errMsg };
+                            const errParsed = JSON.parse(event.data);
+                            errorMessage = errParsed.data || errParsed.message || 'Flowise error';
                         } catch {
-                            yield { failed: true };
+                            errorMessage = event.data || 'Flowise error';
                         }
-                        return;
+                        streamFailed = true;
+                        continue;
                     }
 
-                    if (eventType && eventType !== 'token') continue;
+                    if (event.event && event.event !== 'token') continue;
 
-                    if (FLOWISE_STATUS_STRINGS.has(dataStr)) continue;
-                    if (dataStr === '[DONE]') continue;
+                    const dataStr = event.data;
+                    if (!dataStr || FLOWISE_STATUS_STRINGS.has(dataStr) || dataStr === '[DONE]') continue;
 
                     try {
                         const parsed = JSON.parse(dataStr);
+
+                        if (typeof parsed === 'string') {
+                            if (!FLOWISE_STATUS_STRINGS.has(parsed)) {
+                                yield { chunk: parsed };
+                            }
+                            continue;
+                        }
+
                         if (parsed.event === 'error') {
-                            const errMsg = parsed.data || parsed.message || 'Flowise error';
-                            yield { failed: true, errorMessage: errMsg };
-                            return;
+                            errorMessage = parsed.data || parsed.message || 'Flowise error';
+                            streamFailed = true;
+                            continue;
                         }
                         if (parsed.event && parsed.event !== 'token') continue;
                         const token = parsed.data ?? parsed.token ?? parsed.text ?? null;
@@ -222,6 +237,13 @@ const aiService = {
                         }
                     }
                 }
+                
+                parsedEvents = [];
+                
+                if (streamFailed) {
+                    yield { failed: true, errorMessage };
+                    return;
+                }
             }
         } catch (err) {
             console.error('Lỗi khi đọc stream Flowise:', err.message);
@@ -230,36 +252,19 @@ const aiService = {
     },
 
     buildMessagesForAI: async (userId, currentSessionId, processedMessage, cleanBase64ImagesFn) => {
-        const [userSessionIds, pastMessages] = await Promise.all([
-            chatService.getAllUserSessionIds(userId),
-            chatService.getSessionMessages(currentSessionId, userId)
-        ]);
+        const pastMessages = await chatService.getSessionMessages(currentSessionId, userId);
 
-        const otherSessionIds = userSessionIds.filter(id => id !== currentSessionId);
-
-        let globalContextStr = "";
-        if (otherSessionIds.length > 0){
-            const globalMessages = await chatService.getGlobalContextMessages(otherSessionIds,10);
-            globalContextStr = globalMessages.reverse().map(m => {
-                let safeContent = cleanBase64ImagesFn(m.content);
-                if (safeContent && safeContent.length > 500) safeContent = safeContent.substring(0, 500) + '...';
-                return `${m.role === 'ai' ? 'AI' : 'User'}: ${safeContent}`; 
-            }).join('\n');
-        }
-
-        const systemContent = globalContextStr
-            ? `Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.\n\nDưới đây là thông tin từ các cuộc trò chuyện ở các phiên khác của người dùng để bạn tham khảo ngữ cảnh (Ký ức dài hạn):\n"""\n${globalContextStr}\n"""`
-            : 'Bạn là một trợ lý AI thông minh, nhiệt tình của Neural Hub. Luôn trả lời bằng Tiếng Việt, định dạng văn bản rõ ràng bằng Markdown.';
+        const systemContent = aiPrompts.SYSTEM_PROMPTS.BASE_SYSTEM_PROMPT;
 
         const messageForAI = [
-            { role: 'system', content: systemContent},
+            { role: 'system', content: systemContent },
             ...pastMessages.slice(-20).map(m => ({
                 role: m.role === 'ai' ? 'assistant' : 'user',
                 content: cleanBase64ImagesFn(m.content)
             }))
         ];
 
-        if (messageForAI.length > 0 && messageForAI[messageForAI.length - 1].role === 'user'){
+        if (messageForAI.length > 0 && messageForAI[messageForAI.length - 1].role === 'user') {
             messageForAI[messageForAI.length - 1].content = processedMessage;
         }
 
@@ -273,8 +278,8 @@ const aiService = {
 
         let allExtractedTexts = '';
         try {
-            if (files && files.length > 0){
-                const processFilterPromises = files.map(async(file) => {
+            if (files && files.length > 0) {
+                const processFilterPromises = files.map(async (file) => {
                     let localBase64Data = null;
                     let fileExtractedText = '';
                     let fileFlowiseUpload = null;
@@ -282,20 +287,20 @@ const aiService = {
 
                     const safeName = file.originalname.replace(/[\\]/g, '_');
                     if (file.mimetype.startsWith('image/')) {
-                        const fileData = fs.readFileSync(file.path);
+                        const fileData = await fsp.readFile(file.path);
                         localBase64Data = fileData.toString('base64');
                         const ext = require('path').extname(file.originalname) || '.png';
-                        
+
                         const crypto = require('crypto');
                         const hash = crypto.createHash('md5').update(fileData).digest('hex');
                         const newFilename = `${hash}${ext}`;
                         const newPath = require('path').join(require('path').dirname(file.path), newFilename);
 
                         if (fs.existsSync(newPath)) {
-                            fs.unlinkSync(file.path);
+                            await fsp.unlink(file.path);
                             file.path = newPath;
                         } else {
-                            fs.renameSync(file.path, newPath);
+                            await fsp.rename(file.path, newPath);
                             file.path = newPath;
                         }
 
@@ -313,7 +318,7 @@ const aiService = {
 
                     if (model === "Data Analyst") {
                         if (!localBase64Data) {
-                            const fileData = fs.readFileSync(file.path);
+                            const fileData = await fsp.readFile(file.path);
                             localBase64Data = fileData.toString('base64');
                         }
                         fileFlowiseUpload = {
@@ -323,13 +328,13 @@ const aiService = {
                             mime: file.mimetype
                         };
                         if (!file.mimetype.startsWith('image/')) {
-                            fs.unlinkSync(file.path);
+                            await fsp.unlink(file.path).catch(() => { });
                         }
                     } else {
                         const fileContent = await aiService.extractFileContent(file);
                         fileExtractedText = `\n--- Tài liệu: ${file.originalname} ---\n${fileContent}\n`;
                         if (!file.mimetype.startsWith('image/')) {
-                            fs.unlinkSync(file.path);
+                            await fsp.unlink(file.path).catch(() => { });
                         }
                     }
 
@@ -351,19 +356,21 @@ const aiService = {
                 }
 
                 if (allExtractedTexts.trim() !== '') {
-                    processedMessage = `Người dùng đã tải lên (các) hình ảnh/tài liệu. Hệ thống nhận diện (OCR) đã quét và trích xuất được văn bản sau từ các file đó:\n"""${allExtractedTexts}"""\n\nDựa vào phần chữ đã được hệ thống trích xuất ở trên, hãy trả lời yêu cầu sau của người dùng. Tuyệt đối KHÔNG được từ chối hoặc nói rằng bạn không thể nhìn thấy hình ảnh:\n\nYêu cầu: ${processedMessage}`;
+                    processedMessage = aiPrompts.ATTACHMENT_PROMPTS.OCR_CONTEXT(allExtractedTexts, processedMessage);
                 }
 
                 if (model === "Data Analyst" && flowiseUploads.some(u => u.mime.startsWith('image/'))) {
-                    const visionPrompt = `\n\n[HƯỚNG DẪN BẮT BUỘC CHO AI]: Đây là yêu cầu phân tích hình ảnh. Bạn BẮT BUỘC phải: 1. KHÔNG đoán mò, chỉ trả lời dựa trên những gì nhìn thấy rõ. 2. Đọc cẩn thận từng chi tiết, góc cạnh, chữ nhỏ và đường nối (nếu là sơ đồ). 3. Tự rà soát lại (double-check) xem thông tin có khớp với tổng thể ảnh không trước khi trả lời.`;
+                    const visionPrompt = aiPrompts.ATTACHMENT_PROMPTS.VISION_REQUIREMENT;
                     processedMessage = processedMessage + visionPrompt;
                 }
             }
-        } catch(err) {
+        } catch (err) {
             console.error("Lỗi xử lý file đính kèm:", err);
             if (files && files.length > 0) {
                 for (const file of files) {
-                    if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                    if (file.path && fs.existsSync(file.path)) {
+                        await fsp.unlink(file.path).catch(() => { });
+                    }
                 }
             }
             if (err instanceof AppError) throw err;

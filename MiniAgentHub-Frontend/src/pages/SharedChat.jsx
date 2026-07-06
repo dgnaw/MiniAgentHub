@@ -8,7 +8,7 @@ import axiosClient from '../services/axiosClient';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 
 const PreBlock = ({ children, ...props }) => {
   const [copied, setCopied] = useState(false);
@@ -246,7 +246,7 @@ const SharedChat = () => {
               </div>
 
               <div className="flex-1 text-gray-400 dark:text-gray-500 px-2 py-3 text-base select-none">
-                {t('dashboard.promptPlaceholder', 'Message Agent Hub...')}
+                {t('dashboard.promptPlaceholder')}
               </div>
 
               <div className="flex items-center gap-2 pr-1 shrink-0 pb-0.5">
@@ -259,7 +259,7 @@ const SharedChat = () => {
               </div>
             </div>
             <p className="mt-4 text-[11px] text-gray-600 font-mono tracking-wide">
-              {t('dashboard.footerNote', 'Agent Hub is AI and can make mistakes.')}
+              {t('dashboard.footerNote')}
             </p>
           </div>
         )}

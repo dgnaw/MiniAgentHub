@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, UserPlus, UserCog } from 'lucide-react';
-import axiosClient from '../services/axiosClient';
-import useAuthStore from '../store/authStore';
+import axiosClient from '../../services/axiosClient';
+import useAuthStore from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -27,18 +27,18 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
   const validateFullName = (val) => {
     if (!val || !val.trim()) {
-      return t('userFormModal.fullNameRequired', 'Họ và tên không được để trống.');
+      return t('userFormModal.fullNameRequired');
     }
     return '';
   };
 
   const validateEmail = (val) => {
     if (!val || !val.trim()) {
-      return t('userFormModal.emailRequired', 'Email không được để trống.');
+      return t('userFormModal.emailRequired');
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(val)) {
-      return t('userFormModal.emailInvalid', 'Email không đúng định dạng (ví dụ: ten@congty.com).');
+      return t('userFormModal.emailInvalid');
     }
     return '';
   };
@@ -129,17 +129,17 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
       if (mode === 'create') {
         await axiosClient.post('/users', payload);
-        toast.success(t('userFormModal.createSuccess', 'Tạo người dùng thành công!'));
+        toast.success(t('userFormModal.createSuccess'));
       } else {
         await axiosClient.put(`/users/${initialData.id}`, payload);
-        toast.success(t('userFormModal.updateSuccess', 'Cập nhật người dùng thành công!'));
+        toast.success(t('userFormModal.updateSuccess'));
       }
 
       if (onSuccess) onSuccess(); 
       onClose(); 
     } catch (error) {
       console.error(error);
-      setFormError(error.response?.data?.message || t('userFormModal.alertSaveError', 'Có lỗi xảy ra khi lưu người dùng!'));
+      setFormError(error.response?.data?.message || t('userFormModal.alertSaveError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -155,14 +155,14 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
           </button>
           {mode === 'create' ? <UserPlus size={20} className="text-blue-500 dark:text-blue-400" /> : <UserCog size={20} className="text-blue-500 dark:text-blue-400" />}
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {mode === 'create' ? t('userFormModal.addTitle', 'Add New User') : t('userFormModal.updateTitle', 'Update User')}
+            {mode === 'create' ? t('userFormModal.addTitle') : t('userFormModal.updateTitle')}
           </h2>
         </div>
 
         <div className="p-6 space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-              {t('userFormModal.fullName', 'Full Name')} <span className="text-red-500">*</span>
+              {t('userFormModal.fullName')} <span className="text-red-500">*</span>
             </label>
             <input 
               type="text" 
@@ -176,7 +176,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
               onBlur={(e) => {
                 setFullNameError(validateFullName(e.target.value));
               }}
-              placeholder={mode === 'create' ? t('userFormModal.fullNamePlaceholder', 'Enter full name') : ""}
+              placeholder={mode === 'create' ? t('userFormModal.fullNamePlaceholder') : ""}
               disabled={isReadOnly}
               className={`w-full bg-white dark:bg-[#131417] border ${fullNameError ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
             />
@@ -185,7 +185,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-              {t('userFormModal.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
+              {t('userFormModal.emailLabel')} <span className="text-red-500">*</span>
             </label>
             <input 
               type="email" 
@@ -199,7 +199,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
               onBlur={(e) => {
                 setEmailError(validateEmail(e.target.value));
               }}
-              placeholder={mode === 'create' ? t('userFormModal.emailPlaceholder', 'name@company.com') : ""}
+              placeholder={mode === 'create' ? t('userFormModal.emailPlaceholder') : ""}
               disabled={isReadOnly}
               className={`w-full bg-white dark:bg-[#131417] border ${emailError ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-[#3b82f6]'} rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors`}
             />
@@ -208,7 +208,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
 
           <div ref={dropdownRef}>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-              {t('userFormModal.assignGroups', 'Assign to Groups (Optional)')}
+              {t('userFormModal.assignGroups')}
             </label>
             
             <div className="relative">
@@ -230,7 +230,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
                     onClick={() => setShowGroupDropdown(!showGroupDropdown)}
                     className="w-full bg-white dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] rounded-xl px-4 py-3 text-sm text-left text-gray-700 dark:text-gray-300 flex items-center justify-between outline-none transition-colors focus:border-[#3b82f6]"
                   >
-                    <span>{t('userFormModal.selectGroupsPlaceholder', 'Chọn nhóm...')}</span>
+                    <span>{t('userFormModal.selectGroupsPlaceholder')}</span>
                     <span className="text-gray-400 text-xs">▼</span>
                   </button>
 
@@ -240,11 +240,11 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
                         filteredGroups.map(group => (
                           <div key={group.id} onClick={() => handleAddGroup(group)} className="px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-[#26272b] cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors flex justify-between items-center border-b border-gray-100 dark:border-[#26272b]/50 last:border-b-0">
                             <span>{group.name || group.group_name}</span>
-                            <span className="text-gray-500 text-xs">{group.member_count || group.memberCount || group.members?.length || 0} {t('userFormModal.members', 'thành viên')}</span>
+                            <span className="text-gray-500 text-xs">{group.member_count || group.memberCount || group.members?.length || 0} {t('userFormModal.members')}</span>
                           </div>
                         ))
                       ) : (
-                        <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('userFormModal.noGroupsFound', 'Không tìm thấy nhóm phù hợp')}</div>
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">{t('userFormModal.noGroupsFound')}</div>
                       )}
                     </div>
                   )}
@@ -264,7 +264,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
             onClick={onClose}
             className="px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] border border-gray-300 dark:border-[#333] rounded-xl transition-colors"
           >
-            {isReadOnly ? t('userFormModal.close', 'Close') : t('userFormModal.cancel', 'Cancel')}
+            {isReadOnly ? t('userFormModal.close') : t('userFormModal.cancel')}
           </button>
           {!isReadOnly && (
             <button 
@@ -272,10 +272,10 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
               disabled={isSubmitting}
               className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
             >
-              {isSubmitting ? t('userFormModal.saving', 'Saving...') : mode === 'create' ? (
-                <>{t('userFormModal.btnCreate', 'Create User')} &rarr;</>
+              {isSubmitting ? t('userFormModal.saving') : mode === 'create' ? (
+                <>{t('userFormModal.btnCreate')} &rarr;</>
               ) : (
-                <>{t('userFormModal.btnUpdate', 'Update User')} &#10003;</>
+                <>{t('userFormModal.btnUpdate')} &#10003;</>
               )}
             </button>
           )}

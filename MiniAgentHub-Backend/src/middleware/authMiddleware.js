@@ -5,7 +5,7 @@ const AppError = require('../utils/AppError');
 const authenticateToken = async (req, res, next) => {
     // whitelist some public paths
     const publicPaths = ['/api/login', '/api/forgot-password', '/api/refresh-token'];
-    if (publicPaths.includes(req.path)) {
+    if (publicPaths.includes(req.path) || req.path.startsWith('/api/public/')) {
         return next();
     }
 

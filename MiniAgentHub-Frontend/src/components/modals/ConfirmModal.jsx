@@ -1,9 +1,10 @@
-import React from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, AlertTriangle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText, isDanger = true }) => {
   const { t } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
   
   if (!isOpen) return null;
 
@@ -21,24 +22,35 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
           <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDanger ? 'bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'}`}>
             <AlertTriangle size={24} />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{title || t('confirmModal.title', 'Confirm')}</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{title || t('confirmModal.title')}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{message}</p>
 
           <div className="flex w-full gap-3">
             <button
               onClick={onClose}
-              className="flex-1 bg-gray-100 dark:bg-[#26272b] hover:bg-gray-200 dark:hover:bg-[#33353b] text-gray-700 dark:text-gray-300 font-semibold py-2.5 rounded-xl transition-colors"
+              disabled={isLoading}
+              className="flex-1 bg-gray-100 dark:bg-[#26272b] hover:bg-gray-200 dark:hover:bg-[#33353b] text-gray-700 dark:text-gray-300 font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50"
             >
-              {cancelText || t('confirmModal.cancel', 'Cancel')}
+              {cancelText || t('confirmModal.cancel')}
             </button>
             <button
-              onClick={() => {
-                onConfirm();
-                onClose();
+              disabled={isLoading}
+              onClick={async () => {
+                try {
+                  setIsLoading(true);
+                  const result = onConfirm();
+                  if (result instanceof Promise) {
+                    await result;
+                  }
+                } finally {
+                  setIsLoading(false);
+                  onClose();
+                }
               }}
-              className={`flex-1 font-semibold py-2.5 rounded-xl transition-colors text-white ${isDanger ? 'bg-red-500 hover:bg-red-600' : 'bg-[#3b82f6] hover:bg-[#2563eb]'}`}
+              className={`flex-1 font-semibold py-2.5 rounded-xl transition-colors text-white flex items-center justify-center gap-2 disabled:opacity-70 ${isDanger ? 'bg-red-500 hover:bg-red-600' : 'bg-[#3b82f6] hover:bg-[#2563eb]'}`}
             >
-              {confirmText || t('confirmModal.confirm', 'Confirm')}
+              {isLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+              {confirmText || t('confirmModal.confirm')}
             </button>
           </div>
         </div>

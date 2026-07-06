@@ -1,7 +1,8 @@
-const { User, Group, Role, UserGroup, Permission, RolePermission, GroupPermission } = require('../models');
+const { User, Group, Role, UserGroup, Permission} = require('../models');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { sequelize } = require('../config/database');
+const { Sequelize } = require('sequelize');
 
 const { sendWelcomeEmail } = require('../utils/emailService');
 const AppError = require('../utils/AppError');
@@ -87,7 +88,18 @@ const userService = {
                 { model: Role, attributes: ['id', 'name'] },
                 {
                     model: Group,
-                    attributes: ['id', 'name'],
+                    attributes: {
+                        include: [
+                            [
+                                Sequelize.literal(`(
+                                    SELECT COUNT(*)::int
+                                    FROM user_groups
+                                    WHERE user_groups.group_id = "Groups"."id"
+                                )`),
+                                'member_count'
+                            ]
+                        ]
+                    },
                     through: { attributes: [] }
                 }
             ],
@@ -99,11 +111,35 @@ const userService = {
         const user = await User.findByPk(id, {
             attributes: { exclude: ['password_hash'] },
             include: [
-                { model: Role, attributes: ['id', 'name'] },
+                { 
+                    model: Role,
+                    attributes: ['id', 'name'],
+                    include: [{
+                        model: Permission,
+                        attributes: ['permission_key'],
+                        through: { attributes: [] }
+                    }]
+                },
                 {
                     model: Group,
-                    attributes: ['id', 'name'],
-                    through: { attributes: [] }
+                    attributes: {
+                        include: [
+                            [
+                                Sequelize.literal(`(
+                                    SELECT COUNT(*)::int
+                                    FROM user_groups
+                                    WHERE user_groups.group_id = "Groups"."id"
+                                )`),
+                                'member_count'
+                            ]
+                        ]
+                    },
+                    through: { attributes: [] },
+                    include: [{
+                        model: Permission,
+                        attributes: ['permission_key'],
+                        through: { attributes: [] }
+                    }]
                 }
             ]
         });
@@ -111,39 +147,30 @@ const userService = {
             throw new AppError('user.notFound', 404);
         }
 
-        const roleId = user.role_id;
-        let rolePermissionIds = [];
-        if (roleId) {
-            const rolePerms = await RolePermission.findAll({
-                where: { role_id: roleId }
+        const userData = user.get({ plain: true });
+        const permissionSet = new Set();
+
+        if (userData.Role && userData.Role.Permissions) {
+            userData.Role.Permissions.forEach(p => 
+                permissionSet.add(p.permission_key));
+                delete userData.Role.Permissions;
+        }
+
+        if (userData.Groups) {
+            userData.Groups.forEach(g => {
+                if (g.Permissions) {
+                    g.Permissions.forEach(p => permissionSet.add(p.permission_key));
+                    delete g.Permissions;
+                }
             });
-            rolePermissionIds = rolePerms.map(rp => rp.permission_id);
         }
 
-        const userGroups = await UserGroup.findAll({
-            where: { user_id: user.id }
-        });
-        const groupIds = userGroups.map(ug => ug.group_id);
-
-        let groupPermissionIds = [];
-        if (groupIds.length > 0) {
-            const groupPerms = await GroupPermission.findAll({ where: { group_id: groupIds } });
-            groupPermissionIds = groupPerms.map(gp => gp.permission_id);
-        }
-
-        const allPermissionIds = [...new Set([...rolePermissionIds, ...groupPermissionIds])];
-        let userPermissions = [];
-        if (allPermissionIds.length > 0) {
-            const permissionsList = await Permission.findAll({ where: { id: allPermissionIds } });
-            userPermissions = permissionsList.map(p => p.permission_key);
-        }
-
-        return { 
-            data: { 
-                user, 
-                permissions: userPermissions 
-            }, 
-            status: 200 
+       return {
+            data: {
+                user: userData,
+                permissions: Array.from(permissionSet)
+            },
+            status: 200
         };
     },
 
@@ -239,7 +266,21 @@ const userService = {
             throw new AppError('user.cannotDeleteAdmin', 403);
         }
 
-        await user.destroy();
+        const userGroupCount = await UserGroup.count({ where: { user_id: id } });
+        if (userGroupCount > 0) {
+            throw new AppError('user.deleteHasGroups', 400);
+        }
+
+        const transaction = await sequelize.transaction();
+        try {
+            await UserGroup.destroy({ where: { user_id: id }, transaction });
+            await User.destroy({ where: { id: id }, transaction });
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+
         return { data: { message: 'user.deleteSuccess' }, status: 200 };
     },
 

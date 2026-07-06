@@ -6,7 +6,7 @@ const { sequelize } = require('../config/database');
 const groupService = {
     createGroup: async (groupData) => {
         const { name, description, userIds, permissions, entityType = 'users' } = groupData;
-        
+
         if (!name || !name.trim()) {
             throw new AppError('group.nameRequired', 400);
         }
@@ -24,7 +24,7 @@ const groupService = {
         try {
             newGroup = await Group.create({ name: trimmedName, description: cleanDescription }, { transaction });
 
-            let keysToFind = ['CHAT']; 
+            let keysToFind = ['CHAT'];
             const prefix = entityType === 'groups' ? 'GROUP' : 'USER';
 
             if (permissions) {
@@ -82,64 +82,58 @@ const groupService = {
                     ]
                 ]
             },
-            order: [['created_at', 'DESC']] 
+            include: [{
+                model : Permission,
+                attributes: ['permission_key'],
+                through: { attributes: [] }
+            }],
+            order: [['created_at', 'DESC']]
         });
 
-        const groupIds = groups.map(g => g.id);
-        if (groupIds.length === 0) {
-            return { data: [], status: 200 };
-        }
+        const groupsWithPerms = groups.map(g => {
+            const groupData = g.get({ plain: true });
+            const permissions = { create: false, read: false,
+                update: false, delete:false};
+            
+            let entityType = 'users';
 
-        const groupPerms = await GroupPermission.findAll({
-            where: { group_id: groupIds }
-        });
-        
-        const permIds = [...new Set(groupPerms.map(gp => gp.permission_id))];
-        const permissions = await Permission.findAll({
-            where: { id: permIds }
-        });
-
-        const permIdToKey = {};
-        permissions.forEach(p => permIdToKey[p.id] = p.permission_key);
-
-        const groupPermMap = {};
-        const entityMap = {};
-        groupIds.forEach(id => groupPermMap[id] = { create: false, read: false, update: false, delete: false });
-        groupPerms.forEach(gp => {
-            const key = permIdToKey[gp.permission_id];
-            if (key?.endsWith('_C')) groupPermMap[gp.group_id].create = true;
-            if (key?.endsWith('_R')) groupPermMap[gp.group_id].read = true;
-            if (key?.endsWith('_U')) groupPermMap[gp.group_id].update = true;
-            if (key?.endsWith('_D')) groupPermMap[gp.group_id].delete = true;
-
-            if (key?.startsWith('GROUP_')) entityMap[gp.group_id] = 'groups';
-            if (key?.startsWith('USER_')) entityMap[gp.group_id] = 'users';
-        });
-
-        const groupsWithPerms = groups.map(g => ({ ...g.get({ plain: true }), permissions: groupPermMap[g.id], entityType: entityMap[g.id] || 'users' }));
+            if (groupData.Permissions) {
+                groupData.Permissions.forEach(p => {
+                    const key = p.permission_key;
+                    if (key?.endsWith('_C')) permissions.create = true;
+                    if (key?.endsWith('_R')) permissions.read = true;
+                    if (key?.endsWith('_U')) permissions.update = true;
+                    if (key?.endsWith('_D')) permissions.delete = true;
+                    if (key?.startsWith('GROUP_')) entityType = 'groups';
+                    if (key?.startsWith('USER_')) entityType = 'users';
+                });
+            }
+            delete groupData.Permissions;
+                return {
+                    ...groupData,
+                    permissions,
+                    entityType
+                };
+            });
         return { data: groupsWithPerms, status: 200 };
     },
 
     getGroupById: async (id) => {
-        const group = await Group.findByPk(id);
+        const group = await Group.findByPk(id, {
+            include: [{
+                model: User,
+                attributes: ['id', 'full_name', 'email'],
+                through: { attributes: [] }
+            }]
+        });
 
         if (!group) {
             throw new AppError('group.notFound', 404);
         }
 
-        const userGroups = await UserGroup.findAll({ where: { group_id: id } });
-        const userIds = userGroups.map(ug => ug.user_id);
-        
-        let members = [];
-        if (userIds.length > 0 && User) {
-            members = await User.findAll({
-                where: { id: userIds },
-                attributes: ['id', 'full_name', 'email']
-            });
-        }
-
-        const groupData = group.get ? group.get({ plain: true }) : group;
-        groupData.members = members;
+        const groupData = group.get({ plain: true });
+        groupData.members = groupData.Users || [];
+        delete groupData.Users;
 
         return { data: groupData, status: 200 };
     },
@@ -192,7 +186,7 @@ const groupService = {
             }
 
             if (Array.isArray(userIds)) {
-                await UserGroup.destroy({ where: { group_id: id }, transaction }); 
+                await UserGroup.destroy({ where: { group_id: id }, transaction });
                 if (userIds.length > 0) {
                     const records = userIds.map(uid => ({ group_id: id, user_id: uid }));
                     await UserGroup.bulkCreate(records, { transaction });
@@ -216,12 +210,20 @@ const groupService = {
         }
 
         const userCount = await UserGroup.count({ where: { group_id: id } });
-        
+
         if (userCount > 0) {
             throw new AppError('group.deleteHasUsers', 400, { count: userCount });
         }
 
-        await group.destroy();
+        const transaction = await sequelize.transaction();
+        try {
+            await GroupPermission.destroy({ where: { group_id: id }, transaction});
+            await group.destroy( { transaction} );
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
         return { data: { message: 'group.deleteSuccess' }, status: 200 };
     },
 

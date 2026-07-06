@@ -33,7 +33,7 @@ const UserMessage = ({
             }}
           />
           <div className="flex justify-end gap-2 mt-3">
-            <button onClick={() => setEditingIndex(null)} className="px-4 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2b30] rounded-lg transition-colors">{t('chat.cancelEdit', 'Hủy')}</button>
+            <button onClick={() => setEditingIndex(null)} className="px-4 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2b30] rounded-lg transition-colors">{t('chat.cancelEdit')}</button>
             <button onClick={() => {
               const originalContent = msg.content || '';
               const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
@@ -47,7 +47,7 @@ const UserMessage = ({
               if (imgs.length > 0) finalEdit = `${imgs.join('\n')}\n\n${finalEdit}`;
 
               handleSend(finalEdit.trim(), true, index);
-            }} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">{t('chat.resendEdit', 'Gửi lại')}</button>
+            }} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">{t('chat.resendEdit')}</button>
           </div>
         </div>
       </div>
@@ -96,8 +96,8 @@ const UserMessage = ({
         )}
       </div>
       <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 mr-2">
-        <button onClick={() => { if (!contentText) return; navigator.clipboard.writeText(contentText); toast.success(t('chat.copiedMessage', 'Đã copy tin nhắn!')); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy size={13} /> {t('chat.copy', 'Copy')}</button>
-        <button onClick={() => { setEditInput(contentText); setEditingIndex(index); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"><Pencil size={13} /> {t('chat.edit', 'Edit')}</button>
+        <button onClick={() => { if (!contentText) return; navigator.clipboard.writeText(contentText); toast.success(t('chat.copiedMessage')); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy size={13} /> {t('chat.copy')}</button>
+        <button onClick={() => { setEditInput(contentText); setEditingIndex(index); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"><Pencil size={13} /> {t('chat.edit')}</button>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { Eye, EyeOff, ShieldCheck, ArrowLeft, Mail, X } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import ThemeToggle from '../components/ThemeToggle';
+import ThemeToggle from '../components/common/ThemeToggle';
 import useThemeStore from '../store/themeStore';
 import toast from 'react-hot-toast';
 
@@ -37,21 +37,21 @@ function Login() {
 
   const validateEmail = (val) => {
     if (!val) {
-      return t('login.emailRequired', 'Email không được để trống.');
+      return t('login.emailRequired');
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(val)) {
-      return t('login.emailInvalid', 'Email không đúng định dạng (ví dụ: ten@congty.com).');
+      return t('login.emailInvalid');
     }
     return '';
   };
 
   const validatePassword = (val) => {
     if (!val) {
-      return t('login.passwordRequired', 'Mật khẩu không được để trống.');
+      return t('login.passwordRequired');
     }
     if (val.length < 6) {
-      return t('login.passwordLength', 'Mật khẩu phải chứa ít nhất 6 ký tự.');
+      return t('login.passwordLength');
     }
     return '';
   };
@@ -83,7 +83,7 @@ function Login() {
       navigate('/');
 
     } catch (err) {
-      setError(err.response?.data?.message || t('login.loginFailed', 'Đăng nhập thất bại. Vui lòng kiểm tra lại!'));
+      setError(err.response?.data?.message || t('login.loginFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -93,17 +93,17 @@ function Login() {
     e.preventDefault();
     setForgotError('');
     if (!forgotEmail.trim()) {
-      setForgotError(t('login.emailRequired', 'Email is required.'));
+      setForgotError(t('login.emailRequired'));
       return;
     }
     
     setIsSendingForgot(true);
     try {
       const data = await axiosClient.post('/forgot-password', { email: forgotEmail.trim() });
-      toast.success(data.message || t('login.resetPasswordSuccess', 'A new password has been sent to your email!'));
+      toast.success(data.message || t('login.resetPasswordSuccess'));
       setForgotStep(2);
     } catch (err) {
-      setForgotError(err.response?.data?.message || t('login.resetPasswordError', 'An error occurred. Please try again.'));
+      setForgotError(err.response?.data?.message || t('login.resetPasswordError'));
     } finally {
       setIsSendingForgot(false);
     }
@@ -113,15 +113,15 @@ function Login() {
     e.preventDefault();
     setResetError('');
     if (!tempPassword || !newPassword || !confirmPassword) {
-      setResetError(t('login.fillAllFields', 'Vui lòng điền đầy đủ các trường.'));
+      setResetError(t('login.fillAllFields'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setResetError(t('login.passwordMismatch', 'Mật khẩu xác nhận không khớp.'));
+      setResetError(t('login.passwordMismatch'));
       return;
     }
     if (newPassword.length < 6) {
-      setResetError(t('login.passwordTooShort', 'Mật khẩu mới phải có ít nhất 6 ký tự.'));
+      setResetError(t('login.passwordTooShort'));
       return;
     }
 
@@ -133,13 +133,13 @@ function Login() {
 
       await axiosClient.put('/users/change-password', { old_password: tempPassword, new_password: newPassword });
 
-      toast.success(t('login.changePasswordSuccess', 'Đổi mật khẩu thành công! Bạn đã được đăng nhập.'));
+      toast.success(t('login.changePasswordSuccess'));
       setIsForgotModalOpen(false);
       setLoginData(loginData.user, loginData.permissions, false);
       navigate('/');
 
     } catch (err) {
-      setResetError(err.response?.data?.message || t('login.changePasswordError', 'Có lỗi xảy ra. Mật khẩu gửi từ email không đúng.'));
+      setResetError(err.response?.data?.message || t('login.changePasswordError'));
     } finally {
       setIsResettingPassword(false);
     }
@@ -157,18 +157,18 @@ function Login() {
       <div className="bg-white dark:bg-[#1a1b20] w-full max-w-md mt-5 p-8 rounded-2xl border border-gray-200 dark:border-[#26272b] shadow-2xl transition-colors duration-300">
         <div className="mb-8">
           <p className="text-blue-500 text-xs font-semibold tracking-widest mb-2 uppercase">
-            {t('login.secureAccess', 'Secure Access')}
+            {t('login.secureAccess')}
           </p>
-          <h2 className="text-3xl font-bold mb-2">{t('login.title', 'Log In')}</h2>
+          <h2 className="text-3xl font-bold mb-2">{t('login.title')}</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            {t('login.description', 'Welcome back to Agent Hub. Enter your credentials to access your dashboard.')}
+            {t('login.description')}
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
+              {t('login.emailLabel')} <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
@@ -181,7 +181,7 @@ function Login() {
               onBlur={(e) => {
                 setEmailError(validateEmail(e.target.value));
               }}
-              placeholder={t('login.emailPlaceholder', 'name@company.com')}
+              placeholder={t('login.emailPlaceholder')}
               className={`w-full bg-gray-50 dark:bg-[#131417] border ${emailError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-colors`}
             />
             {emailError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{emailError}</p>}
@@ -189,7 +189,7 @@ function Login() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              {t('login.passwordLabel', 'Password')} <span className="text-red-500">*</span>
+              {t('login.passwordLabel')} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <input
@@ -203,7 +203,7 @@ function Login() {
                 onBlur={(e) => {
                   setPasswordError(validatePassword(e.target.value));
                 }}
-                placeholder={t('login.passwordPlaceholder', 'Enter your password')}
+                placeholder={t('login.passwordPlaceholder')}
                 className={`w-full bg-gray-50 dark:bg-[#131417] border ${passwordError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : error ? 'border-red-500' : 'border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500'} rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 transition-colors`}
               />
               <button
@@ -221,7 +221,7 @@ function Login() {
                 onClick={() => setIsForgotModalOpen(true)}
                 className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline transition-colors focus:outline-none"
               >
-                {t('login.forgotPassword', 'Forgot Password?')}
+                {t('login.forgotPassword')}
               </button>
             </div>
           </div>
@@ -233,17 +233,17 @@ function Login() {
             disabled={isLoading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg mt-4 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? t('login.authenticating', 'Đang xác thực...') : t('login.submitBtn', 'Continue to Dashboard')}
+            {isLoading ? t('login.authenticating') : t('login.submitBtn')}
           </button>
         </form>
       </div>
 
       <div className="flex gap-6 mt-8 text-xs text-gray-500 uppercase tracking-widest font-medium">
         <span className="flex items-center gap-2">
-          <ShieldCheck size={14} /> {t('login.encrypted', 'End-to-End Encrypted')}
+          <ShieldCheck size={14} /> {t('login.encrypted')}
         </span>
         <span className="flex items-center gap-2">
-          <ShieldCheck size={14} /> {t('login.certified', 'ISO 27001 Certified')}
+          <ShieldCheck size={14} /> {t('login.certified')}
         </span>
       </div>
 
@@ -269,22 +269,22 @@ function Login() {
             {forgotStep === 1 ? (
               <>
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.resetPasswordTitle', 'Quên mật khẩu')}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.resetPasswordTitle')}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('login.resetPasswordDesc', 'Nhập địa chỉ email của bạn. Chúng tôi sẽ gửi một mật khẩu tạm thời vào email đó.')}
+                    {t('login.resetPasswordDesc')}
                   </p>
                 </div>
 
                 <form onSubmit={handleForgotPassword} className="space-y-4" noValidate>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      {t('login.emailLabel', 'Email Address')} <span className="text-red-500">*</span>
+                      {t('login.emailLabel')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => { setForgotEmail(e.target.value); setForgotError(''); }}
-                      placeholder={t('login.emailPlaceholder', 'name@company.com')}
+                      placeholder={t('login.emailPlaceholder')}
                       className="w-full bg-gray-50 dark:bg-[#131417] border border-gray-300 dark:border-[#26272b] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none transition-colors"
                       autoFocus
                     />
@@ -295,10 +295,10 @@ function Login() {
                     disabled={isSendingForgot}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                   >
-                    {isSendingForgot ? t('login.sending', 'Đang gửi...') : (
+                    {isSendingForgot ? t('login.sending') : (
                       <>
                         <Mail size={16} />
-                        {t('login.sendNewPassword', 'Gửi mật khẩu mới')}
+                        {t('login.sendNewPassword')}
                       </>
                     )}
                   </button>
@@ -307,16 +307,16 @@ function Login() {
             ) : (
               <>
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.changePasswordTitle', 'Đổi mật khẩu mới')}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('login.changePasswordTitle')}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('login.changePasswordDesc1', 'Mật khẩu đã được gửi đến email ')}<strong>{forgotEmail}</strong>{t('login.changePasswordDesc2', '. Vui lòng nhập mật khẩu đó và thiết lập mật khẩu mới.')}
+                    {t('login.changePasswordDesc1')}<strong>{forgotEmail}</strong>{t('login.changePasswordDesc2')}
                   </p>
                 </div>
 
                 <form onSubmit={handleResetPassword} className="space-y-4" noValidate>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      {t('login.tempPasswordLabel', 'Mật khẩu từ email')} <span className="text-red-500">*</span>
+                      {t('login.tempPasswordLabel')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -328,7 +328,7 @@ function Login() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      {t('login.newPasswordLabel', 'Mật khẩu mới')} <span className="text-red-500">*</span>
+                      {t('login.newPasswordLabel')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -339,7 +339,7 @@ function Login() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      {t('login.confirmPasswordLabel', 'Xác nhận mật khẩu mới')} <span className="text-red-500">*</span>
+                      {t('login.confirmPasswordLabel')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -354,7 +354,7 @@ function Login() {
                     disabled={isResettingPassword}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg mt-2 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                   >
-                    {isResettingPassword ? t('login.updating', 'Đang cập nhật...') : t('login.updateAndLoginBtn', 'Cập nhật mật khẩu và Đăng nhập')}
+                    {isResettingPassword ? t('login.updating') : t('login.updateAndLoginBtn')}
                   </button>
                 </form>
               </>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserPlus, Info, Users, Settings, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
-import Sidebar from '../components/Sidebar';
-import GroupFormModal from '../components/GroupFormModal';
-import ConfirmModal from '../components/ConfirmModal';
+import Sidebar from '../components/layout/Sidebar';
+import GroupFormModal from '../components/modals/GroupFormModal';
+import ConfirmModal from '../components/modals/ConfirmModal';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -23,6 +23,15 @@ const GroupManagement = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const fetchGroups = async () => {
     try {
       setIsLoading(true);
@@ -31,58 +40,47 @@ const GroupManagement = () => {
 
       if (hasGroupAccess) {
         const response = await axiosClient.get('/groups');
-        const data = Array.isArray(response) ? response : (response.data || []);
-        setGroups(data);
+        if (isMounted.current) {
+          const data = Array.isArray(response) ? response : (response.data || []);
+          setGroups(data);
+        }
       } else {
         const response = await axiosClient.get(`/users/${user.id}`);
-        const responseData = response.data || response;
-        const userData = responseData.user || responseData;
-        const userGroups = userData.Groups || userData.groups || [];
-        
-        // Fetch thêm số lượng member cho mỗi nhóm vì API user không trả về member_count
-        const groupsWithCounts = await Promise.all(
-          userGroups.map(async (g) => {
-            try {
-              const detailRes = await axiosClient.get(`/groups/${g.id}`);
-              const detailData = detailRes.data || detailRes;
-              return {
-                ...g,
-                member_count: detailData.member_count || detailData.memberCount || detailData.members?.length || g.member_count || 0
-              };
-            } catch (err) {
-              return g;
-            }
-          })
-        );
-        
-        setGroups(groupsWithCounts);
+        if (isMounted.current) {
+          const responseData = response.data || response;
+          const userData = responseData.user || responseData;
+          const userGroups = userData.Groups || userData.groups || [];
+          setGroups(userGroups);
+        }
       }
-      setError('');
+      if (isMounted.current) setError('');
     } catch (err) {
-      console.error('Lỗi tải danh sách nhóm:', err);
-      setError(t('groupManagement.errorLoad', 'Không thể tải dữ liệu nhóm. Vui lòng kiểm tra lại kết nối.'));
+      if (isMounted.current) {
+        console.error('Lỗi tải danh sách nhóm:', err);
+        setError(t('groupManagement.errorLoad'));
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchGroups();
-  }, []);
+  }, [user?.id, JSON.stringify(permissions)]);
 
   const handleDeleteGroup = (id) => {
     setConfirmDialog({
       isOpen: true,
-      title: t('groupManagement.deleteConfirmTitle', 'Xác nhận xóa'),
-      message: t('groupManagement.deleteConfirm', 'Bạn có chắc chắn muốn xóa nhóm này không?'),
+      title: t('groupManagement.deleteConfirmTitle'),
+      message: t('groupManagement.deleteConfirm'),
       onConfirm: async () => {
         try {
           await axiosClient.delete(`/groups/${id}`);
           setGroups((prev) => prev.filter((g) => g.id !== id));
-          toast.success(t('groupManagement.deleteSuccess', 'Xóa nhóm thành công!'));
+          toast.success(t('groupManagement.deleteSuccess'));
         } catch (err) {
           console.error('Lỗi khi xóa nhóm:', err);
-          toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError', 'Xóa nhóm thất bại. Vui lòng thử lại sau.'));
+          toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError'));
         }
       }
     });
@@ -116,10 +114,10 @@ const GroupManagement = () => {
     try {
       if (modalMode === 'create') {
         await axiosClient.post('/groups', formData);
-        toast.success(t('groupManagement.createSuccess', 'Tạo nhóm thành công!'));
+        toast.success(t('groupManagement.createSuccess'));
       } else {
         await axiosClient.put(`/groups/${selectedGroup.id}`, formData);
-        toast.success(t('groupManagement.updateSuccess', 'Cập nhật nhóm thành công!'));
+        toast.success(t('groupManagement.updateSuccess'));
       }
       setIsModalOpen(false);
       fetchGroups(); 
@@ -137,9 +135,9 @@ const GroupManagement = () => {
         
         <div className="flex flex-col md:flex-row md:items-start md:items-center justify-between gap-4 md:gap-6 mb-6 md:mb-10">
           <div className="max-w-2xl">
-            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3 text-gray-900 dark:text-white">{t('groupManagement.title', 'Group Management')}</h1>
+            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3 text-gray-900 dark:text-white">{t('groupManagement.title')}</h1>
             <p className="text-gray-400 text-sm leading-relaxed">
-              {t('groupManagement.description', 'Monitor and coordinate high-performance intelligence teams. View active groups, manage permissions, and inspect nested member hierarchies.')}
+              {t('groupManagement.description')}
             </p>
           </div>
           
@@ -149,7 +147,7 @@ const GroupManagement = () => {
               className="flex items-center gap-2 bg-[#d1e5fb] hover:bg-[#b8d5fa] text-[#0f2c6b] px-6 py-3 rounded-full font-semibold text-sm transition-colors shrink-0"
             >
               <UserPlus size={18} />
-              {t('groupManagement.createNewGroup', 'Create New Group')}
+              {t('groupManagement.createNewGroup')}
             </button>
           )}
         </div>
@@ -157,9 +155,9 @@ const GroupManagement = () => {
         <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl shadow-lg flex flex-col overflow-hidden w-full">
           
           <div className="px-4 md:px-6 py-5 border-b border-gray-200 dark:border-[#26272b] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#1a1b20]">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('groupManagement.activeGroups', 'Active Groups')}</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('groupManagement.activeGroups')}</h2>
             <div className="bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 text-xs font-bold px-3 py-1 rounded-md tracking-widest">
-              {groups.length} {t('groupManagement.total', 'TOTAL')}
+              {groups.length} {t('groupManagement.total')}
             </div>
           </div>
 
@@ -168,13 +166,13 @@ const GroupManagement = () => {
           {/* --- Table Header (Desktop Only) --- */}
           <div className="hidden md:grid grid-cols-12 px-4 md:px-6 py-4 border-b border-gray-200 dark:border-[#26272b] bg-gray-50 dark:bg-[#1a1b20]">
             <div className="col-span-5 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">
-              {t('groupManagement.groupName', 'Group Name')}
+              {t('groupManagement.groupName')}
             </div>
-            <div className="col-span-4 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">
-              {t('groupManagement.memberCount', 'Member Count')}
+            <div className="col-span-4 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase text-center">
+              {t('groupManagement.memberCount')}
             </div>
             <div className="col-span-3 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase text-right">
-              {t('groupManagement.actions', 'Actions')}
+              {t('groupManagement.actions')}
             </div>
           </div>
 
@@ -182,7 +180,7 @@ const GroupManagement = () => {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <Loader2 className="animate-spin mb-3 text-blue-500" size={28} />
-                <p className="text-sm font-medium tracking-wide">{t('groupManagement.loading', 'Đang tải dữ liệu...')}</p>
+                <p className="text-sm font-medium tracking-wide">{t('groupManagement.loading')}</p>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-12 text-red-400">
@@ -191,7 +189,7 @@ const GroupManagement = () => {
               </div>
             ) : groups.length === 0 ? (
               <div className="text-center py-12 text-gray-500 text-sm tracking-wide">
-                {t('groupManagement.emptyGroup', 'Chưa có nhóm nào trong hệ thống.')}
+                {t('groupManagement.emptyGroup')}
               </div>
             ) : (
               groups.map((group) => (
@@ -203,35 +201,35 @@ const GroupManagement = () => {
                   <div className="flex justify-between items-start md:contents">
                     <div className="md:col-span-5">
                       <div className="text-sm font-medium text-blue-600 dark:text-[#a5c6f7]">
-                        {group.group_name || group.name || t('groupManagement.noName', 'Không có tên')}
+                        {group.group_name || group.name || t('groupManagement.noName')}
                       </div>
                       <div className="md:hidden text-xs text-gray-500 mt-1">
-                        {group.member_count || group.memberCount || group.members?.length || 0} {t('groupManagement.members', 'members')}
+                        {group.member_count || group.memberCount || group.members?.length || 0} {t('groupManagement.members')}
                       </div>
                     </div>
                     
-                    <div className="hidden md:block md:col-span-4 text-sm text-gray-700 dark:text-gray-300">
-                      {group.member_count || group.memberCount || group.members?.length || 0} {t('groupManagement.members', 'members')}
+                    <div className="hidden md:block md:col-span-4 text-sm text-gray-700 dark:text-gray-300 text-center">
+                      {group.member_count || group.memberCount || group.members?.length || 0} {t('groupManagement.members')}
                     </div>
                     
                     <div className="md:col-span-3 flex items-center justify-end gap-4 text-gray-500 dark:text-gray-400">
-                      <button onClick={() => handleOpenInfoModal(group)} className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipInfo', 'Group Info')}>
+                      <button onClick={() => handleOpenInfoModal(group)} className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipInfo')}>
                         <Info size={18} />
                       </button>
                       
                       {(user?.role === 'Admin' || permissions.includes('GROUP_U')) && (
                         <>
-                        <button onClick={() => handleOpenMembersModal(group)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title={t('groupManagement.tooltipMembers', 'Manage Members')}>
+                        <button onClick={() => handleOpenMembersModal(group)} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title={t('groupManagement.tooltipMembers')}>
                             <Users size={18} />
                           </button>
-                        <button onClick={() => handleOpenUpdateModal(group)} className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipSettings', 'Edit Group / Permissions Settings')}>
+                        <button onClick={() => handleOpenUpdateModal(group)} className="hover:text-gray-900 dark:hover:text-white transition-colors" title={t('groupManagement.tooltipSettings')}>
                             <Settings size={18} />
                           </button>
                         </>
                       )}
 
                       {(user?.role === 'Admin' || permissions.includes('GROUP_D')) && (
-                      <button onClick={() => handleDeleteGroup(group.id)} className="hover:text-red-600 dark:hover:text-red-400 transition-colors" title={t('groupManagement.tooltipDelete', 'Delete Group')}>
+                      <button onClick={() => handleDeleteGroup(group.id)} className="hover:text-red-600 dark:hover:text-red-400 transition-colors" title={t('groupManagement.tooltipDelete')}>
                           <Trash2 size={18} />
                         </button>
                       )}

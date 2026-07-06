@@ -2,6 +2,9 @@ const ChatSession = require('../models/chatSession');
 const ChatMessage = require('../models/chatMessage');
 const AppError = require('../utils/AppError');
 const { sequelize } = require('../config/database');
+const fs = require('fs');
+const fsp = fs.promises;
+const path = require('path');
 
 const chatService = {
     prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
@@ -10,12 +13,12 @@ const chatService = {
         let userMessageRecord = null;
 
         if (!currentSessionId) {
-            let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : ""); 
+            let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : "");
             try {
-                const aiService = require('./aiService'); // Lazy load to avoid circular dependency
+                const aiService = require('./aiService'); 
                 const aiTitle = await aiService.generateTitle(cleanMessage, customGroqKey);
                 if (aiTitle) title = aiTitle;
-            } catch (error) {}
+            } catch (error) { }
 
             const newSession = await ChatSession.create({ user_id: userId, title: title });
             currentSessionId = newSession.id;
@@ -41,12 +44,12 @@ const chatService = {
                 where: { session_id: currentSessionId },
                 order: [['created_at', 'ASC']]
             });
-            
+
             if (pastMsgs[parsedEditIndex] && pastMsgs[parsedEditIndex].role === 'user') {
                 const msgToEdit = pastMsgs[parsedEditIndex];
                 await ChatMessage.update({ content: messageToSave }, { where: { id: msgToEdit.id } });
                 userMessageRecord = await ChatMessage.findByPk(msgToEdit.id);
-                
+
                 const messagesToDelete = pastMsgs.slice(parsedEditIndex + 1).map(m => m.id);
                 if (messagesToDelete.length > 0) {
                     await ChatMessage.destroy({ where: { id: messagesToDelete } });
@@ -63,6 +66,23 @@ const chatService = {
 
     saveAIMessage: async (sessionId, aiResponse) => {
         return await ChatMessage.create({ session_id: sessionId, role: 'ai', content: aiResponse });
+    },
+
+    truncateLastAIMessage: async (sessionId, userId, content) => {
+        const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
+        if (!session) throw new AppError('chat.notFound', 404);
+
+        const lastMessage = await ChatMessage.findOne({
+            where: { session_id: sessionId, role: 'ai' },
+            order: [['created_at', 'DESC']]
+        });
+
+        if (lastMessage) {
+            lastMessage.content = content;
+            await lastMessage.save();
+            return { message: 'chat.truncateSuccess' };
+        }
+        return { message: 'chat.noAIMessageFound' };
     },
 
     cleanupOnError: async (userMessageRecord, isNewSession, currentSessionId, parsedEditIndex) => {
@@ -112,12 +132,14 @@ const chatService = {
     },
 
     deleteAllSessions: async (userId) => {
-        const sessions = await ChatSession.findAll({ 
+        const sessions = await ChatSession.findAll({
             where: { user_id: userId },
             attributes: ['id']
         });
         const sessionIds = sessions.map(s => s.id);
         if (sessionIds.length > 0) {
+            const messages = await ChatMessage.findAll({ where: { session_id: sessionIds}});
+            await chatService.deleteImagesFromMessages(messages);
             const transaction = await sequelize.transaction();
             try {
                 await ChatMessage.destroy({ where: { session_id: sessionIds }, transaction });
@@ -134,6 +156,8 @@ const chatService = {
     deleteSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
         if (!session) throw new AppError('chat.notFound', 404);
+        const messages = await ChatMessage.findAll({ where: {session_id: sessionId}});
+        await chatService.deleteImagesFromMessages(messages); 
         const transaction = await sequelize.transaction();
         try {
             await ChatMessage.destroy({ where: { session_id: sessionId }, transaction });
@@ -171,6 +195,26 @@ const chatService = {
             order: [['created_at', 'ASC']]
         });
         return { data: { title: session.title, messages }, status: 200 };
+    },
+
+    deleteImagesFromMessages: async(messages) => {
+        try {
+            const regex = /\/api\/uploads\/([a-zA-Z0-9_.-]+)/g;
+            for (const msg of messages) {
+                if (msg.content) {
+                    let match;
+                    while ((match = regex.exec(msg.content)) !== null){
+                        const filename = match[1];
+                        const filepath = path.join(__dirname, '..','..','uploads', filename);
+                        if (fs.existsSync(filepath)) {
+                            await fsp.unlink(filepath).catch(() => {});
+                        }
+                    }
+                }
+            } 
+        } catch (err) {
+            console.error("Error deleting images:", err);
+        }       
     }
 };
 

@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import useAuthStore from '../store/authStore';
-import useSidebarStore from '../store/sidebarStore';
-import useGenerationStore from '../store/useGenerationStore';
+import useAuthStore from '../../store/authStore';
+import useSidebarStore from '../../store/sidebarStore';
+import useGenerationStore from '../../store/useGenerationStore';
 import { MessageSquare, Settings, Users, User, LogOut, MoreVertical, Pencil, Trash2, Check, X, Menu, PanelLeftClose, PanelLeftOpen, Share2, Copy, ChevronDown, ChevronRight, Download, Clock, Loader2 } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import axiosClient from '../services/axiosClient';
-import useThemeStore from '../store/themeStore';
+import axiosClient from '../../services/axiosClient';
+import useThemeStore from '../../store/themeStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import ConfirmModal from './ConfirmModal';
+import ConfirmModal from '../modals/ConfirmModal';
 import html2canvas from 'html2canvas';
-import ExportModal from './ExportModal';
+import ExportModal from '../modals/ExportModal';
 
 function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -136,7 +136,7 @@ function Sidebar() {
             const isRoleChanged = state.user?.role !== currentRoleFromServer;
             if (isRoleChanged && state.user?.role === 'Admin' && currentRoleFromServer !== 'Admin') {
                setTimeout(() => {
-                  toast.error(t('sidebar.roleChanged', 'Your permissions have changed. The system will log you out to update!'));
+                  toast.error(t('sidebar.roleChanged'));
                   logout();
                   navigate('/login');
                }, 300);
@@ -209,13 +209,13 @@ function Sidebar() {
       try {
         await axiosClient.delete(`/chat-sessions/${sessionId}`);
         setSessions(prev => prev.filter(s => s.id !== sessionId));
-        toast.success(t('sidebar.deleteSessionSuccess', 'Xóa phiên trò chuyện thành công!'));
+        toast.success(t('sidebar.deleteSessionSuccess'));
         if (location.pathname === `/chat/${sessionId}`) {
           navigate('/');
         }
       } catch (error) {
         console.error('Lỗi xóa session:', error);
-        toast.error(t('sidebar.deleteSessionError', 'Failed to delete.'));
+        toast.error(t('sidebar.deleteSessionError'));
       } finally {
         setConfirmConfig({ isOpen: false, type: '', data: null });
       }
@@ -236,10 +236,10 @@ function Sidebar() {
       await axiosClient.put(`/chat-sessions/${sessionId}`, { title: editTitle.trim() });
       setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: editTitle.trim() } : s));
       setEditingSessionId(null);
-      toast.success(t('sidebar.renameSessionSuccess', 'Đổi tên phiên trò chuyện thành công!'));
+      toast.success(t('sidebar.renameSessionSuccess'));
     } catch (error) {
       console.error('Lỗi đổi tên:', error);
-      toast.error(t('sidebar.renameSessionError', 'Failed to rename.'));
+      toast.error(t('sidebar.renameSessionError'));
     }
   };
 
@@ -297,7 +297,7 @@ function Sidebar() {
             className={`${getNavClass('/')} shrink-0`}
           >
             <MessageSquare size={20} />
-            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.chat', 'Chat')}</span>
+            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.chat')}</span>
           </div>
 
           {(user?.role === 'Admin' || permissions.includes('USER_R') || permissions.includes('USER_U')) && (
@@ -306,7 +306,7 @@ function Sidebar() {
               className={`${getNavClass('/users')} shrink-0`}
             >
               <User size={20} />
-              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.users', 'Users')}</span>
+              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.users')}</span>
             </div>
           )}
 
@@ -316,7 +316,7 @@ function Sidebar() {
               className={`${getNavClass('/groups')} shrink-0`}
             >
               <Users size={20} />
-              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.group', 'Groups')}</span>
+              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.group')}</span>
             </div>
           )}
 
@@ -325,37 +325,36 @@ function Sidebar() {
             className={`${getNavClass('/settings')} shrink-0`}
           >
             <Settings size={20} />
-            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.setting', 'Settings')}</span>
+            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.setting')}</span>
           </div>
 
           {sessions.length > 0 && (
             <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 flex flex-col flex-1 min-h-0">
-              {isCollapsed ? (
-                <div className="flex justify-center w-full">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (showCollapsedHistory) {
-                        setShowCollapsedHistory(false);
-                      } else {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setCollapsedHistoryPos({ top: rect.top, left: rect.right + 12 });
-                        setShowCollapsedHistory(true);
-                      }
-                    }}
-                    className={`p-2.5 rounded-xl transition-colors ${showCollapsedHistory ? 'bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#26272b]'}`}
-                    title={t('sidebar.history', 'History')}
-                  >
-                    <Clock size={20} />
-                  </button>
-                </div>
-              ) : (
-                <>
+              <div className={`justify-center w-full ${isCollapsed ? 'hidden md:flex' : 'hidden'}`}>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (showCollapsedHistory) {
+                      setShowCollapsedHistory(false);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setCollapsedHistoryPos({ top: rect.top, left: rect.right + 12 });
+                      setShowCollapsedHistory(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-xl transition-colors ${showCollapsedHistory ? 'bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#26272b]'}`}
+                  title={t('sidebar.history')}
+                >
+                  <Clock size={20} />
+                </button>
+              </div>
+
+              <div className={`flex-col flex-1 min-h-0 ${isCollapsed ? 'flex md:hidden' : 'flex'}`}>
                   <div 
                     className="pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 flex items-center justify-between cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
                   >
-                    <span>{t('sidebar.history', 'History')}</span>
+                    <span>{t('sidebar.history')}</span>
                     {isHistoryExpanded ? <ChevronDown size={14} className="opacity-70" /> : <ChevronRight size={14} className="opacity-70" /> }
                   </div>
                   
@@ -445,8 +444,7 @@ function Sidebar() {
                   )}
                 </div>
               )}
-              </>
-              )}
+              </div>
             </div>
           )}
         </nav>
@@ -472,7 +470,7 @@ function Sidebar() {
           <button 
             onClick={handleLogout}
             className={`text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors ${isCollapsed ? 'md:hidden' : ''}`}
-            title={t('sidebar.logoutTitle', 'Log out')}
+            title={t('sidebar.logoutTitle')}
           >
             <LogOut size={18} />
           </button>
@@ -482,12 +480,12 @@ function Sidebar() {
       
       <ConfirmModal
         isOpen={confirmConfig.isOpen}
-        title={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Đăng xuất') : t('sidebar.delete', 'Xóa')}
-        message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm', 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?') : t('sidebar.deleteSessionConfirm', 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này?')}
+        title={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle') : t('sidebar.delete')}
+        message={confirmConfig.type === 'logout' ? t('sidebar.logoutConfirm') : t('sidebar.deleteSessionConfirm')}
         onConfirm={executeConfirm}
         onClose={() => setConfirmConfig({ isOpen: false, type: '', data: null })}
-        confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle', 'Đăng xuất') : t('sidebar.delete', 'Xóa')}
-        cancelText={t('confirmModal.cancel', 'Hủy')}
+        confirmText={confirmConfig.type === 'logout' ? t('sidebar.logoutTitle') : t('sidebar.delete')}
+        cancelText={t('confirmModal.cancel')}
       />
 
       {/* Collapsed History Popup */}
@@ -498,7 +496,7 @@ function Sidebar() {
           onClick={e => e.stopPropagation()}
         >
           <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-            {t('sidebar.history', 'History')}
+            {t('sidebar.history')}
           </div>
           {sessions.map(session => (
             <div 
@@ -582,26 +580,26 @@ function Sidebar() {
               onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setShareSessionId(activeSession.id); }}
               className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
             >
-              <Share2 size={14} /> {t('sidebar.share', 'Share')}
+              <Share2 size={14} /> {t('sidebar.share')}
             </button>
             <button 
               onClick={(e) => { handleStartEdit(e, activeSession); }}
               className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
             >
-              <Pencil size={14} /> {t('sidebar.rename', 'Rename')}
+              <Pencil size={14} /> {t('sidebar.rename')}
             </button>
             <button 
               onClick={(e) => { handleExportSession(e, activeSession); }}
               className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] flex items-center gap-2 transition-colors"
             >
-              <Download size={14} /> {t('sidebar.export', 'Export')}
+              <Download size={14} /> {t('sidebar.export')}
             </button>
             <div className="border-t border-gray-100 dark:border-[#333] my-1" />
             <button 
               onClick={(e) => { handleDeleteSession(e, activeSession.id); }}
               className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
             >
-              <Trash2 size={14} /> {t('sidebar.delete', 'Delete')}
+              <Trash2 size={14} /> {t('sidebar.delete')}
             </button>
           </div>,
           document.body
@@ -621,8 +619,8 @@ function Sidebar() {
             <button onClick={() => setShareSessionId(null)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
               <X size={20} />
             </button>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('sidebar.shareSession', 'Share Chat')}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('sidebar.shareDesc', 'Copy the link below to share this chat session.')}</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('sidebar.shareSession')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('sidebar.shareDesc')}</p>
             <div className="flex items-center gap-2 mb-2">
               <input
                 type="text"
@@ -633,12 +631,12 @@ function Sidebar() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/shared/chat/${shareSessionId}`);
-                  toast.success(t('sidebar.copied', 'Copied to clipboard!'));
+                  toast.success(t('sidebar.copied'));
                 }}
                 className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
               >
                 <Copy size={16} />
-                {t('sidebar.copyLink', 'Copy')}
+                {t('sidebar.copyLink')}
               </button>
             </div>
           </div>

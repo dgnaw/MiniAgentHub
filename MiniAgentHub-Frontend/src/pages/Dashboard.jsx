@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 import { Sparkles, Code, AlertCircle, X, Paperclip } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import AiMessage from '../components/chat/AiMessage';
-import ApiKeyModal from '../components/ApiKeyModal';
+import ApiKeyModal from '../components/modals/ApiKeyModal';
 import ModelSelector from '../components/chat/ModelSelector';
 import ChatInput from '../components/chat/ChatInput';
 import UserMessage from '../components/chat/UserMessage';
@@ -34,7 +34,7 @@ const Dashboard = () => {
   const [apiKeyModalConfig, setApiKeyModalConfig] = useState({ isOpen: false, type: 'groq' });
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
-  
+
   const generatingSessions = useGenerationStore((state) => state.generatingSessions);
   const isGeneratingBackground = sessionId && generatingSessions.has(sessionId);
 
@@ -59,7 +59,7 @@ const Dashboard = () => {
   const openApiKeyModal = (type) => {
     setApiKeyModalConfig({ isOpen: true, type });
   };
-  
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -85,8 +85,8 @@ const Dashboard = () => {
 
       <main className="flex-1 flex flex-col relative overflow-hidden">
         <header className="flex justify-end p-4 pt-16 md:p-6 md:pt-6 shrink-0 z-10">
-          <ModelSelector 
-            selectedModel={selectedModel} 
+          <ModelSelector
+            selectedModel={selectedModel}
             setSelectedModel={setSelectedModel}
             groqModels={groqModels}
             showModelDropdown={showModelDropdown}
@@ -97,14 +97,14 @@ const Dashboard = () => {
         </header>
 
         {messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-32">
+          <div className="flex-1 flex flex-col items-center justify-start md:justify-center pt-10 md:pt-0 px-6 md:px-8 pb-48 md:pb-32 overflow-y-auto">
             <div className="text-center mb-8 md:mb-12 px-4 md:px-0">
               <h2 className="text-3xl md:text-5xl font-bold mb-3 md:mb-4 text-blue-600 dark:text-[#d1e5fb]">
                 {t('dashboard.greeting', { name: user?.full_name || 'User' })}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-lg">{t('dashboard.subtitle')}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
+            <div className="hidden md:grid md:grid-cols-2 gap-4 w-full max-w-3xl">
               <div
                 onClick={() => handleSend(`${t('dashboard.card1Title')}: ${t('dashboard.card1Desc')}`)}
                 className="bg-white dark:bg-[#1e1f24] hover:bg-blue-50/50 dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] shadow-sm dark:shadow-none p-6 rounded-2xl cursor-pointer transition-colors group"
@@ -129,15 +129,15 @@ const Dashboard = () => {
               {messages.map((msg, index) => (
                 <div key={index} className={`flex flex-col w-full group ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   {msg.role === 'user' ? (
-                    <UserMessage 
-                      msg={msg} 
-                      index={index} 
-                      editingIndex={editingIndex} 
-                      setEditingIndex={setEditingIndex} 
-                      editInput={editInput} 
-                      setEditInput={setEditInput} 
-                      handleSend={handleSend} 
-                      setFullScreenImage={setFullScreenImage} 
+                    <UserMessage
+                      msg={msg}
+                      index={index}
+                      editingIndex={editingIndex}
+                      setEditingIndex={setEditingIndex}
+                      editInput={editInput}
+                      setEditInput={setEditInput}
+                      handleSend={handleSend}
+                      setFullScreenImage={setFullScreenImage}
                     />
                   ) : (
                     <AiMessage content={msg.content} index={index} />
@@ -149,7 +149,7 @@ const Dashboard = () => {
                   <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-3">
                     <Sparkles size={16} className="text-blue-500 animate-pulse" />
                     <span className="text-sm font-medium text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse">
-                      {selectedModel === 'Data Analyst' ? t('dashboard.analyzing', 'Analyzing data deeply') : t('dashboard.thinking', 'Generating response')}
+                      {selectedModel === 'Data Analyst' ? t('dashboard.analyzing') : t('dashboard.thinking')}
                     </span>
                     <div className="flex items-center gap-1 ml-1 mt-1">
                       <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce"></span>
@@ -172,18 +172,18 @@ const Dashboard = () => {
             </div>
           )}
 
-          <ChatInput 
-            input={input} 
-            setInput={setInput} 
-            handleSend={handleSend} 
-            handleStop={handleStop} 
-            handleKeyDown={handleKeyDown} 
-            isLoading={isLoading} 
-            selectedFiles={selectedFiles} 
+          <ChatInput
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            handleStop={handleStop}
+            handleKeyDown={handleKeyDown}
+            isLoading={isLoading}
+            selectedFiles={selectedFiles}
             removeFile={removeFile}
             setSelectedFiles={setSelectedFiles}
-            textareaRef={textareaRef} 
-            setFullScreenImage={setFullScreenImage} 
+            textareaRef={textareaRef}
+            setFullScreenImage={setFullScreenImage}
           />
 
           <p className="mt-4 text-[11px] text-gray-600 font-mono tracking-wide">

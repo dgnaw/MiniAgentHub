@@ -1,3 +1,4 @@
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { User, Role, Permission, RolePermission, Group, UserGroup, GroupPermission } = require('../models');
 
@@ -39,7 +40,6 @@ async function seedAdmin() {
             });
         }
 
-        // Khởi tạo các nhóm (Groups) mặc định
         const [adminGroup] = await Group.findOrCreate({
             where: { name: 'Admin Group' },
             defaults: { description: 'Nhóm dành cho Quản trị viên hệ thống' }
@@ -50,23 +50,22 @@ async function seedAdmin() {
             defaults: { description: 'Nhóm dành cho Người dùng tiêu chuẩn' }
         });
 
-        // Cấp quyền cho Admin Group (để hệ thống nhận diện đúng Target Entity là "groups")
-        const adminPerms = await Permission.findAll({ where: { permission_key: ['GROUP_C', 'GROUP_R', 'GROUP_U', 'GROUP_D', 'CHAT'] } });
+        const adminPerms = await Permission.findAll();
         for (const perm of adminPerms) {
             await GroupPermission.findOrCreate({ where: { group_id: adminGroup.id, permission_id: perm.id } });
         }
 
-        // Cấp quyền cho User Group (để hệ thống nhận diện đúng Target Entity là "users")
         const userPerms = await Permission.findAll({ where: { permission_key: ['USER_R', 'CHAT'] } });
         for (const perm of userPerms) {
             await GroupPermission.findOrCreate({ where: { group_id: userGroup.id, permission_id: perm.id } });
         }
 
-        const adminEmail = 'admin@agenthub.com';
+        const adminEmail = process.env.DEFAULT_ADMIN_EMAIL;
+        const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
         const adminExist = await User.findOne({ where: { email: adminEmail } });
 
         if (!adminExist) {
-            const password_hash = await bcrypt.hash('Admin@123', 10);
+            const password_hash = await bcrypt.hash(adminPassword, 10);
             
             const newAdmin = await User.create({
                 email: adminEmail,
@@ -76,18 +75,16 @@ async function seedAdmin() {
                 is_active: true
             });
 
-            // Tự động gán tài khoản Admin mới tạo vào Admin Group
             await UserGroup.findOrCreate({
                 where: { user_id: newAdmin.id, group_id: adminGroup.id }
             });
 
             console.log('Đã tạo tài khoản Admin thành công:');
-            console.log('   - Email: admin@agenthub.com');
-            console.log('   - Mật khẩu: Admin@123');
+            console.log(`   - Email: ${adminEmail}`);
+            console.log(`   - Mật khẩu: ${adminPassword}`);
         } else {
             console.log('Tài khoản Admin đã tồn tại, bỏ qua bước khởi tạo.');
             
-            // Đảm bảo Admin cũ (nếu đã tạo từ trước) cũng được gán vào nhóm Admin Group
             await UserGroup.findOrCreate({
                 where: { user_id: adminExist.id, group_id: adminGroup.id }
             });
@@ -97,4 +94,10 @@ async function seedAdmin() {
     }
 }
 
-seedAdmin();
+seedAdmin().then(() => {
+    console.log('Hoàn tất quá trình khởi tạo.');
+    process.exit(0);
+}).catch((err) => {
+    console.error('Lỗi không mong muốn:', err);
+    process.exit(1);
+});

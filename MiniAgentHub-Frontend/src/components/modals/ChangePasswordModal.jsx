@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import axiosClient from '../services/axiosClient';
+import axiosClient from '../../services/axiosClient';
 import { useTranslation } from 'react-i18next';
-import useAuthStore from '../store/authStore';
+import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
 const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
@@ -23,15 +23,15 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
   if (!isOpen) return null;
 
   const validateOldPassword = (val) => {
-    return val ? '' : t('change-password-modal.errorOld', 'Please enter your old password.');
+    return val ? '' : t('change-password-modal.errorOld');
   };
 
   const validateNewPassword = (val) => {
-    return val.length >= 6 ? '' : t('change-password-modal.errorLength', 'New password must be at least 6 characters.');
+    return val.length >= 6 ? '' : t('change-password-modal.errorLength');
   };
 
   const validateConfirmPassword = (val, newPwd) => {
-    return val === newPwd ? '' : t('change-password-modal.errorMatch', 'Passwords do not match.');
+    return val === newPwd ? '' : t('change-password-modal.errorMatch');
   };
 
   const handleChangePassword = async (e) => {
@@ -54,7 +54,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
     try {
       const res = await axiosClient.put('/users/change-password', { old_password: oldPassword, new_password: newPassword });
       
-      const successMsg = res.message || t('change-password-modal.success', 'Password changed successfully!');
+      const successMsg = res.message || t('change-password-modal.success');
       setPasswordSuccess(successMsg);
       toast.success(successMsg);
 
@@ -66,7 +66,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
       }, 2000);
     } catch (error) {
       console.error(error);
-      const errorMsg = error.response?.data?.message || t('change-password-modal.errorChange', 'Error changing password.');
+      const errorMsg = error.response?.data?.message || t('change-password-modal.errorChange');
       setApiError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -102,7 +102,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('change-password-modal.oldPassword', 'Old Password')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('change-password-modal.oldPassword')}</label>
             <input
               type="password"
               autoComplete="new-password"
@@ -112,7 +112,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
                 setOldPasswordError(validateOldPassword(e.target.value));
               }}
               onBlur={(e) => setOldPasswordError(validateOldPassword(e.target.value))}
-              placeholder={t('change-password-modal.placeholderOldPassword', 'Enter old password')}
+              placeholder={t('change-password-modal.placeholderOldPassword')}
               className={`w-full bg-gray-50 dark:bg-[#131417] border ${oldPasswordError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-[#333] focus:border-blue-500 focus:ring-1 focus:ring-blue-500'} rounded-lg px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none transition-colors`}
               required
             />
@@ -166,7 +166,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
             disabled={isSavingPassword}
             className="w-full bg-[#006ecf] hover:bg-[#005bb1] text-white font-semibold py-2.5 rounded-lg mt-4 transition-colors disabled:opacity-50"
           >
-            {isSavingPassword ? t('change-password-modal.saving', 'Saving...') : ''}{t('change-password-modal.updatePassword')}
+            {isSavingPassword ? t('change-password-modal.saving') : ''}{t('change-password-modal.updatePassword')}
           </button>
         </form>
       </div>

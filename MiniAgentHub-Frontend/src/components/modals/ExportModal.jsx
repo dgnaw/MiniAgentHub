@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import axiosClient from '../services/axiosClient';
+import axiosClient from '../../services/axiosClient';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import useThemeStore from '../store/themeStore';
+import useThemeStore from '../../store/themeStore';
 
 const ExportModal = ({ isOpen, session, onClose }) => {
   const { t } = useTranslation();
@@ -142,11 +142,11 @@ const ExportModal = ({ isOpen, session, onClose }) => {
         a.click();
       }
 
-      toast.success(t('sidebar.exportSuccess', 'Chat exported!'));
+      toast.success(t('sidebar.exportSuccess'));
       onClose();
     } catch (err) {
       console.error('Export error:', err);
-      toast.error(t('sidebar.exportError', 'Failed to export chat.'));
+      toast.error(t('sidebar.exportError'));
     } finally {
       setIsExporting(false);
     }
@@ -157,7 +157,7 @@ const ExportModal = ({ isOpen, session, onClose }) => {
       <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#333]">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            {t('sidebar.exportTitle', 'Export Session')}
+            {t('sidebar.exportTitle')}
           </h3>
           <button
             onClick={onClose}
@@ -169,7 +169,7 @@ const ExportModal = ({ isOpen, session, onClose }) => {
         <div className="p-6 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('sidebar.exportFileName', 'File Name')}
+              {t('sidebar.exportFileName')}
             </label>
             <input
               type="text"
@@ -181,7 +181,7 @@ const ExportModal = ({ isOpen, session, onClose }) => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('sidebar.exportFormat', 'Format')}
+              {t('sidebar.exportFormat')}
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {['md', 'txt', 'csv', 'json', 'png'].map((fmt) => (
@@ -206,14 +206,14 @@ const ExportModal = ({ isOpen, session, onClose }) => {
             className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333] rounded-lg transition-colors"
             disabled={isExporting}
           >
-            {t('sidebar.exportCancel', 'Cancel')}
+            {t('sidebar.exportCancel')}
           </button>
           <button
             onClick={processExport}
             disabled={isExporting || !fileName.trim()}
             className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-all flex items-center justify-center min-w-[100px]"
           >
-            {isExporting ? t('sidebar.exporting', 'Exporting...') : t('sidebar.exportConfirm', 'Export')}
+            {isExporting ? t('sidebar.exporting') : t('sidebar.exportConfirm')}
           </button>
         </div>
       </div>
