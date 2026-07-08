@@ -60,7 +60,8 @@ const refreshToken = catchAsync(async (req, res, next) => {
 
 const logout = catchAsync(async (req, res, next) => {
     const userId = req.user.id; 
-    const result = await authService.logoutUser(userId);
+    const token = req.cookies?.agentHub_token;
+    const result = await authService.logoutUser(userId, token);
     
     res.clearCookie('agentHub_token');
     res.clearCookie('agentHub_refreshToken');

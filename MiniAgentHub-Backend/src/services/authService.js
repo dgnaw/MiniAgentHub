@@ -5,6 +5,7 @@ const { sendResetPasswordEmail } = require('../utils/emailService');
 const AppError = require('../utils/AppError');
 
 const { User, Role, Group, Permission } = require('../models');
+const redisClient = require('../config/redis');
 
 const loginUser = async (email, password) => {
     const user = await User.findOne({ 
@@ -115,8 +116,24 @@ const refreshAccessToken = async (refreshToken) => {
     return { token: newAccessToken };
 };
 
-const logoutUser = async (userId) => {
+const logoutUser = async (userId, token) => {
     if (!userId) return;
+
+    if (token) {
+        try {
+            const decoded = jwt.decode(token);
+            if (decoded && decoded.exp) {
+                const currentTime = Math.floor(Date.now() / 1000);
+                const ttl = decoded.exp - currentTime;
+                if (ttl > 0) {
+                    await redisClient.setex(`bl:${token}`, ttl, 'true');
+                }
+            }
+        } catch (error) {
+            console.error('Lỗi khi thêm token vào blacklist:', error);
+        }
+    }
+
     await User.update({refresh_token: null}, {where: {id: userId}});
     return { message: 'auth.logoutSuccess' };
 };

@@ -1,7 +1,22 @@
 const { Group, UserGroup, Permission, GroupPermission, User } = require('../models');
+const redisClient = require('../config/redis');
 const { Sequelize } = require('sequelize');
 const AppError = require('../utils/AppError');
 const { sequelize } = require('../config/database');
+
+const invalidateGroupUsersCache = async (groupId, additionalUserIds = []) => {
+    try {
+        const userGroups = await UserGroup.findAll({ where: { group_id: groupId }});
+        const userIds = [...new Set([...userGroups.map(ug => ug.user_id), ...additionalUserIds])];
+        if (userIds.length > 0) {
+            const pipeline = redisClient.pipeline();
+            userIds.forEach(id => pipeline.del(`user:${id}:permissions`));
+            await pipeline.exec();
+        }
+    } catch (error) {
+        console.error('Lỗi khi xóa cache cho group:', error);
+    }
+};
 
 const groupService = {
     createGroup: async (groupData) => {
@@ -60,6 +75,10 @@ const groupService = {
             }
 
             await transaction.commit();
+            await redisClient.del('cache:groups');
+            if (Array.isArray(userIds) && userIds.length > 0) {
+                await invalidateGroupUsersCache(newGroup.id, userIds);
+            }
         } catch (error) {
             await transaction.rollback();
             throw error;
@@ -69,6 +88,9 @@ const groupService = {
     },
 
     getAllGroups: async () => {
+        const cachedGroups = await redisClient.get('cache:groups');
+        if (cachedGroups) return JSON.parse(cachedGroups);
+
         const groups = await Group.findAll({
             attributes: {
                 include: [
@@ -115,6 +137,8 @@ const groupService = {
                     entityType
                 };
             });
+            
+        await redisClient.setex('cache:groups', 86400, JSON.stringify(groupsWithPerms)); // Cache 24h
         return groupsWithPerms;
     },
 
@@ -194,6 +218,8 @@ const groupService = {
             }
 
             await transaction.commit();
+            await redisClient.del('cache:groups');
+            await invalidateGroupUsersCache(id, Array.isArray(userIds) ? userIds : []);
         } catch (error) {
             await transaction.rollback();
             throw error;
@@ -220,6 +246,7 @@ const groupService = {
             await GroupPermission.destroy({ where: { group_id: id }, transaction});
             await group.destroy( { transaction} );
             await transaction.commit();
+            await redisClient.del('cache:groups');
         } catch (error) {
             await transaction.rollback();
             throw error;
@@ -245,6 +272,7 @@ const groupService = {
         if (newUsers.length > 0) {
             const records = newUsers.map(userId => ({ user_id: userId, group_id: id }));
             await UserGroup.bulkCreate(records);
+            await invalidateGroupUsersCache(id, newUsers);
         }
 
         return { message: 'group.addUsersSuccess' };
@@ -263,6 +291,8 @@ const groupService = {
         if (deletedCount === 0) {
             throw new AppError('group.userNotInGroup', 'BAD_REQUEST');
         }
+
+        await redisClient.del(`user:${userId}:permissions`);
 
         return { message: 'group.removeUserSuccess' };
     }

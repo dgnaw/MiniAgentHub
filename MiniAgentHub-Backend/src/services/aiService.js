@@ -7,6 +7,8 @@ const AppError = require('../utils/AppError');
 const aiPrompts = require('../utils/aiPrompts');
 const chatService = require('./chatService');
 const { createParser } = require('eventsource-parser');
+const crypto = require('crypto');
+const redisClient = require('../config/redis');
 
 let tesseractWorkerPromise = null;
 const getTesseractWorker = () => {
@@ -382,6 +384,15 @@ const aiService = {
 
     getAvailableModels: async (customKey) => {
         try {
+            const cacheKey = customKey 
+                ? `groq:models:${crypto.createHash('md5').update(customKey).digest('hex')}`
+                : 'groq:models:default';
+                
+            const cachedModels = await redisClient.get(cacheKey);
+            if (cachedModels) {
+                return JSON.parse(cachedModels);
+            }
+
             const localClient = getGroqClient(customKey);
             const list = await localClient.models.list();
             if (!list || !list.data) return [];
@@ -399,7 +410,7 @@ const aiService = {
                     .join(' ');
             };
 
-            return list.data
+            const result = list.data
                 .filter(model => {
                     const idLower = model.id.toLowerCase();
                     return !idLower.includes('whisper') &&
@@ -414,6 +425,9 @@ const aiService = {
                         desc: `Cung cấp bởi ${model.owned_by || 'Groq'}`
                     };
                 });
+                
+            await redisClient.setex(cacheKey, 86400, JSON.stringify(result)); // Cache 24 hours
+            return result;
         } catch (error) {
             console.error("Lỗi khi lấy danh sách model từ Groq API:", error.message);
             throw error;

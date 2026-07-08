@@ -1,10 +1,12 @@
-const { User, Group, Role, UserGroup, Permission} = require('../models');
+const { User, Group, Role, UserGroup, Permission } = require('../models');
+const redisClient = require('../config/redis');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { sequelize } = require('../config/database');
 const { Sequelize } = require('sequelize');
 
 const { sendWelcomeEmail } = require('../utils/emailService');
+const { emailQueue } = require('../config/queue');
 const AppError = require('../utils/AppError');
 
 const userService = {
@@ -57,13 +59,18 @@ const userService = {
             }
 
             try {
-                await sendWelcomeEmail(email, full_name, rawPassword, lng);
+                await emailQueue.add('welcomeEmail', { 
+                    email, 
+                    full_name, 
+                    password: rawPassword, 
+                    lng 
+                });
             } catch (mailError) {
-                console.error('Lỗi gửi email cấp phát:', mailError);
-                throw new AppError('user.emailSendFailed', 'INTERNAL_ERROR');
+                console.error('Lỗi khi đưa email vào hàng đợi:', mailError);
             }
 
             await transaction.commit();
+            await redisClient.del('cache:users');
 
             return {
                 user: {
@@ -82,7 +89,10 @@ const userService = {
     },
 
     getAllUsers: async () => {
-        return await User.findAll({
+        const cachedUsers = await redisClient.get('cache:users');
+        if (cachedUsers) return JSON.parse(cachedUsers);
+
+        const users = await User.findAll({
             attributes: { exclude: ['password_hash'] },
             include: [
                 { model: Role, attributes: ['id', 'name'] },
@@ -105,13 +115,16 @@ const userService = {
             ],
             order: [['created_at', 'DESC']]
         });
+
+        await redisClient.setex('cache:users', 86400, JSON.stringify(users)); 
+        return users;
     },
 
     getUserById: async (id) => {
         const user = await User.findByPk(id, {
             attributes: { exclude: ['password_hash'] },
             include: [
-                { 
+                {
                     model: Role,
                     attributes: ['id', 'name'],
                     include: [{
@@ -151,9 +164,9 @@ const userService = {
         const permissionSet = new Set();
 
         if (userData.Role && userData.Role.Permissions) {
-            userData.Role.Permissions.forEach(p => 
+            userData.Role.Permissions.forEach(p =>
                 permissionSet.add(p.permission_key));
-                delete userData.Role.Permissions;
+            delete userData.Role.Permissions;
         }
 
         if (userData.Groups) {
@@ -165,7 +178,7 @@ const userService = {
             });
         }
 
-       return {
+        return {
             user: userData,
             permissions: Array.from(permissionSet)
         };
@@ -242,6 +255,10 @@ const userService = {
                 }
             }
 
+            await redisClient.del(`user:${id}:permissions`);
+            await redisClient.del(`user:${id}:status`);
+            await redisClient.del('cache:users');
+
             await transaction.commit();
         } catch (error) {
             await transaction.rollback();
@@ -272,6 +289,10 @@ const userService = {
         try {
             await UserGroup.destroy({ where: { user_id: id }, transaction });
             await User.destroy({ where: { id: id }, transaction });
+            await redisClient.del(`user:${id}:permissions`);
+            await redisClient.del(`user:${id}:status`);
+            await redisClient.del('cache:users');
+
             await transaction.commit();
         } catch (error) {
             await transaction.rollback();

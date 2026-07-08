@@ -5,6 +5,7 @@ const { sequelize } = require('../config/database');
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
+const redisClient = require('../config/redis');
 
 const chatService = {
     prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
@@ -61,11 +62,15 @@ const chatService = {
             userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave });
         }
 
+        await redisClient.del(`chat:messages:${currentSessionId}`);
+
         return { currentSessionId, isNewSession, userMessageRecord };
     },
 
     saveAIMessage: async (sessionId, aiResponse) => {
-        return await ChatMessage.create({ session_id: sessionId, role: 'ai', content: aiResponse });
+        const msg = await ChatMessage.create({ session_id: sessionId, role: 'ai', content: aiResponse });
+        await redisClient.del(`chat:messages:${sessionId}`);
+        return msg;
     },
 
     truncateLastAIMessage: async (sessionId, userId, content) => {
@@ -80,6 +85,7 @@ const chatService = {
         if (lastMessage) {
             lastMessage.content = content;
             await lastMessage.save();
+            await redisClient.del(`chat:messages:${sessionId}`);
             return { message: 'chat.truncateSuccess' };
         }
         return { message: 'chat.noAIMessageFound' };
@@ -96,6 +102,10 @@ const chatService = {
         } catch (cleanupError) {
             console.error('Lỗi khi dọn dẹp DB:', cleanupError);
         }
+        
+        if (currentSessionId) {
+            await redisClient.del(`chat:messages:${currentSessionId}`);
+        }
     },
 
     getSessions: async (userId, page = 1, limit = 20) => {
@@ -109,13 +119,24 @@ const chatService = {
     },
 
     getSessionMessages: async (sessionId, userId) => {
+        const cacheKey = `chat:messages:${sessionId}`;
+        const cached = await redisClient.get(cacheKey);
+        if (cached) {
+            const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId }, attributes: ['id'] });
+            if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
+            return JSON.parse(cached);
+        }
+
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
         if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
 
-        return await ChatMessage.findAll({
+        const messages = await ChatMessage.findAll({
             where: { session_id: sessionId },
             order: [['created_at', 'ASC']]
         });
+
+        await redisClient.setex(cacheKey, 86400, JSON.stringify(messages));
+        return messages;
     },
 
     getAllUserSessionIds: async (userId) => {
@@ -145,6 +166,12 @@ const chatService = {
                 await ChatMessage.destroy({ where: { session_id: sessionIds }, transaction });
                 await ChatSession.destroy({ where: { user_id: userId }, transaction });
                 await transaction.commit();
+                
+                if (sessionIds.length > 0) {
+                    const pipeline = redisClient.pipeline();
+                    sessionIds.forEach(id => pipeline.del(`chat:messages:${id}`));
+                    await pipeline.exec();
+                }
             } catch (error) {
                 await transaction.rollback();
                 throw error;
@@ -163,6 +190,7 @@ const chatService = {
             await ChatMessage.destroy({ where: { session_id: sessionId }, transaction });
             await ChatSession.destroy({ where: { id: sessionId }, transaction });
             await transaction.commit();
+            await redisClient.del(`chat:messages:${sessionId}`);
         } catch (error) {
             await transaction.rollback();
             throw error;

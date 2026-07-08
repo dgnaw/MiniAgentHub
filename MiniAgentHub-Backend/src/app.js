@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const { sequelize, connectDB } = require('./config/database');
+require('./config/redis');
 require('./models'); 
 
 const authRoutes = require('./routes/authRoutes');
@@ -52,10 +53,11 @@ const startServer = async () => {
     try {
         await connectDB();
         
-        await sequelize.sync({ alter: true });
+        await sequelize.sync();
         
         const server = app.listen(PORT, () => {
             console.log(`Server dang chay tai cong ${PORT}`);
+            require('./workers/emailWorker'); // Start BullMQ worker
         });
 
         process.on('unhandledRejection', err => {

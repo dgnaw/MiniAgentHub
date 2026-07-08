@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const authController = require('../controllers/authController');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 
 const handleValidationErrors = (req, res, next) => {
@@ -12,7 +13,7 @@ const handleValidationErrors = (req, res, next) => {
     next();
 };
 
-router.post('/login', [
+router.post('/login', authLimiter, [
     body('email')
         .trim()
         .notEmpty().withMessage('Email không được để trống.')
@@ -22,7 +23,7 @@ router.post('/login', [
         .isLength({ min: 6 }).withMessage('Mật khẩu phải chứa ít nhất 6 ký tự.')
 ], handleValidationErrors, authController.login);
 
-router.post('/forgot-password', [
+router.post('/forgot-password', authLimiter, [
     body('email')
         .trim()
         .notEmpty().withMessage('Email không được để trống.')

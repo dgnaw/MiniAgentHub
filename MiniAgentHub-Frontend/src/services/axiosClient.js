@@ -16,6 +16,7 @@ axiosClient.interceptors.request.use(
 
     const language = localStorage.getItem('language') || localStorage.getItem('i18nextLng') || 'vi';
     config.headers['Accept-Language'] = language;
+    config.params = { ...config.params, lng: language };
 
     return config;
   },
