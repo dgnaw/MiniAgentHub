@@ -43,6 +43,7 @@ Dự án được chia làm 2 phân hệ chính:
 ### Backend (`MiniAgentHub-Backend`)
 - **Môi trường & Framework**: Node.js, Express.js
 - **Database & ORM**: PostgreSQL (hoặc MySQL) giao tiếp qua **Sequelize**
+- **In-Memory Store & Queue**: **Redis** (dùng cho Caching, JWT Blacklisting, Rate Limiting và BullMQ)
 - **Authentication**: `jsonwebtoken` (JWT), mã hóa mật khẩu (bcrypt)
 - **AI Integration**: Axios gọi API từ **Flowise** & **Groq**
 
@@ -74,6 +75,10 @@ Dự án được chia làm 2 phân hệ chính:
   Hệ thống tách biệt triệt để trách nhiệm giữa luồng xử lý phản hồi Stream của AI (`aiController`, `aiService`) và logic thao tác Cơ sở dữ liệu của phiên trò chuyện (`chatController`, `chatService`). Điều này giúp Controller gọn nhẹ (tránh Fat Controller) và tuân thủ nguyên tắc Single Responsibility.
 - **Xử lý hình ảnh thông minh (OCR Workaround):**
   Để vượt qua giới hạn không hỗ trợ ảnh của các mô hình Text-only LLMs (như Llama 3) và tránh làm sập bộ nhớ (Storage limit exceeded) của Flowise khi truyền chuỗi Base64 khổng lồ, hệ thống tích hợp sẵn thư viện OCR `Tesseract.js`. Ảnh tải lên sẽ được quét tự động tại server để lấy văn bản, sau đó gửi đoạn văn bản siêu nhẹ đó tới AI.
+- **Kiến trúc Tối ưu Hiệu suất & Bảo mật với Redis (Nâng cao):**
+  - **Caching (Đệm dữ liệu):** Các dữ liệu nặng, thường xuyên được truy vấn như Danh sách User, Group, Lịch sử Chat, và Danh sách AI Models (Groq API) được đưa vào Redis Cache (Tốc độ phản hồi < 10ms) để giảm tải hoàn toàn cho PostgreSQL. Khi có thay đổi (Create/Update/Delete), hệ thống sử dụng chiến lược Invalidate Cache tự động.
+  - **Message Queue với BullMQ:** Các tác vụ tốn thời gian hoặc phụ thuộc vào bên thứ ba (như gửi Email thông báo mật khẩu qua Google SMTP) được đẩy vào hàng đợi (Background Jobs). Server trả kết quả về UI ngay lập tức trong khi Worker ngầm (emailWorker.js) âm thầm xử lý, mang lại trải nghiệm không độ trễ (Zero-latency UX).
+  - **Bảo mật JWT Blacklist & Rate Limiting:** Redis được dùng để lưu trữ danh sách các Token đã đăng xuất (chống việc hacker dùng lại token cũ) và đếm số lượng Request của từng IP để phòng chống Spam API (Brute-force `/login` và Spam `/chat`), bảo vệ giới hạn tín dụng của các API bên thứ 3.
 
 ---
 
@@ -123,7 +128,12 @@ MiniAgentHub/
    - Các cấu hình cơ bản (`PORT`, `DATABASE_URL`, `JWT_SECRET`) đã được thiết lập giả định để dự án có thể chạy được ngay. Hãy đảm bảo bạn có PostgreSQL và sửa lại `DATABASE_URL` cho khớp với máy của bạn.
    - **Cấu hình Email SMTP (Cần thiết để gửi mật khẩu cho User mới):** Cấu hình `EMAIL_USER` (ví dụ: email Gmail của bạn) và `EMAIL_PASS`. **Lưu ý quan trọng:** `EMAIL_PASS` bắt buộc phải là **Mật khẩu ứng dụng (App Password)** gồm 16 ký tự do Google sinh ra, KHÔNG được sử dụng mật khẩu đăng nhập thông thường. *(Xem hướng dẫn chi tiết cách lấy mật khẩu này ở phần Lưu ý cuối trang)*.
    - **Lưu ý:** Các key AI (`GROQ_API_KEY`, `FLOWISE_API_URL`) là **tùy chọn**. Nếu chưa có, bạn cứ để trống. Bạn vẫn có thể đăng nhập vào trải nghiệm UI bình thường, hệ thống chỉ yêu cầu key khi bạn bắt đầu Chat.
-4. Khởi tạo CSDL và các Bảng (Quan trọng khi chạy lần đầu):
+4. **Khởi chạy Redis (Bắt buộc):**
+   Hệ thống sử dụng Redis để làm Cache, Message Queue và bảo mật. Đảm bảo bạn đã cài đặt Docker, sau đó chạy lệnh sau ở thư mục gốc (nơi chứa file `docker-compose.yml`):
+   ```bash
+   docker compose up -d
+   ```
+5. Khởi tạo CSDL và các Bảng (Quan trọng khi chạy lần đầu):
    - Mở công cụ quản lý Database (như pgAdmin, DBeaver) và tạo một Database trống. Đảm bảo tên Database khớp với cấu hình trong chuỗi `DATABASE_URL`.
    - Khởi chạy server lần đầu tiên để ORM (Sequelize) tự động nạp và tạo các bảng vào Database:
      ```bash
@@ -138,7 +148,7 @@ MiniAgentHub/
    *Lệnh này sẽ tự động tạo tài khoản quản trị hệ thống dựa trên cấu hình trong file `.env`:*
    - Đảm bảo bạn đã thiết lập `DEFAULT_ADMIN_EMAIL` và `DEFAULT_ADMIN_PASSWORD` trong file `.env` trước khi chạy lệnh này.
    - Tài khoản Admin tạo ra sẽ có quyền cao nhất để truy cập toàn bộ hệ thống.
-6. Chạy server chính thức:
+7. Chạy server chính thức:
    ```bash
    npm run dev
    ```
@@ -173,3 +183,24 @@ MiniAgentHub/
   4. Nhập từ khóa "Mật khẩu ứng dụng" (hoặc "App passwords") vào thanh tìm kiếm ở đầu trang tài khoản Google và chọn kết quả tương ứng.
   5. Đặt tên cho ứng dụng (Ví dụ: `AgentHub Backend`) và nhấn nút **Tạo (Create)**.
   6. Copy chuỗi 16 chữ cái màu vàng (viết liền, bỏ qua các dấu cách) và dán vào giá trị `EMAIL_PASS` trong file `.env`.
+
+---
+
+## 🛠 Mẹo làm việc với Redis (Dành cho người mới)
+Do hệ thống sử dụng **Redis** để lưu trữ Cache và hàng đợi, đôi lúc trong quá trình phát triển (Dev) bạn sẽ cần xem bên trong Redis đang chứa dữ liệu gì, hoặc xóa Cache cũ đi:
+
+1. **Xem và Quản lý dữ liệu Redis qua Giao diện (Khuyên dùng):**
+   - Hãy tải và cài đặt phần mềm **[RedisInsight](https://redis.com/redis-enterprise/redis-insight/)** (Chính chủ, miễn phí).
+   - Mở app, nhấn **Add Redis Database**, nhập Host là `127.0.0.1` và Port là `6379`.
+   - Tại đây bạn có thể xem danh sách Cache, xóa Cache, hoặc xem các Token đang bị khóa (Blacklist) cực kỳ trực quan.
+2. **Sử dụng lệnh CLI (Nếu bạn thích dùng Terminal):**
+   - Mở terminal và truy cập thẳng vào container Redis đang chạy bằng lệnh:
+     ```bash
+     docker exec -it redis-agent-hub redis-cli
+     ```
+   - Gõ `keys *` để xem toàn bộ danh sách các key.
+   - Gõ `FLUSHALL` để xóa trắng toàn bộ Cache (rất hữu ích khi bạn sửa data dưới Database nhưng Frontend chưa cập nhật do dính Cache).
+   - Gõ `exit` để thoát khỏi Redis CLI.
+3. **Dừng/Khởi động lại Redis:**
+   - Để tắt Redis: `docker compose down`
+   - Để bật lại: `docker compose up -d`
