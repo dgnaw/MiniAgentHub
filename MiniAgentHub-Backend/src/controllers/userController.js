@@ -22,7 +22,7 @@ const userController = {
 
     getUserById: catchAsync(async (req, res, next) => {
         const result = await userService.getUserById(req.params.id);
-        return res.status(result.status || 200).json(result.data);
+        return res.status(200).json(result);
     }),
 
     updateUser: catchAsync(async (req, res, next) => {
@@ -36,12 +36,12 @@ const userController = {
         }
 
         const result = await userService.updateUser(req.params.id, updateData);
-        return res.status(result.status || 200).json(result.data);
+        return res.status(200).json(result);
     }),
 
     deleteUser: catchAsync(async (req, res, next) => {
         const result = await userService.deleteUser(req.params.id);
-        return res.status(result.status || 200).json({ message: req.t(result.data.message) });
+        return res.status(200).json({ message: req.t(result.message) });
     }),
 
     changePassword: catchAsync(async (req, res, next) => {

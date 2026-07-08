@@ -25,12 +25,12 @@ const chatService = {
             isNewSession = true;
         } else {
             const session = await ChatSession.findOne({ where: { id: currentSessionId, user_id: userId } });
-            if (!session) throw new AppError('chat.notFound', 404);
+            if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
 
             if (parsedEditIndex === undefined) {
                 const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId } });
                 if (messageCount >= 100) {
-                    throw new AppError('chat.limitExceeded', 400);
+                    throw new AppError('chat.limitExceeded', 'BAD_REQUEST');
                 }
             }
             await ChatSession.update(
@@ -70,7 +70,7 @@ const chatService = {
 
     truncateLastAIMessage: async (sessionId, userId, content) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) throw new AppError('chat.notFound', 404);
+        if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
 
         const lastMessage = await ChatMessage.findOne({
             where: { session_id: sessionId, role: 'ai' },
@@ -110,7 +110,7 @@ const chatService = {
 
     getSessionMessages: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) throw new AppError('chat.notFound', 404);
+        if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
 
         return await ChatMessage.findAll({
             where: { session_id: sessionId },
@@ -155,7 +155,7 @@ const chatService = {
 
     deleteSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) throw new AppError('chat.notFound', 404);
+        if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
         const messages = await ChatMessage.findAll({ where: {session_id: sessionId}});
         await chatService.deleteImagesFromMessages(messages); 
         const transaction = await sequelize.transaction();
@@ -171,16 +171,16 @@ const chatService = {
     },
 
     renameSession: async (sessionId, userId, title) => {
-        if (!title || !title.trim()) throw new AppError('chat.titleRequired', 400);
+        if (!title || !title.trim()) throw new AppError('chat.titleRequired', 'BAD_REQUEST');
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) throw new AppError('chat.notFound', 404);
+        if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
         await ChatSession.update({ title: title.trim() }, { where: { id: sessionId }, silent: true });
         return { message: 'chat.renameSuccess', title: title.trim() };
     },
 
     shareSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
-        if (!session) throw new AppError('chat.notFound', 404);
+        if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
         await ChatSession.update({ is_shared: true }, { where: { id: sessionId } });
         return { message: 'chat.shareSuccess', is_shared: true };
     },
@@ -188,13 +188,13 @@ const chatService = {
     getPublicSession: async (sessionId) => {
         const session = await ChatSession.findByPk(sessionId);
         if (!session || !session.is_shared) {
-            throw new AppError('chat.publicSessionNotFound', 404);
+            throw new AppError('chat.publicSessionNotFound', 'NOT_FOUND');
         }
         const messages = await ChatMessage.findAll({
             where: { session_id: sessionId },
             order: [['created_at', 'ASC']]
         });
-        return { data: { title: session.title, messages }, status: 200 };
+        return { title: session.title, messages };
     },
 
     deleteImagesFromMessages: async(messages) => {

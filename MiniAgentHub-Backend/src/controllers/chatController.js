@@ -41,7 +41,7 @@ const chatController = {
 
     getPublicSession: catchAsync(async (req, res, next) => {
         const result = await chatService.getPublicSession(req.params.id);
-        return res.status(200).json(result.data);
+        return res.status(200).json(result);
     }),
 
     truncateLastAIMessage: catchAsync(async (req, res, next) => {

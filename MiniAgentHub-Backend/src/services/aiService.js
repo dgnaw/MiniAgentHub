@@ -24,7 +24,7 @@ const getTesseractWorker = () => {
 const getGroqClient = (customKey) => {
     const key = customKey || process.env.GROQ_API_KEY;
     if (!key || key.trim() === '') {
-        throw new AppError('ai.apiKeyInvalid', 400);
+        throw new AppError('ai.apiKeyInvalid', 'BAD_REQUEST');
     }
     return new Groq({
         apiKey: key
@@ -374,7 +374,7 @@ const aiService = {
                 }
             }
             if (err instanceof AppError) throw err;
-            throw new AppError('ai.fileReadError', 500);
+            throw new AppError('ai.fileReadError', 'INTERNAL_ERROR');
         }
 
         return { processedMessage, messageToSave, flowiseUploads };

@@ -8,13 +8,13 @@ const groupService = {
         const { name, description, userIds, permissions, entityType = 'users' } = groupData;
 
         if (!name || !name.trim()) {
-            throw new AppError('group.nameRequired', 400);
+            throw new AppError('group.nameRequired', 'BAD_REQUEST');
         }
 
         const trimmedName = name.trim();
         const existingGroup = await Group.findOne({ where: { name: trimmedName } });
         if (existingGroup) {
-            throw new AppError('group.nameExists', 409);
+            throw new AppError('group.nameExists', 'CONFLICT');
         }
 
         const cleanDescription = description?.trim() || null;
@@ -65,7 +65,7 @@ const groupService = {
             throw error;
         }
 
-        return { data: newGroup, status: 201 };
+        return newGroup;
     },
 
     getAllGroups: async () => {
@@ -115,7 +115,7 @@ const groupService = {
                     entityType
                 };
             });
-        return { data: groupsWithPerms, status: 200 };
+        return groupsWithPerms;
     },
 
     getGroupById: async (id) => {
@@ -128,14 +128,14 @@ const groupService = {
         });
 
         if (!group) {
-            throw new AppError('group.notFound', 404);
+            throw new AppError('group.notFound', 'NOT_FOUND');
         }
 
         const groupData = group.get({ plain: true });
         groupData.members = groupData.Users || [];
         delete groupData.Users;
 
-        return { data: groupData, status: 200 };
+        return groupData;
     },
 
     updateGroup: async (id, groupData) => {
@@ -144,7 +144,7 @@ const groupService = {
         const group = await Group.findByPk(id);
 
         if (!group) {
-            throw new AppError('group.notFound', 404);
+            throw new AppError('group.notFound', 'NOT_FOUND');
         }
 
         const transaction = await sequelize.transaction();
@@ -153,7 +153,7 @@ const groupService = {
                 const trimmedName = name.trim();
                 const existingGroup = await Group.findOne({ where: { name: trimmedName } });
                 if (existingGroup && existingGroup.id.toString() !== id.toString()) {
-                    throw new AppError('group.nameExists', 409);
+                    throw new AppError('group.nameExists', 'CONFLICT');
                 }
                 group.name = trimmedName;
             }
@@ -199,20 +199,20 @@ const groupService = {
             throw error;
         }
 
-        return { data: group, status: 200 };
+        return group;
     },
 
     deleteGroup: async (id) => {
         const group = await Group.findByPk(id);
 
         if (!group) {
-            throw new AppError('group.notFound', 404);
+            throw new AppError('group.notFound', 'NOT_FOUND');
         }
 
         const userCount = await UserGroup.count({ where: { group_id: id } });
 
         if (userCount > 0) {
-            throw new AppError('group.deleteHasUsers', 400, { count: userCount });
+            throw new AppError('group.deleteHasUsers', 'BAD_REQUEST', { count: userCount });
         }
 
         const transaction = await sequelize.transaction();
@@ -224,17 +224,17 @@ const groupService = {
             await transaction.rollback();
             throw error;
         }
-        return { data: { message: 'group.deleteSuccess' }, status: 200 };
+        return { message: 'group.deleteSuccess' };
     },
 
     addUsersToGroup: async (id, userIds) => {
         const group = await Group.findByPk(id);
         if (!group) {
-            throw new AppError('group.notFound', 404);
+            throw new AppError('group.notFound', 'NOT_FOUND');
         }
 
         if (!Array.isArray(userIds) || userIds.length === 0) {
-            throw new AppError('group.invalidUserIds', 400);
+            throw new AppError('group.invalidUserIds', 'BAD_REQUEST');
         }
 
         const existingMembers = await UserGroup.findAll({ where: { group_id: id } });
@@ -247,13 +247,13 @@ const groupService = {
             await UserGroup.bulkCreate(records);
         }
 
-        return { data: { message: 'group.addUsersSuccess' }, status: 200 };
+        return { message: 'group.addUsersSuccess' };
     },
 
     removeUserFromGroup: async (id, userId) => {
         const group = await Group.findByPk(id);
         if (!group) {
-            throw new AppError('group.notFound', 404);
+            throw new AppError('group.notFound', 'NOT_FOUND');
         }
 
         const deletedCount = await UserGroup.destroy({
@@ -261,10 +261,10 @@ const groupService = {
         });
 
         if (deletedCount === 0) {
-            throw new AppError('group.userNotInGroup', 400);
+            throw new AppError('group.userNotInGroup', 'BAD_REQUEST');
         }
 
-        return { data: { message: 'group.removeUserSuccess' }, status: 200 };
+        return { message: 'group.removeUserSuccess' };
     }
 };
 

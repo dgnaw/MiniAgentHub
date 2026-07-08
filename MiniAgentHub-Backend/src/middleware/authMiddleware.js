@@ -12,7 +12,7 @@ const authenticateToken = async (req, res, next) => {
     const token = req.cookies?.agentHub_token;
 
     if (!token) {
-        return next(new AppError('auth.tokenNotFound', 401));
+        return next(new AppError('auth.tokenNotFound', 'UNAUTHORIZED'));
     }
 
     try {
@@ -23,11 +23,11 @@ const authenticateToken = async (req, res, next) => {
         });
 
         if (!user) {
-            return next(new AppError('auth.userNotFound', 401));
+            return next(new AppError('auth.userNotFound', 'UNAUTHORIZED'));
         }
 
         if (!user.is_active) {
-            return next(new AppError('auth.accountInactive', 403));
+            return next(new AppError('auth.accountInactive', 'FORBIDDEN'));
         }
         
         req.user = {
@@ -39,7 +39,7 @@ const authenticateToken = async (req, res, next) => {
         next();
     } catch (error) {
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-            return next(new AppError('auth.tokenInvalid', 401));
+            return next(new AppError('auth.tokenInvalid', 'UNAUTHORIZED'));
         }
         console.error('Lỗi xác thực token:', error);
         return next(error);
@@ -50,7 +50,7 @@ const checkPermission = (requiredPermission) => {
     return async (req, res, next) => {
         try {
             if (!req.user) {
-                return next(new AppError('auth.unauthenticated', 401));
+                return next(new AppError('auth.unauthenticated', 'UNAUTHORIZED'));
             }
 
             const roleId = req.user.role_id; 
@@ -96,13 +96,13 @@ const checkPermission = (requiredPermission) => {
             }
 
             if (!userPermissions.includes(requiredPermission)) {
-                return next(new AppError('auth.forbidden', 403));
+                return next(new AppError('auth.forbidden', 'FORBIDDEN'));
             }
 
             next();
         } catch (error) {
             console.error('Lỗi kiểm tra quyền:', error);
-            return next(new AppError('server.initError', 500));
+            return next(new AppError('server.initError', 'INTERNAL_ERROR'));
         }
     };
 };

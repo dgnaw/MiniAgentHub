@@ -1,7 +1,7 @@
 class AppError extends Error {
-    constructor(messageKey, statusCode, params = {}) {
+    constructor(messageKey, errorCode = 'INTERNAL_ERROR', params = {}) {
         super(messageKey);
-        this.statusCode = statusCode;
+        this.errorCode = errorCode;
         this.params = params;
         this.isOperational = true;
         Error.captureStackTrace(this, this.constructor);

@@ -13,21 +13,21 @@ const loginUser = async (email, password) => {
     });
 
     if (!user) {
-        throw new AppError('auth.invalidCredentials', 401);
+        throw new AppError('auth.invalidCredentials', 'UNAUTHORIZED');
     }
 
     if (!user.is_active) {
-        throw new AppError('auth.accountLocked', 403);
+        throw new AppError('auth.accountLocked', 'FORBIDDEN');
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-        throw new AppError('auth.invalidCredentials', 401);
+        throw new AppError('auth.invalidCredentials', 'UNAUTHORIZED');
     }
 
     if (!process.env.JWT_SECRET) {
         console.error('Lỗi: JWT_SECRET chưa được cấu hình trong file .env');
-        throw new AppError('server.configError', 500);
+        throw new AppError('server.configError', 'INTERNAL_ERROR');
     }
 
     const roleName = user?.Role.name || 'User';
@@ -81,7 +81,7 @@ const loginUser = async (email, password) => {
 
 const refreshAccessToken = async (refreshToken) => {
     if (!refreshToken) {
-        throw new AppError('auth.refreshTokenMissing', 401);
+        throw new AppError('auth.refreshTokenMissing', 'UNAUTHORIZED');
     }
 
     const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
@@ -89,7 +89,7 @@ const refreshAccessToken = async (refreshToken) => {
     try {
         decoded = jwt.verify(refreshToken, refreshSecret);
     } catch (err) {
-        throw new AppError('auth.refreshTokenInvalid', 403);
+        throw new AppError('auth.refreshTokenInvalid', 'FORBIDDEN');
     }
 
     const user = await User.findOne({
@@ -97,11 +97,11 @@ const refreshAccessToken = async (refreshToken) => {
         include: [{ model: Role }]
     });
     if (!user) {
-        throw new AppError('auth.refreshTokenNotFound', 403);
+        throw new AppError('auth.refreshTokenNotFound', 'FORBIDDEN');
     }
 
     if (!user.is_active) {
-        throw new AppError('auth.accountLocked', 403);
+        throw new AppError('auth.accountLocked', 'FORBIDDEN');
     }
 
     const payload = {
