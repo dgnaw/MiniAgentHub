@@ -17,76 +17,76 @@ function App() {
   return (
     <ErrorBoundary>
       <Toaster position="top-right" reverseOrder={false} />
-    {isAuthenticated && mustChangePassword && <ChangePasswordModal isOpen={mustChangePassword} isForced={true} onClose={() => {}} />}
-    <BrowserRouter>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={isAuthenticated ? <Navigate to="/" /> : <Login />} 
-        />
+      {isAuthenticated && mustChangePassword && <ChangePasswordModal isOpen={mustChangePassword} isForced={true} onClose={() => { }} />}
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/login"
+            element={isAuthenticated ? <Navigate to="/" /> : <Login />}
+          />
 
-        <Route 
-          path="/shared/chat/:id" 
-          element={<SharedChat />} 
-        />
+          <Route
+            path="/shared/chat/:id"
+            element={<SharedChat />}
+          />
 
-        <Route 
-          path="/" 
-          element={
-            isAuthenticated ? (
-              <Dashboard />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? (
+                <Dashboard />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
 
-        <Route 
-          path="/chat/:id" 
-          element={
-            isAuthenticated ? (
-              <Dashboard />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
+          <Route
+            path="/chat/:id"
+            element={
+              isAuthenticated ? (
+                <Dashboard />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
 
-        <Route 
-          path="/settings" 
-          element={
-            isAuthenticated ? (
-              <Settings />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
+          <Route
+            path="/settings"
+            element={
+              isAuthenticated ? (
+                <Settings />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
 
-        <Route 
-          path="/groups" 
-          element={
-            isAuthenticated ? (
-              <GroupManagement />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
+          <Route
+            path="/groups"
+            element={
+              isAuthenticated ? (
+                <GroupManagement />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
 
-        <Route 
-          path="/users" 
-          element={
-            isAuthenticated ? (
-              <UserManagement />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-      </Routes>
+          <Route
+            path="/users"
+            element={
+              isAuthenticated ? (
+                <UserManagement />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+        </Routes>
 
-    </BrowserRouter>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }
