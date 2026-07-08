@@ -403,7 +403,7 @@ function Sidebar() {
                           <Loader2 size={14} className={`animate-spin text-blue-500 shrink-0 ${isCollapsed ? 'md:hidden' : ''} mr-1`} />
                         )}
 
-                        <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''} ${isCollapsed ? 'md:hidden' : ''}`}>
+                        <div className={`opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''} ${isCollapsed ? 'md:hidden' : ''}`}>
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -452,16 +452,16 @@ function Sidebar() {
 
       {user && (
         <div className={`p-4 border-t border-gray-200 dark:border-gray-800 flex items-center ${isCollapsed ? 'md:justify-center' : 'justify-between'} shrink-0`}>
-          <div className={`flex items-center gap-3 ${isCollapsed ? 'md:px-0' : 'px-2'}`}>
-            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-[#2a2a2a] flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+          <div className={`flex items-center gap-3 min-w-0 flex-1 ${isCollapsed ? 'md:px-0' : 'px-2'}`}>
+            <div className="w-10 h-10 shrink-0 rounded-full bg-gray-100 dark:bg-[#2a2a2a] flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
               <User size={20} />
             </div>
             
-            <div className={`flex flex-col text-left overflow-hidden ${isCollapsed ? 'md:hidden' : ''}`}>
+            <div className={`flex flex-col text-left overflow-hidden min-w-0 ${isCollapsed ? 'md:hidden' : ''}`}>
               <span className="text-gray-900 dark:text-white text-sm font-semibold truncate">
                 {user.full_name}
               </span>
-              <span className="text-blue-500 text-[10px] tracking-widest uppercase font-bold">
+              <span className="text-blue-500 text-[10px] tracking-widest uppercase font-bold truncate">
                 {user?.role ? t(`roles.${user.role}`) : ''}
               </span>
             </div>
@@ -469,7 +469,7 @@ function Sidebar() {
 
           <button 
             onClick={handleLogout}
-            className={`text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors ${isCollapsed ? 'md:hidden' : ''}`}
+            className={`text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors shrink-0 ml-1 ${isCollapsed ? 'md:hidden' : ''}`}
             title={t('sidebar.logoutTitle')}
           >
             <LogOut size={18} />
@@ -528,7 +528,7 @@ function Sidebar() {
                   {generatingSessions.has(session.id) && session.id !== currentSessionId && (
                     <Loader2 size={14} className="animate-spin text-blue-500 shrink-0 mr-1" />
                   )}
-                  <div className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
+                  <div className={`opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();

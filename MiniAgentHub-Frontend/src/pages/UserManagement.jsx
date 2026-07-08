@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Filter, Eye, Trash2, RefreshCw, ChevronLeft, ChevronRight, Loader2, AlertCircle, X } from 'lucide-react';
+import { UserPlus, Filter, Eye, Trash2, Pencil, ChevronLeft, ChevronRight, Loader2, AlertCircle, X } from 'lucide-react';
 import UserFormModal from '../components/modals/UserFormModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import axiosClient from '../services/axiosClient';
@@ -207,7 +207,7 @@ const UserManagement = () => {
                 <Filter size={16} /> {t('userManagement.filter')}
               </button>
               {showFilterDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-lg py-1 z-50">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-48 bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-xl shadow-lg py-1 z-50">
                   <button onClick={() => { setSortOrder('newest'); setShowFilterDropdown(false); setCurrentPage(1); }} className={`w-full text-left px-4 py-2 text-sm ${sortOrder === 'newest' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b]'}`}>{t('userManagement.sortNewest')}</button>
                   <button onClick={() => { setSortOrder('az'); setShowFilterDropdown(false); setCurrentPage(1); }} className={`w-full text-left px-4 py-2 text-sm ${sortOrder === 'az' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b]'}`}>{t('userManagement.sortAZ')}</button>
                   <button onClick={() => { setSortOrder('za'); setShowFilterDropdown(false); setCurrentPage(1); }} className={`w-full text-left px-4 py-2 text-sm ${sortOrder === 'za' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#26272b]'}`}>{t('userManagement.sortZA')}</button>
@@ -312,7 +312,7 @@ const UserManagement = () => {
                   <div className="md:hidden flex items-center justify-end gap-2 text-gray-400 dark:text-gray-500 shrink-0">
                     <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipView')}><Eye size={16} /></button>
                     {(user?.role === 'Admin' || permissions.includes('USER_U')) && (
-                      <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipReset')}><RefreshCw size={16} /></button>
+                      <button className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipEdit', 'Cập nhật')}><Pencil size={16} /></button>
                     )}
                     {(user?.role === 'Admin' || permissions.includes('USER_D')) && !isCurrentUser && (
                       <button className="hover:text-red-600 dark:hover:text-red-400 transition-colors" onClick={() => handleDeleteUser(u.id)} title={t('userManagement.tooltipDelete')}><Trash2 size={16} /></button>
@@ -347,7 +347,7 @@ const UserManagement = () => {
                 <div className="hidden md:flex md:col-span-1 items-center justify-end gap-3 text-gray-400 dark:text-gray-500">
                   <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipView')}><Eye size={16} /></button>
                   {(user?.role === 'Admin' || permissions.includes('USER_U')) && (
-                    <button className="hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipReset')}><RefreshCw size={16} /></button>
+                    <button className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" onClick={() => handleOpenUpdate(u)} title={t('userManagement.tooltipEdit', 'Cập nhật')}><Pencil size={16} /></button>
                   )}
                   {(user?.role === 'Admin' || permissions.includes('USER_D')) && !isCurrentUser && (
                     <button className="hover:text-red-600 dark:hover:text-red-400 transition-colors" onClick={() => handleDeleteUser(u.id)} title={t('userManagement.tooltipDelete')}><Trash2 size={16} /></button>
