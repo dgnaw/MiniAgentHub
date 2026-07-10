@@ -7,6 +7,12 @@ const connection = {
     password: process.env.REDIS_PASSWORD || undefined,
 };
 
-const emailQueue = new Queue('emailQueue', { connection });
+const emailQueue = new Queue('emailQueue', { 
+    connection,
+    defaultJobOptions: {
+        removeOnComplete: true, 
+        removeOnFail: true      
+    }
+});
 
 module.exports = { emailQueue, connection };

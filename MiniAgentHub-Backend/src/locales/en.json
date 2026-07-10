@@ -68,6 +68,10 @@
     "messageTooLong": "Message is too long. Please enter a maximum of 5000 characters.",
     "modelFetchError": "Unable to fetch model list from Groq API."
   },
+  "rateLimit": {
+    "auth": "You have performed this action too many times. Please try again after 15 minutes.",
+    "chat": "You are sending messages too fast. Please wait a moment."
+  },
   "email": {
     "welcome": {
       "subject": "Welcome to Agent Hub - Your Login Credentials",
