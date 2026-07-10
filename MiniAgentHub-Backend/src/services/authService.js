@@ -1,11 +1,11 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { sendResetPasswordEmail } = require('../utils/emailService');
 const AppError = require('../utils/AppError');
 
 const { User, Role, Group, Permission } = require('../models');
 const redisClient = require('../config/redis');
+const { emailQueue } = require('../config/queue');
 
 const loginUser = async (email, password) => {
     const user = await User.findOne({ 
@@ -151,7 +151,16 @@ const forgotPassword = async (email, lng = 'vi') => {
         user.is_first_login = true;
         await user.save();
 
-        await sendResetPasswordEmail(user.email, user.full_name, tempPassword, lng);
+        try {
+            await emailQueue.add('resetPasswordEmail', { 
+                email: user.email, 
+                full_name: user.full_name, 
+                password: tempPassword, 
+                lng 
+            });
+        } catch (mailError) {
+            console.error('Lỗi khi đưa email reset password vào hàng đợi:', mailError);
+        }
     }
 
     return { message: 'auth.newPasswordSent' };

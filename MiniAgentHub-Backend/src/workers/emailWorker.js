@@ -7,6 +7,11 @@ const emailWorker = new Worker('emailQueue', async job => {
         const { email, full_name, password, lng } = job.data;
         await sendWelcomeEmail(email, full_name, password, lng);
         console.log(`[Worker] Sent welcome email to ${email}`);
+    } else if (job.name === 'resetPasswordEmail') {
+        const { sendResetPasswordEmail } = require('../utils/emailService');
+        const { email, full_name, password, lng } = job.data;
+        await sendResetPasswordEmail(email, full_name, password, lng);
+        console.log(`[Worker] Sent reset password email to ${email}`);
     }
 }, { connection });
 

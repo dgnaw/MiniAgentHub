@@ -317,7 +317,18 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
 
           {mode !== 'update' && mode !== 'info' && (
             <section>
-            <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase mb-4">{t('groupFormModal.membersManagement')}</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">{t('groupFormModal.membersManagement')}</h3>
+              {mode === 'members' && members.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMembers(members.filter(m => m.id === user?.id && user?.role !== 'Admin'))}
+                  className="text-xs text-red-500 hover:text-red-600 font-semibold transition-colors"
+                >
+                  {t('groupFormModal.removeAllMembers')}
+                </button>
+              )}
+            </div>
               
               <div className="relative mb-4" ref={dropdownRef}>
                 <div 

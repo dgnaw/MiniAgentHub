@@ -40,7 +40,8 @@ const userController = {
     }),
 
     deleteUser: catchAsync(async (req, res, next) => {
-        const result = await userService.deleteUser(req.params.id);
+        const force = req.query.force === 'true';
+        const result = await userService.deleteUser(req.params.id, force);
         return res.status(200).json({ message: req.t(result.message) });
     }),
 

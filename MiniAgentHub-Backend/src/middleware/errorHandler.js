@@ -15,6 +15,7 @@ const errorHandler = (err, req, res, next) => {
        const statusCode = HTTP_STATUS_MAP[err.errorCode] || 500;
         return res.status(statusCode).json({
             message: req.t(err.message, err.params),
+            errorKey: err.message,
         });
     }
 

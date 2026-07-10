@@ -4,9 +4,10 @@ const AppError = require('../utils/AppError');
 const redisClient = require('../config/redis');
 
 const authenticateToken = async (req, res, next) => {
-    // whitelist some public paths
-    const publicPaths = ['/api/login', '/api/forgot-password', '/api/refresh-token'];
-    if (publicPaths.includes(req.path) || req.path.startsWith('/api/public/')) {
+    const publicPaths = ['/login', '/forgot-password', '/refresh-token'];
+    const isPublic = publicPaths.some(p => req.path.endsWith(p)) || req.path.includes('/public/');
+    
+    if (isPublic) {
         return next();
     }
 

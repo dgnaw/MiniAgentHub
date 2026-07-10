@@ -61,7 +61,7 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const handleDeleteUser = async (id) => {
+  const handleDeleteUser = async (id, force = false) => {
     if (id === user?.id) {
       toast.error(t('userManagement.alertSelfDelete'));
       return;
@@ -69,14 +69,18 @@ const UserManagement = () => {
     setConfirmDialog({
       isOpen: true,
       title: t('userManagement.deleteConfirmTitle'),
-      message: t('userManagement.deleteConfirm'),
+      message: force ? t('userManagement.forceDeleteConfirm') : t('userManagement.deleteConfirm'),
       onConfirm: async () => {
         try {
-          await axiosClient.delete(`/users/${id}`);
+          await axiosClient.delete(`/users/${id}${force ? '?force=true' : ''}`);
           setUsers(users.filter(u => u.id !== id));
           toast.success(t('userManagement.deleteSuccess'));
         } catch (err) {
-          toast.error(err.response?.data?.message || t('userManagement.deleteError'));
+          if (!force && err.response?.data?.errorKey === 'user.deleteHasGroups') {
+            setTimeout(() => handleDeleteUser(id, true), 300);
+          } else {
+            toast.error(err.response?.data?.message || t('userManagement.deleteError'));
+          }
         }
       }
     });
@@ -111,9 +115,9 @@ const UserManagement = () => {
     );
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedUserIds.length === 0) return;
-    if (selectedUserIds.includes(user?.id)) {
+  const handleDeleteSelected = async (force = false, idsToDelete = selectedUserIds) => {
+    if (idsToDelete.length === 0) return;
+    if (idsToDelete.includes(user?.id)) {
       toast.error(t('userManagement.alertSelfDelete'));
       return;
     }
@@ -121,14 +125,39 @@ const UserManagement = () => {
     setConfirmDialog({
       isOpen: true,
       title: t('userManagement.deleteMultipleConfirmTitle'),
-      message: t('userManagement.deleteMultipleConfirm', { count: selectedUserIds.length }),
+      message: force 
+        ? t('userManagement.forceDeleteMultipleConfirm') 
+        : t('userManagement.deleteMultipleConfirm', { count: idsToDelete.length }),
       onConfirm: async () => {
         try {
           setIsLoading(true);
-          await Promise.all(selectedUserIds.map(id => axiosClient.delete(`/users/${id}`)));
-          setUsers(users.filter(u => !selectedUserIds.includes(u.id)));
-          setSelectedUserIds([]);
-          toast.success(t('userManagement.deleteMultipleSuccess'));
+          const results = await Promise.allSettled(idsToDelete.map(id => axiosClient.delete(`/users/${id}${force ? '?force=true' : ''}`)));
+          const failedIds = [];
+          let hasGroupError = false;
+          
+          results.forEach((res, index) => {
+            if (res.status === 'rejected') {
+              failedIds.push(idsToDelete[index]);
+              if (res.reason?.response?.data?.errorKey === 'user.deleteHasGroups') {
+                hasGroupError = true;
+              }
+            }
+          });
+
+          if (failedIds.length === 0) {
+            setUsers(prev => prev.filter(u => !idsToDelete.includes(u.id)));
+            setSelectedUserIds([]);
+            toast.success(t('userManagement.deleteMultipleSuccess'));
+          } else {
+            setUsers(prev => prev.filter(u => !idsToDelete.includes(u.id) || failedIds.includes(u.id)));
+            setSelectedUserIds(failedIds);
+            
+            if (!force && hasGroupError) {
+               setTimeout(() => handleDeleteSelected(true, failedIds), 300);
+            } else {
+               toast.error(t('userManagement.deleteMultipleError'));
+            }
+          }
         } catch (err) {
           console.error('Lỗi khi xóa nhiều users:', err);
           toast.error(t('userManagement.deleteMultipleError'));

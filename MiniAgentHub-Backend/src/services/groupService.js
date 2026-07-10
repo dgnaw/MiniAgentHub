@@ -11,6 +11,13 @@ const invalidateGroupUsersCache = async (groupId, additionalUserIds = []) => {
         if (userIds.length > 0) {
             const pipeline = redisClient.pipeline();
             userIds.forEach(id => pipeline.del(`user:${id}:permissions`));
+            pipeline.del('cache:users');
+            pipeline.del('cache:groups');
+            await pipeline.exec();
+        } else {
+            const pipeline = redisClient.pipeline();
+            pipeline.del('cache:users');
+            pipeline.del('cache:groups');
             await pipeline.exec();
         }
     } catch (error) {
@@ -228,7 +235,7 @@ const groupService = {
         return group;
     },
 
-    deleteGroup: async (id) => {
+    deleteGroup: async (id, force = false) => {
         const group = await Group.findByPk(id);
 
         if (!group) {
@@ -237,16 +244,28 @@ const groupService = {
 
         const userCount = await UserGroup.count({ where: { group_id: id } });
 
-        if (userCount > 0) {
+        if (userCount > 0 && !force) {
             throw new AppError('group.deleteHasUsers', 'BAD_REQUEST', { count: userCount });
+        }
+
+        let userIds = [];
+        if (force && userCount > 0) {
+            const userGroups = await UserGroup.findAll({ where: { group_id: id } });
+            userIds = userGroups.map(ug => ug.user_id);
         }
 
         const transaction = await sequelize.transaction();
         try {
+            if (force && userCount > 0) {
+                await UserGroup.destroy({ where: { group_id: id }, transaction });
+            }
             await GroupPermission.destroy({ where: { group_id: id }, transaction});
             await group.destroy( { transaction} );
             await transaction.commit();
             await redisClient.del('cache:groups');
+            if (force && userIds.length > 0) {
+                await invalidateGroupUsersCache(id, userIds);
+            }
         } catch (error) {
             await transaction.rollback();
             throw error;
@@ -293,6 +312,8 @@ const groupService = {
         }
 
         await redisClient.del(`user:${userId}:permissions`);
+        await redisClient.del('cache:users');
+        await redisClient.del('cache:groups');
 
         return { message: 'group.removeUserSuccess' };
     }

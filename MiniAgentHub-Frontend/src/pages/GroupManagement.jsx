@@ -68,19 +68,23 @@ const GroupManagement = () => {
     fetchGroups();
   }, [user?.id, JSON.stringify(permissions)]);
 
-  const handleDeleteGroup = (id) => {
+  const handleDeleteGroup = (id, force = false) => {
     setConfirmDialog({
       isOpen: true,
       title: t('groupManagement.deleteConfirmTitle'),
-      message: t('groupManagement.deleteConfirm'),
+      message: force ? t('groupManagement.forceDeleteConfirm') : t('groupManagement.deleteConfirm'),
       onConfirm: async () => {
         try {
-          await axiosClient.delete(`/groups/${id}`);
+          await axiosClient.delete(`/groups/${id}${force ? '?force=true' : ''}`);
           setGroups((prev) => prev.filter((g) => g.id !== id));
           toast.success(t('groupManagement.deleteSuccess'));
         } catch (err) {
           console.error('Lỗi khi xóa nhóm:', err);
-          toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError'));
+          if (!force && err.response?.data?.errorKey === 'group.deleteHasUsers') {
+            setTimeout(() => handleDeleteGroup(id, true), 300);
+          } else {
+            toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError'));
+          }
         }
       }
     });

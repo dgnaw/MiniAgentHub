@@ -50,11 +50,12 @@ const userService = {
             }, { transaction });
 
             if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
-                const groupCount = await Group.count({ where: { id: group_ids } });
-                if (groupCount !== group_ids.length) {
+                const uniqueGroupIds = [...new Set(group_ids)];
+                const groupCount = await Group.count({ where: { id: uniqueGroupIds } });
+                if (groupCount !== uniqueGroupIds.length) {
                     throw new AppError('user.invalidGroupId', 'BAD_REQUEST');
                 }
-                const userGroupRecords = group_ids.map(gId => ({ user_id: newUser.id, group_id: gId }));
+                const userGroupRecords = uniqueGroupIds.map(gId => ({ user_id: newUser.id, group_id: gId }));
                 await UserGroup.bulkCreate(userGroupRecords, { transaction });
             }
 
@@ -71,6 +72,9 @@ const userService = {
 
             await transaction.commit();
             await redisClient.del('cache:users');
+            if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
+                await redisClient.del('cache:groups');
+            }
 
             return {
                 user: {
@@ -241,16 +245,17 @@ const userService = {
             await user.save({ transaction });
 
             if (group_ids && Array.isArray(group_ids)) {
-                if (group_ids.length > 0) {
-                    const groupCount = await Group.count({ where: { id: group_ids } });
-                    if (groupCount !== group_ids.length) {
+                const uniqueGroupIds = [...new Set(group_ids)];
+                if (uniqueGroupIds.length > 0) {
+                    const groupCount = await Group.count({ where: { id: uniqueGroupIds } });
+                    if (groupCount !== uniqueGroupIds.length) {
                         throw new AppError('user.invalidGroupId', 'BAD_REQUEST');
                     }
                 }
                 await UserGroup.destroy({ where: { user_id: id }, transaction });
 
-                if (group_ids.length > 0) {
-                    const userGroupRecords = group_ids.map(gId => ({ user_id: id, group_id: gId }));
+                if (uniqueGroupIds.length > 0) {
+                    const userGroupRecords = uniqueGroupIds.map(gId => ({ user_id: id, group_id: gId }));
                     await UserGroup.bulkCreate(userGroupRecords, { transaction });
                 }
             }
@@ -258,6 +263,9 @@ const userService = {
             await redisClient.del(`user:${id}:permissions`);
             await redisClient.del(`user:${id}:status`);
             await redisClient.del('cache:users');
+            if (group_ids && Array.isArray(group_ids)) {
+                await redisClient.del('cache:groups');
+            }
 
             await transaction.commit();
         } catch (error) {
@@ -268,7 +276,7 @@ const userService = {
         return user;
     },
 
-    deleteUser: async (id) => {
+    deleteUser: async (id, force = false) => {
         const user = await User.findByPk(id, {
             include: [{ model: Role, attributes: ['name'] }]
         });
@@ -281,17 +289,22 @@ const userService = {
         }
 
         const userGroupCount = await UserGroup.count({ where: { user_id: id } });
-        if (userGroupCount > 0) {
+        if (userGroupCount > 0 && !force) {
             throw new AppError('user.deleteHasGroups', 'BAD_REQUEST');
         }
 
         const transaction = await sequelize.transaction();
         try {
-            await UserGroup.destroy({ where: { user_id: id }, transaction });
+            if (force && userGroupCount > 0) {
+                await UserGroup.destroy({ where: { user_id: id }, transaction });
+            }
             await User.destroy({ where: { id: id }, transaction });
             await redisClient.del(`user:${id}:permissions`);
             await redisClient.del(`user:${id}:status`);
             await redisClient.del('cache:users');
+            if (force && userGroupCount > 0) {
+                await redisClient.del('cache:groups');
+            }
 
             await transaction.commit();
         } catch (error) {
