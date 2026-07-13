@@ -12,8 +12,6 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
   (config) => {
-
-
     const language = localStorage.getItem('language') || localStorage.getItem('i18nextLng') || 'vi';
     config.headers['Accept-Language'] = language;
     config.params = { ...config.params, lng: language };
@@ -50,8 +48,6 @@ axiosClient.interceptors.response.use(
       if (originalRequest.url.includes('/login') || originalRequest.url.includes('/refresh-token')) {
         return Promise.reject(error);
       }
-
-
 
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {

@@ -72,16 +72,9 @@ function Login() {
     setIsLoading(true);
 
     try {
-
       const data = await axiosClient.post('/login', { email, password });
-
-
-
-
       setLoginData(data.user, data.permissions, data.must_change_password);
-
       navigate('/');
-
     } catch (err) {
       setError(err.response?.data?.message || t('login.loginFailed'));
     } finally {
@@ -128,16 +121,11 @@ function Login() {
     setIsResettingPassword(true);
     try {
       const loginData = await axiosClient.post('/login', { email: forgotEmail.trim(), password: tempPassword });
-      
-
-
       await axiosClient.put('/users/change-password', { old_password: tempPassword, new_password: newPassword });
-
       toast.success(t('login.changePasswordSuccess'));
       setIsForgotModalOpen(false);
       setLoginData(loginData.user, loginData.permissions, false);
       navigate('/');
-
     } catch (err) {
       setResetError(err.response?.data?.message || t('login.changePasswordError'));
     } finally {

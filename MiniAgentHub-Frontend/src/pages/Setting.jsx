@@ -29,10 +29,15 @@ const Settings = () => {
   const navigate = useNavigate();
   const [confirmDeleteHistory, setConfirmDeleteHistory] = useState(false);
 
-  const handleSignOut = () => {
-    if (logout) logout();
-    localStorage.removeItem('agentHub_token');
-    navigate('/login');
+  const handleSignOut = async () => {
+    try {
+      await axiosClient.post('/logout');
+    } catch (error) {
+      console.error('Lỗi khi đăng xuất:', error);
+    } finally {
+      if (logout) logout();
+      navigate('/login');
+    }
   };
 
   const handleClearHistory = async () => {

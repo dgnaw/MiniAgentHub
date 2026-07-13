@@ -101,7 +101,9 @@ const UserManagement = () => {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const newIds = displayedUsers.filter(u => u.id !== user?.id).map(u => u.id);
+      const newIds = displayedUsers
+        .filter(u => u.id !== user?.id && u.Role?.name !== 'Admin' && u.role_id !== 1)
+        .map(u => u.id);
       setSelectedUserIds(prev => [...new Set([...prev, ...newIds])]);
     } else {
       const displayedIds = displayedUsers.map(u => u.id);
@@ -326,8 +328,8 @@ const UserManagement = () => {
                       type="checkbox" 
                       checked={selectedUserIds.includes(u.id)}
                       onChange={() => handleSelectUser(u.id)}
-                      disabled={isCurrentUser}
-                      className={`w-4 h-4 shrink-0 rounded border-gray-300 dark:border-gray-600 accent-blue-500 ${isCurrentUser ? 'bg-gray-200 opacity-50 cursor-not-allowed' : 'bg-gray-50 dark:bg-[#2a2b30] cursor-pointer'}`} 
+                      disabled={isCurrentUser || u.Role?.name === 'Admin' || u.role_id === 1}
+                      className={`w-4 h-4 shrink-0 rounded border-gray-300 dark:border-gray-600 accent-blue-500 ${isCurrentUser || u.Role?.name === 'Admin' || u.role_id === 1 ? 'bg-gray-200 opacity-50 cursor-not-allowed' : 'bg-gray-50 dark:bg-[#2a2b30] cursor-pointer'}`} 
                     />
                     <div className="w-8 h-8 shrink-0 rounded-full bg-gray-200 dark:bg-[#2a2b30] text-gray-700 dark:text-gray-300 flex items-center justify-center text-xs font-bold">
                       {getInitials(u.full_name, u.email)}

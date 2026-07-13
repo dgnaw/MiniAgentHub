@@ -120,6 +120,12 @@
     "thinking": "Đang tạo câu trả lời",
     "modelLlamaDesc": "Trò chuyện đa năng (qua Groq)",
     "modelDataDesc": "Phân tích dữ liệu (qua Flowise)",
+    "modelLlama318b": "Nhanh, nhẹ, xử lý cơ bản",
+    "modelLlama3370b": "Thông minh, suy luận sâu",
+    "modelLlama370b": "Mô hình lớn, độ chính xác cao",
+    "modelDeepseek": "Mô hình lập luận logic mạnh mẽ",
+    "modelMixtral": "Tốt cho lập trình & đa ngôn ngữ",
+    "modelGemma": "Mã nguồn mở từ Google",
     "configApiKeyGroq": "Cấu hình API Key (Groq)",
     "configApiUrlFlowise": "Cấu hình API URL (Flowise)",
     "configApiKeyGroqDesc": "Nhập API Key Groq cá nhân của bạn để sử dụng các model Llama, Mixtral... Key được lưu trực tiếp trên trình duyệt (localStorage) của bạn và không lưu trên cơ sở dữ liệu server.",
@@ -132,6 +138,8 @@
     "expire1d": "Sau 1 ngày",
     "expire7d": "Sau 7 ngày",
     "expire30d": "Sau 30 ngày",
+    "dropFileTitle": "Thả file vào đây",
+    "dropFileDesc": "Hỗ trợ đính kèm tối đa 10 files cùng lúc",
     "clearConfig": "Xóa cấu hình",
     "cancel": "Hủy",
     "saveConfig": "Lưu cấu hình",
@@ -140,7 +148,8 @@
     "saveGroqKeySuccess": "Đã lưu cấu hình API Key Groq cá nhân!",
     "saveFlowiseUrlSuccess": "Đã lưu cấu hình API URL Flowise cá nhân!",
     "deleteGroqKeySuccess": "Đã xóa API Key Groq cá nhân.",
-    "deleteFlowiseUrlSuccess": "Đã xóa API URL Flowise cá nhân."
+    "deleteFlowiseUrlSuccess": "Đã xóa API URL Flowise cá nhân.",
+    "providedBy": "Cung cấp bởi {{provider}}"
   },
 
   "theme": {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import { Sparkles, Code, AlertCircle, X, Paperclip } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
@@ -13,23 +13,38 @@ import UserMessage from '../components/chat/UserMessage';
 import { useChatStream } from '../hooks/useChatStream';
 import useGenerationStore from '../store/useGenerationStore';
 
-const DEFAULT_GROQ_MODELS = [
-  { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', desc: 'Nhanh, nhẹ, xử lý cơ bản' },
-  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', desc: 'Thông minh, suy luận sâu' },
-  { id: 'llama3-70b-8192', name: 'Llama 3 70B', desc: 'Mô hình lớn, độ chính xác cao' },
-  { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1', desc: 'Mô hình lập luận logic mạnh mẽ' },
-  { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Tốt cho lập trình & đa ngôn ngữ' },
-  { id: 'gemma2-9b-it', name: 'Gemma 2 9B', desc: 'Mã nguồn mở từ Google' }
-];
-
 const Dashboard = () => {
   useThemeStore();
   const user = useAuthStore((state) => state.user);
   const { t } = useTranslation();
   const { id: sessionId } = useParams();
 
+  const defaultGroqModels = useMemo(() => [
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', desc: t('dashboard.modelLlama318b') },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', desc: t('dashboard.modelLlama3370b') },
+    { id: 'llama3-70b-8192', name: 'Llama 3 70B', desc: t('dashboard.modelLlama370b') },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1', desc: t('dashboard.modelDeepseek') },
+    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: t('dashboard.modelMixtral') },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B', desc: t('dashboard.modelGemma') }
+  ], [t]);
+
   const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant');
-  const [groqModels, setGroqModels] = useState(DEFAULT_GROQ_MODELS);
+  const [groqModels, setGroqModels] = useState(defaultGroqModels);
+
+  const displayGroqModels = useMemo(() => {
+    return groqModels.map(m => {
+      const def = defaultGroqModels.find(d => d.id === m.id);
+      if (def) {
+        return { ...m, desc: def.desc };
+      }
+      
+      if (m.desc && m.desc.includes('Cung cấp bởi')) {
+         const provider = m.desc.replace('Cung cấp bởi ', '');
+         return { ...m, desc: t('dashboard.providedBy', { provider }) };
+      }
+      return m;
+    });
+  }, [groqModels, defaultGroqModels, t]);
   const [apiKeyChanged, setApiKeyChanged] = useState(0);
   const [apiKeyModalConfig, setApiKeyModalConfig] = useState({ isOpen: false, type: 'groq' });
   const [showModelDropdown, setShowModelDropdown] = useState(false);
@@ -77,8 +92,8 @@ const Dashboard = () => {
         <div className="absolute inset-0 z-[60] bg-blue-500/10 backdrop-blur-sm border-4 border-blue-500 border-dashed m-4 rounded-3xl flex items-center justify-center pointer-events-none transition-all duration-200">
           <div className="bg-white dark:bg-[#1e1f24] p-8 rounded-2xl shadow-2xl flex flex-col items-center">
             <Paperclip size={48} className="text-blue-500 mb-4 animate-bounce" />
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Thả file vào đây</h3>
-            <p className="text-gray-500 mt-2">Hỗ trợ đính kèm tối đa 10 files cùng lúc</p>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t('dashboard.dropFileTitle')}</h3>
+            <p className="text-gray-500 mt-2">{t('dashboard.dropFileDesc')}</p>
           </div>
         </div>
       )}
@@ -88,7 +103,7 @@ const Dashboard = () => {
           <ModelSelector
             selectedModel={selectedModel}
             setSelectedModel={setSelectedModel}
-            groqModels={groqModels}
+            groqModels={displayGroqModels}
             showModelDropdown={showModelDropdown}
             setShowModelDropdown={setShowModelDropdown}
             isFlowiseAvailable={isFlowiseAvailable}

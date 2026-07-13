@@ -6,8 +6,8 @@ const authLimiter = rateLimit({
     store: new RedisStore({
         sendCommand: (...args) => redisClient.call(...args),
     }),
-    windowMs: 15 * 60 * 1000, 
-    max: 15,
+    windowMs: 5 * 60 * 1000, 
+    max: 30,
     handler: (req, res, next, options) => {
         res.status(options.statusCode).json({ message: req.t('rateLimit.auth') });
     },

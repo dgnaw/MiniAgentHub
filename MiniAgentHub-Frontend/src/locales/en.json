@@ -76,6 +76,12 @@
     "thinking": "Generating response",
     "modelLlamaDesc": "Versatile chat (via Groq)",
     "modelDataDesc": "Data analysis",
+    "modelLlama318b": "Fast, lightweight, basic processing",
+    "modelLlama3370b": "Smart, deep reasoning",
+    "modelLlama370b": "Large model, high accuracy",
+    "modelDeepseek": "Strong logical reasoning model",
+    "modelMixtral": "Good for programming & multi-language",
+    "modelGemma": "Open source from Google",
     "configApiKeyGroq": "Config API Key (Groq)",
     "configApiUrlFlowise": "Config API URL (Flowise)",
     "configApiKeyGroqDesc": "Enter your personal Groq API Key to use models like Llama, Mixtral... Your key is stored securely in your browser's localStorage and is not saved to the server.",
@@ -88,6 +94,8 @@
     "expire1d": "After 1 day",
     "expire7d": "After 7 days",
     "expire30d": "After 30 days",
+    "dropFileTitle": "Drop files here",
+    "dropFileDesc": "Supports attaching up to 10 files at once",
     "clearConfig": "Clear Config",
     "cancel": "Cancel",
     "saveConfig": "Save Config",
@@ -96,7 +104,8 @@
     "saveGroqKeySuccess": "Personal Groq API Key saved successfully!",
     "saveFlowiseUrlSuccess": "Personal Flowise API URL saved successfully!",
     "deleteGroqKeySuccess": "Personal Groq API Key deleted.",
-    "deleteFlowiseUrlSuccess": "Personal Flowise API URL deleted."
+    "deleteFlowiseUrlSuccess": "Personal Flowise API URL deleted.",
+    "providedBy": "Provided by {{provider}}"
   },
 
   "sidebar": {
