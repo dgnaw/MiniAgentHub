@@ -29,6 +29,10 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   const [isDragging, setIsDragging] = useState(false);
   const [triggerReload, setTriggerReload] = useState(0);
   
+  const [chatPage, setChatPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  
   const currentSessionIdRef = useRef(sessionId);
   const activeSessionIdRef = useRef(sessionId);
   useEffect(() => { 
@@ -415,9 +419,16 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     if (sessionId) {
       const fetchMessages = async () => {
         try {
-          const res = await axiosClient.get(`/chat-sessions/${sessionId}/messages`);
+          const res = await axiosClient.get(`/chat-sessions/${sessionId}/messages?page=1&limit=50`);
           const msgList = Array.isArray(res) ? res : (res.data || []);
-          setMessages(msgList.map(m => ({ role: m.role, content: m.content })));
+          setMessages(msgList.map(m => ({ id: m.id, role: m.role, content: m.content })));
+          
+          if (res && res.totalPages !== undefined) {
+             setHasMoreMessages(1 < res.totalPages);
+          } else {
+             setHasMoreMessages(false);
+          }
+          setChatPage(1);
         } catch (error) {
           console.error("Lỗi tải lịch sử tin nhắn:", error);
         }
@@ -425,9 +436,34 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       fetchMessages();
     } else {
       setMessages([]);
+      setHasMoreMessages(false);
+      setChatPage(1);
     }
     // Không dùng handleStop ở đây nữa để giữ kết nối ngầm khi chuyển trang
   }, [sessionId, triggerReload]);
+
+  const loadMoreMessages = async () => {
+    if (isFetchingMore || !hasMoreMessages || !sessionId) return;
+    setIsFetchingMore(true);
+    try {
+      const nextPage = chatPage + 1;
+      const res = await axiosClient.get(`/chat-sessions/${sessionId}/messages?page=${nextPage}&limit=50`);
+      const msgList = Array.isArray(res) ? res : (res.data || []);
+      
+      const newMessages = msgList.map(m => ({ id: m.id, role: m.role, content: m.content }));
+      
+      setMessages(prev => [...newMessages, ...prev]);
+      setChatPage(nextPage);
+      
+      if (res && res.totalPages !== undefined) {
+         setHasMoreMessages(nextPage < res.totalPages);
+      }
+    } catch (error) {
+      console.error("Lỗi tải thêm tin nhắn:", error);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
 
   useEffect(() => {
     const checkApiKeyStatus = async () => {
@@ -515,6 +551,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     isApiKeyMissing, setIsApiKeyMissing,
     isDragging,
     textareaRef,
+    hasMoreMessages,
+    isFetchingMore,
+    loadMoreMessages,
     handleSend, handleStop, handleKeyDown,
     handleDragOver, handleDragLeave, handleDrop, removeFile
   };

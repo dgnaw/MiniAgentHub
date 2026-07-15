@@ -1,5 +1,5 @@
 const { User, Group, Role, UserGroup, Permission } = require('../models');
-const redisClient = require('../config/redis');
+const cacheHelper = require('../utils/cacheHelper');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { sequelize } = require('../config/database');
@@ -71,10 +71,6 @@ const userService = {
             }
 
             await transaction.commit();
-            await redisClient.del('cache:users');
-            if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
-                await redisClient.del('cache:groups');
-            }
 
             return {
                 user: {
@@ -92,11 +88,9 @@ const userService = {
         }
     },
 
-    getAllUsers: async () => {
-        const cachedUsers = await redisClient.get('cache:users');
-        if (cachedUsers) return JSON.parse(cachedUsers);
-
-        const users = await User.findAll({
+    getAllUsers: async (page = 1, limit = 10) => {
+        const offset = (page - 1) * limit;
+        const users = await User.findAndCountAll({
             attributes: { exclude: ['password_hash'] },
             include: [
                 { model: Role, attributes: ['id', 'name'] },
@@ -117,10 +111,12 @@ const userService = {
                     through: { attributes: [] }
                 }
             ],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
 
-        await redisClient.setex('cache:users', 86400, JSON.stringify(users)); 
         return users;
     },
 
@@ -260,12 +256,8 @@ const userService = {
                 }
             }
 
-            await redisClient.del(`user:${id}:permissions`);
-            await redisClient.del(`user:${id}:status`);
-            await redisClient.del('cache:users');
-            if (group_ids && Array.isArray(group_ids)) {
-                await redisClient.del('cache:groups');
-            }
+            await cacheHelper.del(`user:${id}:permissions`);
+            await cacheHelper.del(`user:${id}:status`);
 
             await transaction.commit();
         } catch (error) {
@@ -299,12 +291,8 @@ const userService = {
                 await UserGroup.destroy({ where: { user_id: id }, transaction });
             }
             await User.destroy({ where: { id: id }, transaction });
-            await redisClient.del(`user:${id}:permissions`);
-            await redisClient.del(`user:${id}:status`);
-            await redisClient.del('cache:users');
-            if (force && userGroupCount > 0) {
-                await redisClient.del('cache:groups');
-            }
+            await cacheHelper.del(`user:${id}:permissions`);
+            await cacheHelper.del(`user:${id}:status`);
 
             await transaction.commit();
         } catch (error) {

@@ -57,7 +57,9 @@ const startServer = async () => {
         
         const server = app.listen(PORT, () => {
             console.log(`Server dang chay tai cong ${PORT}`);
-            require('./workers/emailWorker'); // Start BullMQ worker
+            if (process.env.USE_REDIS !== 'false') {
+                require('./workers/emailWorker'); // Start BullMQ worker
+            }
         });
 
         process.on('unhandledRejection', err => {

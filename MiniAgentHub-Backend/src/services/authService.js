@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const AppError = require('../utils/AppError');
 
 const { User, Role, Group, Permission } = require('../models');
-const redisClient = require('../config/redis');
+const cacheHelper = require('../utils/cacheHelper');
 const { emailQueue } = require('../config/queue');
 
 const loginUser = async (email, password) => {
@@ -126,7 +126,7 @@ const logoutUser = async (userId, token) => {
                 const currentTime = Math.floor(Date.now() / 1000);
                 const ttl = decoded.exp - currentTime;
                 if (ttl > 0) {
-                    await redisClient.setex(`bl:${token}`, ttl, 'true');
+                    await cacheHelper.setex(`bl:${token}`, ttl, 'true');
                 }
             }
         } catch (error) {

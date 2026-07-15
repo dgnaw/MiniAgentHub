@@ -67,6 +67,9 @@ const Dashboard = () => {
     isApiKeyMissing, setIsApiKeyMissing,
     isDragging,
     textareaRef,
+    hasMoreMessages,
+    isFetchingMore,
+    loadMoreMessages,
     handleSend, handleStop, handleKeyDown,
     handleDragOver, handleDragLeave, handleDrop, removeFile
   } = useChatStream(sessionId, selectedModel, setSelectedModel, apiKeyChanged, setGroqModels);
@@ -141,6 +144,24 @@ const Dashboard = () => {
         ) : (
           <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6 min-h-0">
             <div className="max-w-3xl w-full mx-auto flex flex-col space-y-6">
+              {hasMoreMessages && (
+                <div className="flex justify-center mt-2 mb-2">
+                  <button
+                    onClick={loadMoreMessages}
+                    disabled={isFetchingMore}
+                    className="text-xs font-medium bg-white hover:bg-gray-100 dark:bg-[#1e1f24] dark:hover:bg-[#25272d] border border-gray-200 dark:border-[#2a2b30] text-gray-600 dark:text-gray-400 px-4 py-1.5 rounded-full shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isFetchingMore ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                        Đang tải...
+                      </>
+                    ) : (
+                      'Tải thêm tin nhắn cũ'
+                    )}
+                  </button>
+                </div>
+              )}
               {messages.map((msg, index) => (
                 <div key={index} className={`flex flex-col w-full group ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   {msg.role === 'user' ? (

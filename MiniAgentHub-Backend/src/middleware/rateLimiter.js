@@ -2,12 +2,19 @@ const rateLimit = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis').default; 
 const redisClient = require('../config/redis');
 
-const authLimiter = rateLimit({
-    store: new RedisStore({
+const isRedisEnabled = process.env.USE_REDIS !== 'false';
+
+const getStore = (prefix) => {
+    return isRedisEnabled ? new RedisStore({
         sendCommand: (...args) => redisClient.call(...args),
-    }),
+        prefix: prefix
+    }) : undefined;
+};
+
+const authLimiter = rateLimit({
+    store: getStore('rl_auth:'),
     windowMs: 5 * 60 * 1000, 
-    max: 30,
+    max: 5,
     handler: (req, res, next, options) => {
         res.status(options.statusCode).json({ message: req.t('rateLimit.auth') });
     },
@@ -16,9 +23,7 @@ const authLimiter = rateLimit({
 });
 
 const chatLimiter = rateLimit({
-    store: new RedisStore({
-        sendCommand: (...args) => redisClient.call(...args),
-    }),
+    store: getStore('rl_chat:'),
     windowMs: 60 * 1000, 
     max: 30, 
     handler: (req, res, next, options) => {

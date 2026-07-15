@@ -8,8 +8,19 @@ const groupController = {
     }),
 
     getAllGroups: catchAsync(async (req, res, next) => {
-        const result = await groupService.getAllGroups();
-        return res.status(200).json(result);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 1000;
+        const result = await groupService.getAllGroups(page, limit);
+        
+        return res.status(200).json({
+            data: result.rows,
+            pagination: {
+                total: result.count,
+                page,
+                limit,
+                totalPages: Math.ceil(result.count / limit)
+            }
+        });
     }),
 
     getGroupById: catchAsync(async (req, res, next) => {

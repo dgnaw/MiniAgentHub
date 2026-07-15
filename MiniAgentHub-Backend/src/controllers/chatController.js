@@ -15,7 +15,9 @@ const chatController = {
     }),
 
     getSessionMessages: catchAsync(async (req, res, next) => {
-        const messages = await chatService.getSessionMessages(req.params.id, req.user.id);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const messages = await chatService.getSessionMessages(req.params.id, req.user.id, page, limit);
         return res.status(200).json(messages);
     }),
 

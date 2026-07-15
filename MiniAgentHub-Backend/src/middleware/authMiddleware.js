@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { Permission, RolePermission, UserGroup, GroupPermission, User } = require('../models');
 const AppError = require('../utils/AppError');
-const redisClient = require('../config/redis');
+const cacheHelper = require('../utils/cacheHelper');
 
 const authenticateToken = async (req, res, next) => {
     const publicPaths = ['/login', '/forgot-password', '/refresh-token'];
@@ -18,7 +18,7 @@ const authenticateToken = async (req, res, next) => {
     }
 
     try {
-        const isBlacklisted = await redisClient.get(`bl:${token}`);
+        const isBlacklisted = await cacheHelper.get(`bl:${token}`);
         if (isBlacklisted) {
             return next(new AppError('auth.tokenInvalid', 'UNAUTHORIZED'));
         }
@@ -62,7 +62,7 @@ const checkPermission = (requiredPermission) => {
 
             const redisKey = `user:${req.user.id}:permissions`;
             let userPermissions = [];
-            const cachedPerms = await redisClient.get(redisKey);
+            const cachedPerms = await cacheHelper.get(redisKey);
 
             if (cachedPerms) {
                 userPermissions = JSON.parse(cachedPerms);
@@ -102,7 +102,7 @@ const checkPermission = (requiredPermission) => {
                     userPermissions = permissionsList.map(p => p.permission_key);
                 }
 
-                await redisClient.setex(redisKey, 3600, JSON.stringify(userPermissions));
+                await cacheHelper.setex(redisKey, 3600, JSON.stringify(userPermissions));
             }
 
             req.userPermissions = userPermissions;

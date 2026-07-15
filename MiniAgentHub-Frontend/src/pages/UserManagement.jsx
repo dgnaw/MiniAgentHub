@@ -18,6 +18,8 @@ const UserManagement = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
@@ -40,8 +42,18 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await axiosClient.get('/users');
-      setUsers(Array.isArray(response) ? response : (response.data || []));
+      const response = await axiosClient.get(`/users?page=${currentPage}&limit=${itemsPerPage}`);
+      const resData = response;
+      if (resData.pagination) {
+          setUsers(resData.data);
+          console.log("DEBUG PAGINATION:", resData.pagination);
+          setTotalPages(resData.pagination.totalPages);
+          setTotalUsers(resData.pagination.total);
+      } else {
+          setUsers(Array.isArray(resData) ? resData : (resData.data || []));
+          setTotalPages(1);
+          setTotalUsers(Array.isArray(resData) ? resData.length : 0);
+      }
       setError('');
     } catch (err) {
       console.error('Lỗi khi tải danh sách users:', err);
@@ -59,7 +71,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage]);
 
   const handleDeleteUser = async (id, force = false) => {
     if (id === user?.id) {
@@ -73,8 +85,8 @@ const UserManagement = () => {
       onConfirm: async () => {
         try {
           await axiosClient.delete(`/users/${id}${force ? '?force=true' : ''}`);
-          setUsers(users.filter(u => u.id !== id));
           toast.success(t('userManagement.deleteSuccess'));
+          fetchUsers();
         } catch (err) {
           if (!force && err.response?.data?.errorKey === 'user.deleteHasGroups') {
             setTimeout(() => handleDeleteUser(id, true), 300);
@@ -94,9 +106,7 @@ const UserManagement = () => {
     return 0; 
   });
 
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedUsers = sortedUsers.slice(startIndex, startIndex + itemsPerPage);
+  const displayedUsers = sortedUsers;
   const hasPagination = totalPages > 1;
 
   const handleSelectAll = (e) => {
@@ -147,11 +157,9 @@ const UserManagement = () => {
           });
 
           if (failedIds.length === 0) {
-            setUsers(prev => prev.filter(u => !idsToDelete.includes(u.id)));
             setSelectedUserIds([]);
             toast.success(t('userManagement.deleteMultipleSuccess'));
           } else {
-            setUsers(prev => prev.filter(u => !idsToDelete.includes(u.id) || failedIds.includes(u.id)));
             setSelectedUserIds(failedIds);
             
             if (!force && hasGroupError) {
@@ -163,9 +171,9 @@ const UserManagement = () => {
         } catch (err) {
           console.error('Lỗi khi xóa nhiều users:', err);
           toast.error(t('userManagement.deleteMultipleError'));
-          fetchUsers();
         } finally {
           setIsLoading(false);
+          fetchUsers();
         }
       }
     });
@@ -389,10 +397,9 @@ const UserManagement = () => {
           }))}
           </div>
             </div>
-          </div>
-
+          
           <div className="px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-[#26272b] bg-white dark:bg-[#1a1b20]">
-            <span className="text-sm text-gray-500 dark:text-gray-400">{t('userManagement.totalUsers', 'Total Users: {{count}}', { count: users.length })}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('userManagement.totalUsers', 'Total Users: {{count}}', { count: totalUsers })}</span>
             
             {hasPagination && (
               <div className="flex items-center gap-2">
@@ -424,9 +431,9 @@ const UserManagement = () => {
               </div>
             )}
           </div>
-
         </div>
       </div>
+    </div>
 
       <UserFormModal 
         isOpen={modalConfig.isOpen}

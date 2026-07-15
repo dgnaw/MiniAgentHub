@@ -1,5 +1,5 @@
 const { Group, UserGroup, Permission, GroupPermission, User } = require('../models');
-const redisClient = require('../config/redis');
+const cacheHelper = require('../utils/cacheHelper');
 const { Sequelize } = require('sequelize');
 const AppError = require('../utils/AppError');
 const { sequelize } = require('../config/database');
@@ -9,16 +9,8 @@ const invalidateGroupUsersCache = async (groupId, additionalUserIds = []) => {
         const userGroups = await UserGroup.findAll({ where: { group_id: groupId }});
         const userIds = [...new Set([...userGroups.map(ug => ug.user_id), ...additionalUserIds])];
         if (userIds.length > 0) {
-            const pipeline = redisClient.pipeline();
-            userIds.forEach(id => pipeline.del(`user:${id}:permissions`));
-            pipeline.del('cache:users');
-            pipeline.del('cache:groups');
-            await pipeline.exec();
-        } else {
-            const pipeline = redisClient.pipeline();
-            pipeline.del('cache:users');
-            pipeline.del('cache:groups');
-            await pipeline.exec();
+            const promises = userIds.map(id => cacheHelper.del(`user:${id}:permissions`));
+            await Promise.all(promises);
         }
     } catch (error) {
         console.error('Lỗi khi xóa cache cho group:', error);
@@ -82,7 +74,6 @@ const groupService = {
             }
 
             await transaction.commit();
-            await redisClient.del('cache:groups');
             if (Array.isArray(userIds) && userIds.length > 0) {
                 await invalidateGroupUsersCache(newGroup.id, userIds);
             }
@@ -94,11 +85,10 @@ const groupService = {
         return newGroup;
     },
 
-    getAllGroups: async () => {
-        const cachedGroups = await redisClient.get('cache:groups');
-        if (cachedGroups) return JSON.parse(cachedGroups);
+    getAllGroups: async (page = 1, limit = 10) => {
+        const offset = (page - 1) * limit;
 
-        const groups = await Group.findAll({
+        const result = await Group.findAndCountAll({
             attributes: {
                 include: [
                     [
@@ -116,10 +106,13 @@ const groupService = {
                 attributes: ['permission_key'],
                 through: { attributes: [] }
             }],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
 
-        const groupsWithPerms = groups.map(g => {
+        const groupsWithPerms = result.rows.map(g => {
             const groupData = g.get({ plain: true });
             const permissions = { create: false, read: false,
                 update: false, delete:false};
@@ -145,8 +138,7 @@ const groupService = {
                 };
             });
             
-        await redisClient.setex('cache:groups', 86400, JSON.stringify(groupsWithPerms)); // Cache 24h
-        return groupsWithPerms;
+        return { count: result.count, rows: groupsWithPerms };
     },
 
     getGroupById: async (id) => {
@@ -225,7 +217,6 @@ const groupService = {
             }
 
             await transaction.commit();
-            await redisClient.del('cache:groups');
             await invalidateGroupUsersCache(id, Array.isArray(userIds) ? userIds : []);
         } catch (error) {
             await transaction.rollback();
@@ -262,7 +253,6 @@ const groupService = {
             await GroupPermission.destroy({ where: { group_id: id }, transaction});
             await group.destroy( { transaction} );
             await transaction.commit();
-            await redisClient.del('cache:groups');
             if (force && userIds.length > 0) {
                 await invalidateGroupUsersCache(id, userIds);
             }
@@ -311,9 +301,7 @@ const groupService = {
             throw new AppError('group.userNotInGroup', 'BAD_REQUEST');
         }
 
-        await redisClient.del(`user:${userId}:permissions`);
-        await redisClient.del('cache:users');
-        await redisClient.del('cache:groups');
+        await cacheHelper.del(`user:${userId}:permissions`);
 
         return { message: 'group.removeUserSuccess' };
     }

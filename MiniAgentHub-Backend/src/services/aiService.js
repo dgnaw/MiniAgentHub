@@ -8,7 +8,7 @@ const aiPrompts = require('../utils/aiPrompts');
 const chatService = require('./chatService');
 
 const crypto = require('crypto');
-const redisClient = require('../config/redis');
+const cacheHelper = require('../utils/cacheHelper');
 
 let tesseractWorkerPromise = null;
 const getTesseractWorker = () => {
@@ -122,13 +122,14 @@ const aiService = {
 
 
     buildMessagesForAI: async (userId, currentSessionId, processedMessage, cleanBase64ImagesFn) => {
-        const pastMessages = await chatService.getSessionMessages(currentSessionId, userId);
+        const pastMessagesResponse = await chatService.getSessionMessages(currentSessionId, userId, 1, 20);
+        const pastMessages = pastMessagesResponse.data || [];
 
         const systemContent = aiPrompts.SYSTEM_PROMPTS.BASE_SYSTEM_PROMPT;
 
         const messageForAI = [
             { role: 'system', content: systemContent },
-            ...pastMessages.slice(-20).map(m => ({
+            ...pastMessages.map(m => ({
                 role: m.role === 'ai' ? 'assistant' : 'user',
                 content: cleanBase64ImagesFn(m.content)
             }))
@@ -256,7 +257,7 @@ const aiService = {
                 ? `groq:models:${crypto.createHash('md5').update(customKey).digest('hex')}`
                 : 'groq:models:default';
                 
-            const cachedModels = await redisClient.get(cacheKey);
+            const cachedModels = await cacheHelper.get(cacheKey);
             if (cachedModels) {
                 return JSON.parse(cachedModels);
             }
@@ -294,7 +295,7 @@ const aiService = {
                     };
                 });
                 
-            await redisClient.setex(cacheKey, 86400, JSON.stringify(result)); // Cache 24 hours
+            await cacheHelper.setex(cacheKey, 86400, JSON.stringify(result)); // Cache 24 hours
             return result;
         } catch (error) {
             console.error("Lỗi khi lấy danh sách model từ Groq API:", error.message);

@@ -16,8 +16,18 @@ const userController = {
     }),
 
     getAllUsers: catchAsync(async (req, res, next) => {
-        const users = await userService.getAllUsers();
-        return res.status(200).json(users);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 1000; // Mặc định 1000 để tạm tương thích nếu frontend chưa truyền limit
+        const result = await userService.getAllUsers(page, limit);
+        return res.status(200).json({
+            data: result.rows,
+            pagination: {
+                total: result.count,
+                page,
+                limit,
+                totalPages: Math.ceil(result.count / limit)
+            }
+        });
     }),
 
     getUserById: catchAsync(async (req, res, next) => {

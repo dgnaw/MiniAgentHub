@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserPlus, Info, Users, Settings, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { UserPlus, Info, Users, Settings, Trash2, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import axiosClient from '../services/axiosClient';
 import Sidebar from '../components/layout/Sidebar';
 import GroupFormModal from '../components/modals/GroupFormModal';
@@ -16,9 +16,11 @@ const GroupManagement = () => {
   const [groups, setGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Modal States
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalGroups, setTotalGroups] = useState(0);
+  const [selectedGroupIds, setSelectedGroupIds] = useState([]);
+  const itemsPerPage = 5; const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
@@ -39,10 +41,18 @@ const GroupManagement = () => {
       const hasGroupAccess = user?.role === 'Admin' || permissions.includes('GROUP_R') || permissions.includes('GROUP_U') || permissions.includes('GROUP_D');
 
       if (hasGroupAccess) {
-        const response = await axiosClient.get('/groups');
+        const response = await axiosClient.get(`/groups?page=${currentPage}&limit=${itemsPerPage}`);
         if (isMounted.current) {
-          const data = Array.isArray(response) ? response : (response.data || []);
-          setGroups(data);
+          const resData = response;
+          if (resData.pagination) {
+            setGroups(resData.data);
+            setTotalPages(resData.pagination.totalPages);
+            setTotalGroups(resData.pagination.total);
+          } else {
+            setGroups(Array.isArray(resData) ? resData : (resData.data || []));
+            setTotalPages(1);
+            setTotalGroups(Array.isArray(resData) ? resData.length : 0);
+          }
         }
       } else {
         const response = await axiosClient.get(`/users/${user.id}`);
@@ -50,7 +60,10 @@ const GroupManagement = () => {
           const responseData = response.data || response;
           const userData = responseData.user || responseData;
           const userGroups = userData.Groups || userData.groups || [];
+          // Tạm thời nếu là user thường không dùng pagination api
           setGroups(userGroups);
+          setTotalPages(1);
+          setTotalGroups(userGroups.length);
         }
       }
       if (isMounted.current) setError('');
@@ -66,7 +79,7 @@ const GroupManagement = () => {
 
   useEffect(() => {
     fetchGroups();
-  }, [user?.id, JSON.stringify(permissions)]);
+  }, [user?.id, JSON.stringify(permissions), currentPage]);
 
   const handleDeleteGroup = (id, force = false) => {
     setConfirmDialog({
@@ -76,7 +89,6 @@ const GroupManagement = () => {
       onConfirm: async () => {
         try {
           await axiosClient.delete(`/groups/${id}${force ? '?force=true' : ''}`);
-          setGroups((prev) => prev.filter((g) => g.id !== id));
           toast.success(t('groupManagement.deleteSuccess'));
         } catch (err) {
           console.error('Lỗi khi xóa nhóm:', err);
@@ -85,6 +97,69 @@ const GroupManagement = () => {
           } else {
             toast.error(err.response?.data?.message || err.response?.data?.error || t('groupManagement.deleteError'));
           }
+        } finally {
+          fetchGroups();
+        }
+      }
+    });
+  };
+
+  const handleSelectGroup = (id) => {
+    setSelectedGroupIds(prev => 
+      prev.includes(id) ? prev.filter(gId => gId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = groups.map(g => g.id);
+      setSelectedGroupIds(ids);
+    } else {
+      setSelectedGroupIds([]);
+    }
+  };
+
+  const handleDeleteSelected = async (force = false, idsToDelete = selectedGroupIds) => {
+    if (idsToDelete.length === 0) return;
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: t('groupManagement.deleteMultipleConfirmTitle'),
+      message: force 
+        ? t('groupManagement.forceDeleteMultipleConfirm') 
+        : t('groupManagement.deleteMultipleConfirm', { count: idsToDelete.length }),
+      onConfirm: async () => {
+        try {
+          const results = await Promise.allSettled(idsToDelete.map(id => axiosClient.delete(`/groups/${id}${force ? '?force=true' : ''}`)));
+          const failedIds = [];
+          let hasUserError = false;
+          
+          results.forEach((res, index) => {
+            if (res.status === 'rejected') {
+              failedIds.push(idsToDelete[index]);
+              if (res.reason?.response?.data?.errorKey === 'group.deleteHasUsers') {
+                hasUserError = true;
+              }
+            }
+          });
+
+          if (failedIds.length === 0) {
+            setSelectedGroupIds([]);
+            toast.success(t('groupManagement.deleteMultipleSuccess'));
+          } else {
+            setSelectedGroupIds(failedIds);
+            
+            if (!force && hasUserError) {
+               setTimeout(() => handleDeleteSelected(true, failedIds), 300);
+            } else {
+               toast.error(t('groupManagement.deleteMultipleError'));
+            }
+          }
+        } catch (err) {
+          console.error('Lỗi khi xóa nhiều nhóm:', err);
+          toast.error(t('groupManagement.deleteMultipleError'));
+        } finally {
+          fetchGroups();
         }
       }
     });
@@ -158,10 +233,29 @@ const GroupManagement = () => {
 
           <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl shadow-lg flex flex-col overflow-hidden w-full">
 
-            <div className="px-4 md:px-6 py-5 border-b border-gray-200 dark:border-[#26272b] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#1a1b20]">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('groupManagement.activeGroups')}</h2>
-              <div className="bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 text-xs font-bold px-3 py-1 rounded-md tracking-widest">
-                {groups.length} {t('groupManagement.total')}
+            <div className="px-4 md:px-6 py-5 border-b border-gray-200 dark:border-[#26272b] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1a1b20]">
+              <div className="flex items-center gap-4">
+                 <input 
+                   type="checkbox" 
+                   checked={groups.length > 0 && groups.every(g => selectedGroupIds.includes(g.id))}
+                   onChange={handleSelectAll}
+                   className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] accent-blue-500 cursor-pointer" 
+                 />
+                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{t('groupManagement.activeGroups')}</h2>
+                 <div className="bg-gray-100 dark:bg-[#2a2b30] text-gray-600 dark:text-gray-400 text-xs font-bold px-3 py-1 rounded-md tracking-widest">
+                   {totalGroups} {t('groupManagement.total')}
+                 </div>
+              </div>
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                {(user?.role === 'Admin' || permissions.includes('GROUP_D')) && (
+                  <button 
+                    onClick={() => handleDeleteSelected(false)}
+                    disabled={selectedGroupIds.length === 0}
+                    className={`text-xs font-bold tracking-widest transition-colors ${selectedGroupIds.length === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:text-red-300'}`}
+                  >
+                    {t('groupManagement.deleteSelected')}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -169,7 +263,7 @@ const GroupManagement = () => {
               <div className="min-w-full md:min-w-[700px]">
                 {/* --- Table Header (Desktop Only) --- */}
                 <div className="hidden md:grid grid-cols-12 px-4 md:px-6 py-4 border-b border-gray-200 dark:border-[#26272b] bg-gray-50 dark:bg-[#1a1b20]">
-                  <div className="col-span-5 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase">
+                  <div className="col-span-5 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase pl-[40px]">
                     {t('groupManagement.groupName')}
                   </div>
                   <div className="col-span-4 text-[10px] font-bold text-gray-500 tracking-[0.15em] uppercase text-center">
@@ -203,12 +297,20 @@ const GroupManagement = () => {
                       >
                         {/* --- Mobile Card Layout --- */}
                         <div className="flex justify-between items-start md:contents">
-                          <div className="md:col-span-5">
-                            <div className="text-sm font-medium text-blue-600 dark:text-[#a5c6f7]">
+                          <div className="md:col-span-5 flex items-center gap-3 md:gap-4 min-w-0">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedGroupIds.includes(group.id)}
+                              onChange={() => handleSelectGroup(group.id)}
+                              className="w-4 h-4 shrink-0 rounded border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#2a2b30] accent-blue-500 cursor-pointer" 
+                            />
+                            <div>
+                              <div className="text-sm font-medium text-blue-600 dark:text-[#a5c6f7]">
                               {group.group_name || group.name || t('groupManagement.noName')}
                             </div>
                             <div className="md:hidden text-xs text-gray-500 mt-1">
                               {group.member_count || group.memberCount || group.members?.length || 0} {t('groupManagement.members')}
+                            </div>
                             </div>
                           </div>
 
@@ -244,7 +346,40 @@ const GroupManagement = () => {
                   )}
                 </div>
               </div>
+            <div className="px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-[#26272b] bg-white dark:bg-[#1a1b20]">
+              <span className="text-sm text-gray-500 dark:text-gray-400">{t('groupManagement.total')} {totalGroups}</span>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setCurrentPage(idx + 1)}
+                      className={`w-8 h-8 rounded-lg text-sm flex items-center justify-center transition-colors ${currentPage === idx + 1 ? 'bg-blue-100 dark:bg-[#d1e5fb] text-blue-800 dark:text-[#0f2c6b] font-bold' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#26272b]'}`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              )}
             </div>
+          </div>
 
           </div>
         </div>
