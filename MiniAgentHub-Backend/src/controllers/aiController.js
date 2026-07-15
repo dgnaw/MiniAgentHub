@@ -3,6 +3,7 @@ const chatService = require('../services/chatService');
 const userService = require('../services/userService');
 const aiFactory = require('../services/aiStrategies/aiFactory');
 const catchAsync = require('../utils/catchAsync');
+const streamManager = require('../services/streamManager');
 
 const cleanBase64Images = (text) => {
     if (!text) return text;
@@ -61,6 +62,11 @@ const aiController = {
             res.write(`data: ${JSON.stringify({ sessionId: currentSessionId })}\n\n`);
 
             aiResponse = "";
+            
+            streamManager.addStream(currentSessionId);
+            if (sessionId !== currentSessionId) {
+                streamManager.setNewSessionId(currentSessionId, currentSessionId);
+            }
 
             const strategyParams = {
                 model,
@@ -78,33 +84,52 @@ const aiController = {
             const stream = chatStrategy(strategyParams);
 
             for await (const event of stream) {
-                if (clientDisconnected || req.socket?.destroyed) {
-                    clientDisconnected = true;
+                if (streamManager.getStream(currentSessionId)?.isStopped) {
+                    console.log('Stream đã bị user dừng khẩn cấp!');
                     break;
                 }
                 
+                if (clientDisconnected || req.socket?.destroyed) {
+                    clientDisconnected = true;
+                }
+                
                 if (event.error) {
-                    res.write(`data: ${JSON.stringify({ error: event.error })}\n\n`);
+                    streamManager.emitError(currentSessionId, event.error);
+                    if (!clientDisconnected) {
+                        res.write(`data: ${JSON.stringify({ error: event.error })}\n\n`);
+                    }
                     break;
+                }
+                
+                if (event.flowiseUnavailable) {
+                    streamManager.emitFlowiseUnavailable(currentSessionId);
+                    if (!clientDisconnected) {
+                        res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
+                    }
                 }
                 
                 if (event.chunk) {
                     aiResponse += event.chunk;
+                    streamManager.emitChunk(currentSessionId, event.chunk);
                     if (!clientDisconnected) {
                         res.write(`data: ${JSON.stringify({ chunk: event.chunk })}\n\n`);
                     }
                 }
             }
 
+            streamManager.emitDone(currentSessionId);
+
             if (clientDisconnected || req.socket?.destroyed) {
                 console.log('Client ngắt kết nối giao diện, AI chạy ngầm hoàn tất. Lưu câu trả lời...');
                 if (aiResponse) {
                     await chatService.saveAIMessage(currentSessionId, aiResponse);
                 }
+                setTimeout(() => streamManager.removeStream(currentSessionId), 5000);
                 return;
             }
 
             await chatService.saveAIMessage(currentSessionId, aiResponse);
+            streamManager.removeStream(currentSessionId);
 
             res.write(`data: [DONE]\n\n`);
             res.end();
@@ -133,6 +158,11 @@ const aiController = {
                 errorMessage = `\n\n${req.t('server.internalError')}: ${error.message}`;
             }
 
+            if (aiProcessData && aiProcessData.currentSessionId) {
+                streamManager.emitError(aiProcessData.currentSessionId, errorMessage);
+                streamManager.removeStream(aiProcessData.currentSessionId);
+            }
+
             if (!res.headersSent) {
                 return next(error);
             } else {
@@ -141,6 +171,48 @@ const aiController = {
                 res.end();
             }
         }
+    },
+
+    reconnectStream: async (req, res, next) => {
+        const { sessionId } = req.params;
+        const streamData = streamManager.getStream(sessionId);
+        
+        if (!streamData) {
+            return res.status(404).json({ message: 'Stream not found or already completed' });
+        }
+
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        res.write(`data: ${JSON.stringify({ sessionId: streamData.newSessionId || sessionId })}\n\n`);
+
+        if (streamData.fullText) {
+            res.write(`data: ${JSON.stringify({ chunk: streamData.fullText })}\n\n`);
+        }
+
+        const onChunk = (chunk) => res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+        const onError = (err) => res.write(`data: ${JSON.stringify({ error: err })}\n\n`);
+        const onFlowiseUnavailable = () => res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
+        const onDone = () => {
+            res.write(`data: [DONE]\n\n`);
+            res.end();
+            cleanup();
+        };
+
+        streamData.emitter.on('chunk', onChunk);
+        streamData.emitter.on('error', onError);
+        streamData.emitter.on('flowiseUnavailable', onFlowiseUnavailable);
+        streamData.emitter.on('done', onDone);
+
+        const cleanup = () => {
+            streamData.emitter.off('chunk', onChunk);
+            streamData.emitter.off('error', onError);
+            streamData.emitter.off('flowiseUnavailable', onFlowiseUnavailable);
+            streamData.emitter.off('done', onDone);
+        };
+
+        res.on('close', cleanup);
     },
 
     getModels: catchAsync(async (req, res, next) => {

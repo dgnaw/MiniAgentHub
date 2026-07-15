@@ -15,5 +15,6 @@ router.post('/chat',
     upload.array('files', 10), 
     aiController.chat
 );
+router.get('/chat/stream/:sessionId', checkPermission('CHAT'), aiController.reconnectStream);
 router.get('/models', aiController.getModels);
 module.exports = router;

@@ -1,5 +1,6 @@
 const chatService = require('../services/chatService');
 const catchAsync = require('../utils/catchAsync');
+const streamManager = require('../services/streamManager');
 
 const chatController = {
     getSessions: catchAsync(async (req, res, next) => {
@@ -47,6 +48,7 @@ const chatController = {
     }),
 
     truncateLastAIMessage: catchAsync(async (req, res, next) => {
+        streamManager.markAsStopped(req.params.id);
         const result = await chatService.truncateLastAIMessage(req.params.id, req.user.id, req.body.content);
         return res.status(200).json(result);
     })

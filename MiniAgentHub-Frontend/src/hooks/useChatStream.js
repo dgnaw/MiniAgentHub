@@ -18,7 +18,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
 
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // isLoading được derive trực tiếp từ Zustand — không dùng local state để tránh race condition
+  const isLoading = useGenerationStore(state => state.generatingSessions.has(sessionId));
   const [localError, setLocalError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
@@ -38,6 +39,17 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   useEffect(() => { 
     currentSessionIdRef.current = sessionId; 
     activeSessionIdRef.current = sessionId;
+    
+    // Abort bất kỳ reconnect stream nào đang chạy khi chuyển conversation
+    // Điều này giải phóng HTTP connection slot, tránh trường hợp bấm nhiều lần mới chuyển được
+    if (readerRef.current) {
+      readerRef.current.cancel().catch(() => {});
+      readerRef.current = null;
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     
     setInput('');
     setSelectedFiles([]);
@@ -64,7 +76,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       abortControllerRef.current = null;
     }
     isStoppedRef.current = true;
-    setIsLoading(false);
     
     const targetSessionId = activeSessionIdRef.current;
     if (targetSessionId) {
@@ -163,7 +174,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         textareaRef.current.style.height = 'auto';
       }
     }
-    setIsLoading(true);
     setLocalError('');
 
     let newSessionId = null;
@@ -227,6 +237,10 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
             isUnmountedRef.current
           ) {
              isDetached = true;
+             if (abortControllerRef.current) {
+                 abortControllerRef.current.abort();
+             }
+             break;
           }
 
           const { value, done } = await reader.read();
@@ -355,13 +369,17 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         setInput(textToSend.trim());
       }
     } finally {
-      useGenerationStore.getState().removeGeneration(originalSessionId);
-      if (newSessionId) useGenerationStore.getState().removeGeneration(newSessionId);
+      const targetSessionId = newSessionId || originalSessionId;
+      const isActuallyDetached = isDetached || isUnmountedRef.current || currentSessionIdRef.current !== targetSessionId;
+
+      if (!isActuallyDetached) {
+        useGenerationStore.getState().removeGeneration(originalSessionId);
+        if (newSessionId) useGenerationStore.getState().removeGeneration(newSessionId);
+      }
 
       const finalPath = window.location.pathname;
-      const targetSessionId = newSessionId || originalSessionId;
       const isPathDetached = !didAutoNavigate && targetSessionId && finalPath !== `/chat/${targetSessionId}`;
-      const shouldShowToast = isDetached || isUnmountedRef.current || isPathDetached;
+      const shouldShowToast = isActuallyDetached || isPathDetached;
 
       if (shouldShowToast && isDone) {
         toast.success(
@@ -380,7 +398,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       }
       
       if (!shouldShowToast) {
-        setIsLoading(false);
         abortControllerRef.current = null;
       }
     }
@@ -425,13 +442,111 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     return () => window.removeEventListener('reload-messages', handleReload);
   }, [sessionId]);
 
-  useEffect(() => {
-    if (useGenerationStore.getState().generatingSessions.has(sessionId)) {
-      setIsLoading(true);
-    } else {
-      setIsLoading(false);
-    }
+  const reconnectToStream = async (targetSessionId) => {
+    isStoppedRef.current = false;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    useGenerationStore.getState().addGeneration(targetSessionId, controller);
 
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat/stream/${targetSessionId}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[reconnect] Backend trả về lỗi:', response.status, errorText);
+        if (response.status === 404) {
+          console.log('[reconnect] Stream đã hoàn tất, reload messages...');
+          useGenerationStore.getState().removeGeneration(targetSessionId);
+          setTriggerReload(prev => prev + 1);
+          return;
+        }
+        throw new Error(`Không thể kết nối lại: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      readerRef.current = reader;
+      const decoder = new TextDecoder('utf-8');
+      let aiResponseText = '';
+      let buffer = '';
+      let isAiMessageAdded = false;
+      let isDone = false;
+
+      while (true) {
+        if (currentSessionIdRef.current !== targetSessionId || isUnmountedRef.current) {
+           if (abortControllerRef.current) {
+               abortControllerRef.current.abort();
+           }
+           break;
+        }
+
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '').trim();
+            if (dataStr === '[DONE]') { isDone = true; break; }
+            let streamError = null;
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.error) streamError = parsed.error;
+              if (parsed.chunk) {
+                if (!isAiMessageAdded) {
+                  setMessages((prev) => {
+                    const newMsgs = [...prev];
+                    if (newMsgs.length === 0 || newMsgs[newMsgs.length - 1].role !== 'ai') {
+                      newMsgs.push({ role: 'ai', content: '' });
+                    }
+                    return newMsgs;
+                  });
+                  isAiMessageAdded = true;
+                }
+
+                aiResponseText += parsed.chunk;
+                if (currentSessionIdRef.current === targetSessionId) {
+                  setMessages((prev) => {
+                    const newMsgs = [...prev];
+                    if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+                      newMsgs[newMsgs.length - 1].content = aiResponseText;
+                    }
+                    return newMsgs;
+                  });
+                }
+              }
+            } catch (e) {}
+            if (streamError) throw new Error(streamError);
+          }
+        }
+        if (isStoppedRef.current || isDone) break;
+      }
+      
+      if (isDone) {
+        useGenerationStore.getState().removeGeneration(targetSessionId);
+        window.dispatchEvent(new CustomEvent('sessions-updated'));
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError' && !error.message?.includes('aborted')) {
+        console.error("Lỗi khi reconnect chat:", error);
+        useGenerationStore.getState().removeGeneration(targetSessionId);
+      }
+    } finally {
+      readerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
     if (sessionId) {
       const fetchMessages = async () => {
         try {
@@ -445,6 +560,10 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
              setHasMoreMessages(false);
           }
           setChatPage(1);
+
+          if (useGenerationStore.getState().generatingSessions.has(sessionId)) {
+            reconnectToStream(sessionId);
+          }
         } catch (error) {
           console.error("Lỗi tải lịch sử tin nhắn:", error);
         }
