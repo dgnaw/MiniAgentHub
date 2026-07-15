@@ -1,6 +1,7 @@
 const aiService = require('../services/aiService');
 const chatService = require('../services/chatService');
 const userService = require('../services/userService');
+const aiFactory = require('../services/aiStrategies/aiFactory');
 const catchAsync = require('../utils/catchAsync');
 
 const cleanBase64Images = (text) => {
@@ -60,57 +61,38 @@ const aiController = {
             res.write(`data: ${JSON.stringify({ sessionId: currentSessionId })}\n\n`);
 
             aiResponse = "";
-            let flowiseFailed = false;
 
-            if (model === "Data Analyst") {
-                const flowiseStream = aiService.chatWithFlowiseStream(fileData.processedMessage, currentSessionId, fileData.flowiseUploads, customFlowiseUrl);
-                for await (const event of flowiseStream) {
-                    if (clientDisconnected || req.socket?.destroyed) {
-                        clientDisconnected = true;
-                        break;
-                    }
-                    if (event.failed) {
-                        flowiseFailed = true;
-                        const errMsg = event.errorMessage || 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.';
-                        res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
-                        break;
-                    }
-                    if (event.chunk) {
-                        aiResponse += event.chunk;
-                        if (!clientDisconnected) {
-                            res.write(`data: ${JSON.stringify({ chunk: event.chunk })}\n\n`);
-                        }
-                    }
+            const strategyParams = {
+                model,
+                userId,
+                currentSessionId,
+                processedMessage: fileData.processedMessage,
+                flowiseUploads: fileData.flowiseUploads,
+                customFlowiseUrl,
+                customGroqKey,
+                cleanBase64Images,
+                t: req.t
+            };
+
+            const chatStrategy = aiFactory.getChatStrategy(model);
+            const stream = chatStrategy(strategyParams);
+
+            for await (const event of stream) {
+                if (clientDisconnected || req.socket?.destroyed) {
+                    clientDisconnected = true;
+                    break;
                 }
-            }
-
-            if (model !== "Data Analyst") {
-                const messagesForAI = await aiService.buildMessagesForAI(userId, currentSessionId, fileData.processedMessage, cleanBase64Images);
-
-                try {
-                    const stream = await aiService.chatWithAIStream(messagesForAI, model, customGroqKey);
-                    for await (const chunk of stream) {
-                        if (clientDisconnected || req.socket?.destroyed) {
-                            clientDisconnected = true;
-                            break;
-                        }
-                        const content = chunk.choices[0]?.delta?.content || "";
-                        if (content) {
-                            aiResponse += content;
-                            if (!clientDisconnected) {
-                                res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
-                            }
-                        }
+                
+                if (event.error) {
+                    res.write(`data: ${JSON.stringify({ error: event.error })}\n\n`);
+                    break;
+                }
+                
+                if (event.chunk) {
+                    aiResponse += event.chunk;
+                    if (!clientDisconnected) {
+                        res.write(`data: ${JSON.stringify({ chunk: event.chunk })}\n\n`);
                     }
-                } catch (groqError) {
-                    console.error('Lỗi khi gọi Groq:', groqError.message);
-                    let errMsg;
-                    if (groqError.message?.includes('API Key') || groqError.status === 401) {
-                        errMsg = req.t('ai.apiKeyInvalid');
-                    } else {
-                        errMsg = `${req.t('server.internalError')}: ${groqError.message || 'Không thể kết nối tới AI.'}`;
-                    }
-                    res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
                 }
             }
 

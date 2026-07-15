@@ -6,7 +6,7 @@ const Tesseract = require('tesseract.js');
 const AppError = require('../utils/AppError');
 const aiPrompts = require('../utils/aiPrompts');
 const chatService = require('./chatService');
-const { createParser } = require('eventsource-parser');
+
 const crypto = require('crypto');
 const redisClient = require('../config/redis');
 
@@ -120,138 +120,6 @@ const aiService = {
         }
     },
 
-    chatWithFlowiseStream: async function* (message, sessionId, uploads = [], customFlowiseUrl) {
-        const flowiseUrl = customFlowiseUrl || process.env.FLOWISE_API_URL;
-        const payload = {
-            question: message,
-            streaming: true,
-            overrideConfig: { sessionId }
-        };
-
-        if (uploads && uploads.length > 0) {
-            payload.uploads = uploads;
-        }
-
-        let response;
-        try {
-            response = await fetch(flowiseUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-        } catch (err) {
-            console.error('Lỗi kết nối Flowise:', err.message);
-            yield { failed: true };
-            return;
-        }
-
-        if (!response.ok) {
-            const errBody = await response.text().catch(() => '');
-            console.error('Flowise trả về lỗi HTTP:', response.status, errBody.substring(0, 200));
-            yield { failed: true };
-            return;
-        }
-
-        const contentType = response.headers.get('content-type') || '';
-
-        if (!contentType.includes('text/event-stream')) {
-            try {
-                const rawText = await response.text();
-                const json = JSON.parse(rawText);
-                const text = json.text || json.answer || json.output || json.result || JSON.stringify(json);
-                if (typeof text === 'string' && (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html'))) {
-                    yield { failed: true };
-                } else {
-                    yield { chunk: text };
-                }
-            } catch {
-                yield { failed: true };
-            }
-            return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-
-        const FLOWISE_STATUS_STRINGS = new Set([
-            'INProgress', 'done', 'start', 'end', 'error',
-            '[DONE]', 'true', 'false', 'null', ''
-        ]);
-
-        let streamFailed = false;
-        let errorMessage = null;
-        let parsedEvents = [];
-
-        const parser = createParser({
-            onEvent: (event) => {
-                parsedEvents.push(event);
-            }
-        });
-
-        try {
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                const rawChunk = decoder.decode(value, { stream: true });
-                parser.feed(rawChunk);
-
-                for (const event of parsedEvents) {
-                    if (event.event === 'error') {
-                        try {
-                            const errParsed = JSON.parse(event.data);
-                            errorMessage = errParsed.data || errParsed.message || 'Flowise error';
-                        } catch {
-                            errorMessage = event.data || 'Flowise error';
-                        }
-                        streamFailed = true;
-                        continue;
-                    }
-
-                    if (event.event && event.event !== 'token') continue;
-
-                    const dataStr = event.data;
-                    if (!dataStr || FLOWISE_STATUS_STRINGS.has(dataStr) || dataStr === '[DONE]') continue;
-
-                    try {
-                        const parsed = JSON.parse(dataStr);
-
-                        if (typeof parsed === 'string') {
-                            if (!FLOWISE_STATUS_STRINGS.has(parsed)) {
-                                yield { chunk: parsed };
-                            }
-                            continue;
-                        }
-
-                        if (parsed.event === 'error') {
-                            errorMessage = parsed.data || parsed.message || 'Flowise error';
-                            streamFailed = true;
-                            continue;
-                        }
-                        if (parsed.event && parsed.event !== 'token') continue;
-                        const token = parsed.data ?? parsed.token ?? parsed.text ?? null;
-                        if (typeof token === 'string' && !FLOWISE_STATUS_STRINGS.has(token)) {
-                            yield { chunk: token };
-                        }
-                    } catch {
-                        if (!FLOWISE_STATUS_STRINGS.has(dataStr)) {
-                            yield { chunk: dataStr };
-                        }
-                    }
-                }
-                
-                parsedEvents = [];
-                
-                if (streamFailed) {
-                    yield { failed: true, errorMessage };
-                    return;
-                }
-            }
-        } catch (err) {
-            console.error('Lỗi khi đọc stream Flowise:', err.message);
-            yield { failed: true };
-        }
-    },
 
     buildMessagesForAI: async (userId, currentSessionId, processedMessage, cleanBase64ImagesFn) => {
         const pastMessages = await chatService.getSessionMessages(currentSessionId, userId);
