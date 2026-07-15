@@ -49,7 +49,6 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
         }
       }
 
-      // Nếu không có thay đổi nào (chỉ truyền lên key đã mask) thì không cần gọi API cập nhật key đó
       if (Object.keys(payload).length === 0) {
         onSuccess();
         onClose();
@@ -67,31 +66,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
     }
   };
 
-  const clearApiKeyConfig = async () => {
-    if (!user?.id) return;
-    setIsLoading(true);
-    try {
-      const payload = {};
-      if (type === 'groq') {
-        payload.groq_api_key = null;
-      } else {
-        payload.flowise_api_url = null;
-      }
 
-      await axiosClient.put(`/users/${user.id}`, payload);
-      
-      if (type === 'groq') setTempApiKey('');
-      else setTempApiUrl('');
-
-      toast.success(type === 'groq' ? t('dashboard.deleteGroqKeySuccess') : t('dashboard.deleteFlowiseUrlSuccess'));
-      onSuccess();
-      onClose();
-    } catch (error) {
-      toast.error(error.message || 'Lỗi khi xóa cấu hình.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
@@ -122,7 +97,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
         <div className="space-y-4 mb-6">
           {type === 'groq' ? (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.groqApiKeyLabel')}</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.groqApiKeyLabel')} <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={tempApiKey}
@@ -135,7 +110,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.flowiseApiUrlLabel')}</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('dashboard.flowiseApiUrlLabel')} <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={tempApiUrl}
@@ -150,13 +125,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
         </div>
 
         <div className="flex gap-3 justify-end items-center">
-          <button
-            onClick={clearApiKeyConfig}
-            disabled={isLoading}
-            className="px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
-          >
-            {t('dashboard.clearConfig')}
-          </button>
+
           <div className="flex gap-2">
             <button
               onClick={onClose}
@@ -167,7 +136,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
             </button>
             <button
               onClick={saveApiKeyConfig}
-              disabled={isLoading}
+              disabled={isLoading || (type === 'groq' ? !tempApiKey.trim() || tempApiKey === '••••••••••••••••••••••••••••' : !tempApiUrl.trim() || tempApiUrl === '••••••••••••••••••••••••••••')}
               className={`px-5 py-2.5 text-sm font-medium text-white rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 ${type === 'groq' ? 'bg-[#3b82f6] hover:bg-[#2563eb]' : 'bg-[#10b981] hover:bg-[#059669]'}`}
             >
               {t('dashboard.saveConfig')}

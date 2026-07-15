@@ -97,6 +97,7 @@
     "errorMatch": "Mật khẩu xác nhận không khớp.",
     "success": "Đổi mật khẩu thành công!",
     "errorChange": "Lỗi khi đổi mật khẩu.",
+    "errorSameAsOld": "Mật khẩu mới không được trùng với mật khẩu cũ.",
     "saving": "Đang lưu..."
   },
 
@@ -366,7 +367,8 @@
     "copiedMessage": "Đã copy tin nhắn!",
     "edit": "Chỉnh sửa",
     "generationComplete": "Câu trả lời ở phiên trước đã hoàn thành!",
-    "generationStopped": "Đã dừng tạo câu trả lời."
+    "generationStopped": "Đã dừng tạo câu trả lời.",
+    "generationStoppedByUser": "*(Đã bị dừng bởi người dùng)*"
   },
   "errorBoundary": {
     "title": "Đã có lỗi xảy ra!",

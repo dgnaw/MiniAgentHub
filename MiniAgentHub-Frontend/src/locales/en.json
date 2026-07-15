@@ -14,6 +14,7 @@
     "errorMatch": "Passwords do not match.",
     "success": "Password changed successfully!",
     "errorChange": "Error changing password.",
+    "errorSameAsOld": "New password cannot be the same as the old password.",
     "saving": "Saving..."
   },
 
@@ -204,7 +205,8 @@
     "copiedMessage": "Copied message!",
     "edit": "Edit",
     "generationComplete": "The previous session's response is complete!",
-    "generationStopped": "Response generation stopped."
+    "generationStopped": "Response generation stopped.",
+    "generationStoppedByUser": "*(Stopped by user)*"
   },
 
   "groupManagement": {
@@ -212,7 +214,7 @@
     "description": "Monitor and coordinate high-performance work groups. View active groups, manage permissions, and inspect member hierarchy.",
     "createNewGroup": "Create New Group",
     "activeGroups": "Active Groups",
-    "total": "TOTAL",
+    "total": "Total:",
     "groupName": "Group Name",
     "memberCount": "Member Count",
     "actions": "Actions",

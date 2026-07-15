@@ -12,7 +12,7 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
   (config) => {
-    const language = localStorage.getItem('language') || localStorage.getItem('i18nextLng') || 'vi';
+    const language = localStorage.getItem('language') || localStorage.getItem('i18nextLng') || 'en';
     config.headers['Accept-Language'] = language;
     config.params = { ...config.params, lng: language };
 

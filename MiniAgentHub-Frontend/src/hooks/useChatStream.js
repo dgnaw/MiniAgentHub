@@ -38,6 +38,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
   useEffect(() => { 
     currentSessionIdRef.current = sessionId; 
     activeSessionIdRef.current = sessionId;
+    
+    setInput('');
+    setSelectedFiles([]);
   }, [sessionId]);
   
   const isUnmountedRef = useRef(false);
@@ -69,8 +72,17 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       
       const currentMsgs = latestMessages.current;
       if (currentMsgs && currentMsgs.length > 0 && currentMsgs[currentMsgs.length - 1].role === 'ai') {
-        const truncatedContent = currentMsgs[currentMsgs.length - 1].content;
+        const stopLabel = `\n\n${t('chat.generationStoppedByUser')}`;
+        const truncatedContent = currentMsgs[currentMsgs.length - 1].content + stopLabel;
         
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+            newMsgs[newMsgs.length - 1].content = truncatedContent;
+          }
+          return newMsgs;
+        });
+
         setTimeout(async () => {
           try {
             await axiosClient.put(`/chat-sessions/${targetSessionId}/truncate-last-message`, {
@@ -82,7 +94,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         }, 1000);
       }
     }
-    toast.success(t('chat.generationStopped'));
   };
 
   const handleSend = async (customMessage, isEdit = false, editIdx = null) => {
@@ -136,15 +147,12 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
 
     const userMessage = { role: 'user', content: finalContent };
     
-    // Kiểm tra xem tin nhắn được edit có phải là tin nhắn cuối cùng (hoặc áp chót nếu đã có AI trả lời) không
     const isLastMessage = isEdit && (editIdx >= messages.length - 2);
 
     if (isLastMessage) {
-      // Nếu là tin nhắn cuối: cập nhật tại chỗ (xóa tin nhắn cũ và câu trả lời AI cũ tương ứng)
       setMessages((prev) => [...prev.slice(0, editIdx), userMessage]);
       setEditingIndex(null);
     } else if (isEdit) {
-      // Nếu là tin nhắn ở giữa lịch sử: copy xuống dưới cùng thành một cuộc hội thoại mới
       setMessages((prev) => [...prev, userMessage]);
       setEditingIndex(null);
     } else {
@@ -327,15 +335,25 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       }
       console.error("Lỗi khi chat:", error);
       
-      // Khôi phục lại input của người dùng nhưng KHÔNG lưu error vào messages
+      const errorMsg = error.message || 'Đã xảy ra lỗi khi kết nối server.';
+      
+      // Hiển thị lỗi thẳng vào khung chat AI thay vì toast
+      setMessages((prev) => {
+        const newMsgs = [...prev];
+        if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
+          newMsgs[newMsgs.length - 1].content = newMsgs[newMsgs.length - 1].content + `\n\n*(Lỗi: ${errorMsg})*`;
+        } else {
+          newMsgs.push({ role: 'ai', content: `*(Lỗi: ${errorMsg})*` });
+        }
+        return newMsgs;
+      });
+
       if (isEdit) {
         setEditInput(textToSend.trim());
         setEditingIndex(editIdx);
       } else {
         setInput(textToSend.trim());
       }
-      setLocalError(error.message || 'Đã xảy ra lỗi khi kết nối server.');
-      setTimeout(() => setLocalError(''), 7000);
     } finally {
       useGenerationStore.getState().removeGeneration(originalSessionId);
       if (newSessionId) useGenerationStore.getState().removeGeneration(newSessionId);
@@ -345,7 +363,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       const isPathDetached = !didAutoNavigate && targetSessionId && finalPath !== `/chat/${targetSessionId}`;
       const shouldShowToast = isDetached || isUnmountedRef.current || isPathDetached;
 
-      // Chỉ hiện thông báo nếu hoàn thành thành công và đang ở trang khác
       if (shouldShowToast && isDone) {
         toast.success(
           t('chat.generationComplete'),
@@ -376,7 +393,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     }
   };
 
-  // Drag and Drop
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -439,7 +455,6 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       setHasMoreMessages(false);
       setChatPage(1);
     }
-    // Không dùng handleStop ở đây nữa để giữ kết nối ngầm khi chuyển trang
   }, [sessionId, triggerReload]);
 
   const loadMoreMessages = async () => {

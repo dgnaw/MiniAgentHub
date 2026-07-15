@@ -26,8 +26,10 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
     return val ? '' : t('change-password-modal.errorOld');
   };
 
-  const validateNewPassword = (val) => {
-    return val.length >= 6 ? '' : t('change-password-modal.errorLength');
+  const validateNewPassword = (val, currentOld) => {
+    if (val.length < 6) return t('change-password-modal.errorLength');
+    if (val === currentOld) return t('change-password-modal.errorSameAsOld');
+    return '';
   };
 
   const validateConfirmPassword = (val, newPwd) => {
@@ -40,7 +42,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
     setPasswordSuccess('');
 
     const oErr = validateOldPassword(oldPassword);
-    const nErr = validateNewPassword(newPassword);
+    const nErr = validateNewPassword(newPassword, oldPassword);
     const cErr = validateConfirmPassword(confirmPassword, newPassword);
 
     if (oErr || nErr || cErr) {
@@ -88,7 +90,7 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity p-4">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity p-4">
       <div className="bg-white dark:bg-[#1a1b20] border border-gray-200 dark:border-[#26272b] rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
         <button
           onClick={handleClose}
@@ -127,12 +129,12 @@ const ChangePasswordModal = ({ isOpen, onClose, isForced = false }) => {
               value={newPassword}
               onChange={(e) => {
                 setNewPassword(e.target.value);
-                setNewPasswordError(validateNewPassword(e.target.value));
+                setNewPasswordError(validateNewPassword(e.target.value, oldPassword));
                 if (confirmPassword) {
                   setConfirmPasswordError(validateConfirmPassword(confirmPassword, e.target.value));
                 }
               }}
-              onBlur={(e) => setNewPasswordError(validateNewPassword(e.target.value))}
+              onBlur={(e) => setNewPasswordError(validateNewPassword(e.target.value, oldPassword))}
               placeholder={t('change-password-modal.placeholderNewPassword')}
               className={`w-full bg-gray-50 dark:bg-[#131417] border ${newPasswordError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-[#333] focus:border-blue-500 focus:ring-1 focus:ring-blue-500'} rounded-lg px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none transition-colors`}
               required
