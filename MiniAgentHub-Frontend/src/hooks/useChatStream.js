@@ -292,7 +292,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                       content: aiResponseText
                     };
                     
-                    const isActive = currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId;
+                    const isActive = !isUnmountedRef.current && (currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId);
                     
                     const targetSessionId = newSessionId || originalSessionId;
                     if (targetSessionId) {
@@ -343,7 +343,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       const targetSessionId = newSessionId || originalSessionId || 'new';
       backgroundStreams.set(targetSessionId, currentMessages);
       
-      const isActive = currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId;
+      const isActive = !isUnmountedRef.current && (currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId);
       if (isActive) {
         setMessages([...currentMessages]);
       }

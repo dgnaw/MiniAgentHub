@@ -6,65 +6,70 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 
-
 const chatService = {
     prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
-        let currentSessionId = sessionId;
-        let isNewSession = false;
-        let userMessageRecord = null;
+        const transaction = await sequelize.transaction();
+        try {
+            let currentSessionId = sessionId;
+            let isNewSession = false;
+            let userMessageRecord = null;
 
-        if (!currentSessionId) {
-            let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : "");
-            try {
-                const aiService = require('./aiService'); 
-                const aiTitle = await aiService.generateTitle(cleanMessage, customGroqKey);
-                if (aiTitle) title = aiTitle;
-            } catch (error) { }
+            if (!currentSessionId) {
+                let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : "");
+                try {
+                    const aiService = require('./aiService'); 
+                    const aiTitle = await aiService.generateTitle(cleanMessage, customGroqKey);
+                    if (aiTitle) title = aiTitle;
+                } catch (error) { }
 
-            const newSession = await ChatSession.create({ user_id: userId, title: title });
-            currentSessionId = newSession.id;
-            isNewSession = true;
-        } else {
-            const session = await ChatSession.findOne({ where: { id: currentSessionId, user_id: userId } });
-            if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
+                const newSession = await ChatSession.create({ user_id: userId, title: title }, { transaction });
+                currentSessionId = newSession.id;
+                isNewSession = true;
+            } else {
+                const session = await ChatSession.findOne({ where: { id: currentSessionId, user_id: userId }, transaction });
+                if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
 
-            if (parsedEditIndex === undefined) {
-                const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId } });
-                if (messageCount >= 100) {
-                    throw new AppError('chat.limitExceeded', 'BAD_REQUEST');
+                if (parsedEditIndex === undefined) {
+                    const messageCount = await ChatMessage.count({ where: { session_id: currentSessionId }, transaction });
+                    if (messageCount >= 100) {
+                        throw new AppError('chat.limitExceeded', 'BAD_REQUEST');
+                    }
                 }
+                await ChatSession.update(
+                    { updated_at: sequelize.literal('CURRENT_TIMESTAMP') },
+                    { where: { id: currentSessionId }, transaction }
+                );
             }
-            await ChatSession.update(
-                { updated_at: sequelize.literal('CURRENT_TIMESTAMP') },
-                { where: { id: currentSessionId } }
-            );
-        }
 
-        if (parsedEditIndex !== undefined && !isNaN(parsedEditIndex) && currentSessionId && !isNewSession) {
-            const pastMsgs = await ChatMessage.findAll({
-                where: { session_id: currentSessionId },
-                order: [['created_at', 'ASC']]
-            });
+            if (parsedEditIndex !== undefined && !isNaN(parsedEditIndex) && currentSessionId && !isNewSession) {
+                const pastMsgs = await ChatMessage.findAll({
+                    where: { session_id: currentSessionId },
+                    order: [['created_at', 'ASC']],
+                    transaction
+                });
 
-            if (pastMsgs[parsedEditIndex] && pastMsgs[parsedEditIndex].role === 'user') {
-                const msgToEdit = pastMsgs[parsedEditIndex];
-                await ChatMessage.update({ content: messageToSave }, { where: { id: msgToEdit.id } });
-                userMessageRecord = await ChatMessage.findByPk(msgToEdit.id);
+                if (pastMsgs[parsedEditIndex] && pastMsgs[parsedEditIndex].role === 'user') {
+                    const msgToEdit = pastMsgs[parsedEditIndex];
+                    await ChatMessage.update({ content: messageToSave }, { where: { id: msgToEdit.id }, transaction });
+                    userMessageRecord = await ChatMessage.findByPk(msgToEdit.id, { transaction });
 
-                const messagesToDelete = pastMsgs.slice(parsedEditIndex + 1).map(m => m.id);
-                if (messagesToDelete.length > 0) {
-                    await ChatMessage.destroy({ where: { id: messagesToDelete } });
+                    const messagesToDelete = pastMsgs.slice(parsedEditIndex + 1).map(m => m.id);
+                    if (messagesToDelete.length > 0) {
+                        await ChatMessage.destroy({ where: { id: messagesToDelete }, transaction });
+                    }
+                } else {
+                    userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave }, { transaction });
                 }
             } else {
-                userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave });
+                userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave }, { transaction });
             }
-        } else {
-            userMessageRecord = await ChatMessage.create({ session_id: currentSessionId, role: 'user', content: messageToSave });
+
+            await transaction.commit();
+            return { currentSessionId, isNewSession, userMessageRecord };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
-
-
-
-        return { currentSessionId, isNewSession, userMessageRecord };
     },
 
     saveAIMessage: async (sessionId, aiResponse) => {

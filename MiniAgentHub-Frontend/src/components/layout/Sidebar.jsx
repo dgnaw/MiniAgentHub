@@ -184,7 +184,7 @@ function Sidebar() {
     const baseClass = isActive 
       ? "bg-blue-50 dark:bg-[#1a233a] text-blue-600 dark:text-blue-400"
       : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] hover:text-gray-900 dark:hover:text-gray-200";
-    return `flex items-center gap-3 ${isCollapsed ? 'md:justify-center md:gap-0 md:px-0 px-4' : 'px-4'} w-full py-3 rounded-lg cursor-pointer transition-colors ${baseClass}`;
+    return `flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 px-4' : 'px-4'} w-full py-3 rounded-lg cursor-pointer transition-colors ${baseClass}`;
   };
 
   const handleDeleteSession = async (e, sessionId) => {
@@ -259,7 +259,7 @@ function Sidebar() {
   return (
     <>
       {/* Mobile Top Header Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white/90 dark:bg-[#131417]/90 backdrop-blur-md border-b border-gray-200 dark:border-[#26272b] z-30 flex items-center justify-between px-4 shadow-sm">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white/90 dark:bg-[#131417]/90 backdrop-blur-md border-b border-gray-200 dark:border-[#26272b] z-30 flex items-center justify-between px-4 shadow-sm">
         <div className="flex items-center">
           <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#26272b] rounded-lg transition-colors">
             <Menu size={22} />
@@ -270,22 +270,22 @@ function Sidebar() {
 
       {/* Overlay tối mờ khi mở Sidebar trên Mobile */}
       {isMobileOpen && (
-        <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMobileOpen(false)} />
+        <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMobileOpen(false)} />
       )}
 
-      <div className={`fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-all duration-300 ${isCollapsed ? 'w-80 md:w-20' : 'w-80'} bg-white dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col text-gray-900 dark:text-white shrink-0`}>
+      <div className={`fixed inset-y-0 left-0 z-50 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-all duration-300 ${isCollapsed ? 'w-80 lg:w-20' : 'w-80'} bg-white dark:bg-[#0d0d0d] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col text-gray-900 dark:text-white shrink-0`}>
       <div className="p-6 flex-1 flex flex-col min-h-0">
-        <div className={`flex items-center ${isCollapsed ? 'md:justify-center justify-between' : 'justify-between'} mb-8 shrink-0`}>
-          <h2 className={`text-xl font-bold text-gray-900 dark:text-white tracking-wide truncate ${isCollapsed ? 'md:hidden' : ''}`}>Agent Hub</h2>
+        <div className={`flex items-center ${isCollapsed ? 'lg:justify-center justify-between' : 'justify-between'} mb-8 shrink-0`}>
+          <h2 className={`text-xl font-bold text-gray-900 dark:text-white tracking-wide truncate ${isCollapsed ? 'lg:hidden' : ''}`}>Agent Hub</h2>
           <div className="flex items-center gap-2">
             <button 
               onClick={toggleSidebar}
-              className={`hidden md:flex p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-[#26272b] transition-colors ${isCollapsed ? '' : '-mr-2'}`}
+              className={`hidden lg:flex p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-[#26272b] transition-colors ${isCollapsed ? '' : '-mr-2'}`}
               title={isCollapsed ? "Mở rộng Sidebar" : "Thu gọn Sidebar"}
             >
               {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
             </button>
-            <button className="md:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" onClick={() => setIsMobileOpen(false)}>
+            <button className="lg:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" onClick={() => setIsMobileOpen(false)}>
               <X size={20} />
             </button>
           </div>
@@ -297,7 +297,7 @@ function Sidebar() {
             className={`${getNavClass('/')} shrink-0`}
           >
             <MessageSquare size={20} />
-            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.chat')}</span>
+            <span className={`font-medium text-sm ${isCollapsed ? 'lg:hidden' : ''}`}>{t('sidebar.chat')}</span>
           </div>
 
           {(user?.role === 'Admin' || permissions.includes('USER_R') || permissions.includes('USER_U')) && (
@@ -306,7 +306,7 @@ function Sidebar() {
               className={`${getNavClass('/users')} shrink-0`}
             >
               <User size={20} />
-              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.users')}</span>
+              <span className={`font-medium text-sm ${isCollapsed ? 'lg:hidden' : ''}`}>{t('sidebar.users')}</span>
             </div>
           )}
 
@@ -316,7 +316,7 @@ function Sidebar() {
               className={`${getNavClass('/groups')} shrink-0`}
             >
               <Users size={20} />
-              <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.group')}</span>
+              <span className={`font-medium text-sm ${isCollapsed ? 'lg:hidden' : ''}`}>{t('sidebar.group')}</span>
             </div>
           )}
 
@@ -325,12 +325,12 @@ function Sidebar() {
             className={`${getNavClass('/settings')} shrink-0`}
           >
             <Settings size={20} />
-            <span className={`font-medium text-sm ${isCollapsed ? 'md:hidden' : ''}`}>{t('sidebar.setting')}</span>
+            <span className={`font-medium text-sm ${isCollapsed ? 'lg:hidden' : ''}`}>{t('sidebar.setting')}</span>
           </div>
 
           {sessions.length > 0 && (
             <div className="mt-4 border-t border-gray-100 dark:border-gray-800/60 pt-4 flex flex-col flex-1 min-h-0">
-              <div className={`justify-center w-full ${isCollapsed ? 'hidden md:flex' : 'hidden'}`}>
+              <div className={`justify-center w-full ${isCollapsed ? 'hidden lg:flex' : 'hidden'}`}>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
@@ -349,7 +349,7 @@ function Sidebar() {
                 </button>
               </div>
 
-              <div className={`flex-col flex-1 min-h-0 ${isCollapsed ? 'flex md:hidden' : 'flex'}`}>
+              <div className={`flex-col flex-1 min-h-0 ${isCollapsed ? 'flex lg:hidden' : 'flex'}`}>
                   <div 
                     className="pb-2 px-4 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider shrink-0 flex items-center justify-between cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
@@ -380,7 +380,7 @@ function Sidebar() {
                     <MessageSquare size={16} className="shrink-0 text-gray-400" />
                     
                     {editingSessionId === session.id ? (
-                      <div className={`flex items-center gap-2 flex-1 w-full ${isCollapsed ? 'md:hidden' : ''}`} onClick={e => e.stopPropagation()}>
+                      <div className={`flex items-center gap-2 flex-1 w-full ${isCollapsed ? 'lg:hidden' : ''}`} onClick={e => e.stopPropagation()}>
                         <input
                           type="text"
                           value={editTitle}
@@ -397,13 +397,13 @@ function Sidebar() {
                       </div>
                     ) : (
                       <>
-                        <span className={`font-medium text-sm truncate flex-1 ${isCollapsed ? 'md:hidden' : ''}`}>{session.title}</span>
+                        <span className={`font-medium text-sm truncate flex-1 ${isCollapsed ? 'lg:hidden' : ''}`}>{session.title}</span>
                         
                         {generatingSessions.has(session.id) && session.id !== currentSessionId && (
-                          <Loader2 size={14} className={`animate-spin text-blue-500 shrink-0 ${isCollapsed ? 'md:hidden' : ''} mr-1`} />
+                          <Loader2 size={14} className={`animate-spin text-blue-500 shrink-0 ${isCollapsed ? 'lg:hidden' : ''} mr-1`} />
                         )}
 
-                        <div className={`opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''} ${isCollapsed ? 'md:hidden' : ''}`}>
+                        <div className={`opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''} ${isCollapsed ? 'lg:hidden' : ''}`}>
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -451,13 +451,13 @@ function Sidebar() {
       </div>
 
       {user && (
-        <div className={`p-4 border-t border-gray-200 dark:border-gray-800 flex items-center ${isCollapsed ? 'md:justify-center' : 'justify-between'} shrink-0`}>
-          <div className={`flex items-center gap-3 min-w-0 flex-1 ${isCollapsed ? 'md:px-0' : 'px-2'}`}>
+        <div className={`p-4 border-t border-gray-200 dark:border-gray-800 flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'} shrink-0`}>
+          <div className={`flex items-center gap-3 min-w-0 flex-1 ${isCollapsed ? 'lg:px-0' : 'px-2'}`}>
             <div className="w-10 h-10 shrink-0 rounded-full bg-gray-100 dark:bg-[#2a2a2a] flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
               <User size={20} />
             </div>
             
-            <div className={`flex flex-col text-left overflow-hidden min-w-0 ${isCollapsed ? 'md:hidden' : ''}`}>
+            <div className={`flex flex-col text-left overflow-hidden min-w-0 ${isCollapsed ? 'lg:hidden' : ''}`}>
               <span className="text-gray-900 dark:text-white text-sm font-semibold truncate">
                 {user.full_name}
               </span>
@@ -469,7 +469,7 @@ function Sidebar() {
 
           <button 
             onClick={handleLogout}
-            className={`text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors shrink-0 ml-1 ${isCollapsed ? 'md:hidden' : ''}`}
+            className={`text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors shrink-0 ml-1 ${isCollapsed ? 'lg:hidden' : ''}`}
             title={t('sidebar.logoutTitle')}
           >
             <LogOut size={18} />
@@ -528,7 +528,7 @@ function Sidebar() {
                   {generatingSessions.has(session.id) && session.id !== currentSessionId && (
                     <Loader2 size={14} className="animate-spin text-blue-500 shrink-0 mr-1" />
                   )}
-                  <div className={`opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
+                  <div className={`opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center shrink-0 ${activeMenuId === session.id ? 'opacity-100' : ''}`}>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();

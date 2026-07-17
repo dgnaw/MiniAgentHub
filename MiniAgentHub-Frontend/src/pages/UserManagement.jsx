@@ -226,7 +226,7 @@ const UserManagement = () => {
   return (
     <div className="flex h-[100dvh] bg-gray-50 dark:bg-[#131417] text-gray-900 dark:text-white font-sans overflow-hidden">
         <Sidebar />
-      <div className="flex-1 p-4 pt-20 md:p-10 overflow-y-auto min-w-0">
+      <div className="flex-1 p-4 pt-20 lg:p-10 overflow-y-auto min-w-0">
       <div className="max-w-6xl mx-auto">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-6 md:mb-8">

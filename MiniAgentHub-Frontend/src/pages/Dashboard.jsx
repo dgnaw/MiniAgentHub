@@ -102,7 +102,7 @@ const Dashboard = () => {
       )}
 
       <main className="flex-1 flex flex-col relative overflow-hidden">
-        <header className="flex justify-end p-4 pt-16 md:p-6 md:pt-6 shrink-0 z-10">
+        <header className="flex justify-end p-4 pt-16 lg:p-6 lg:pt-6 shrink-0 z-10">
           <ModelSelector
             selectedModel={selectedModel}
             setSelectedModel={setSelectedModel}

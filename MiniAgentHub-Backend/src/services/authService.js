@@ -44,7 +44,8 @@ const loginUser = async (email, password) => {
     const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
     const refreshToken = jwt.sign({ id: user.id }, refreshSecret, { expiresIn: '7d' });
 
-    user.refresh_token = refreshToken;
+    const salt = await bcrypt.genSalt(10);
+    user.refresh_token = await bcrypt.hash(refreshToken, salt);
     
     const [rolewithPerms, userWithGroups] = await Promise.all([
         Role.findByPk(user.role_id, {
@@ -94,11 +95,17 @@ const refreshAccessToken = async (refreshToken) => {
     }
 
     const user = await User.findOne({
-        where: { id: decoded.id, refresh_token: refreshToken },
+        where: { id: decoded.id },
         include: [{ model: Role }]
     });
-    if (!user) {
+
+    if (!user || !user.refresh_token) {
         throw new AppError('auth.refreshTokenNotFound', 'FORBIDDEN');
+    }
+
+    const isMatch = await bcrypt.compare(refreshToken, user.refresh_token);
+    if (!isMatch) {
+        throw new AppError('auth.refreshTokenInvalid', 'FORBIDDEN');
     }
 
     if (!user.is_active) {

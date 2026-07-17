@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import toast from 'react-hot-toast';
 import { Check, Copy, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -65,7 +66,7 @@ const AiMessage = React.memo(({ content, index }) => {
     <div className="flex flex-col items-start w-full">
       <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm break-words overflow-x-auto">
         <ReactMarkdown
-          rehypePlugins={[rehypeRaw]}
+          rehypePlugins={[rehypeRaw, rehypeSanitize]}
           components={{
             p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
             ul: ({ node, ...props }) => <ul className="list-disc ml-5 mb-2 space-y-1" {...props} />,

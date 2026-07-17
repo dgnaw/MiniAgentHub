@@ -200,7 +200,7 @@
     "description": "Giám sát và điều phối các nhóm làm việc hiệu suất cao. Xem các nhóm đang hoạt động, quản lý quyền và kiểm tra hệ thống phân cấp thành viên.",
     "createNewGroup": "Tạo nhóm mới",
     "activeGroups": "Nhóm đang hoạt động",
-    "total": "TỔNG SỐ",
+    "total": "Tổng số:",
     "groupName": "Tên nhóm",
     "memberCount": "Số lượng thành viên",
     "actions": "Thao tác",
