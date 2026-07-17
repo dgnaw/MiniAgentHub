@@ -85,10 +85,11 @@ const chatService = {
         if (lastMessage) {
             lastMessage.content = content;
             await lastMessage.save();
-
             return { message: 'chat.truncateSuccess' };
         }
-        return { message: 'chat.noAIMessageFound' };
+        
+        await ChatMessage.create({ session_id: sessionId, role: 'ai', content });
+        return { message: 'chat.truncateSuccess' };
     },
 
     cleanupOnError: async (userMessageRecord, isNewSession, currentSessionId, parsedEditIndex) => {
