@@ -59,7 +59,7 @@ Dự án được chia làm 2 phân hệ chính:
 
 ![Flowise Flow](./assets/flowise-flow.png)
 
-### 3. Quyết định Thiết kế CSDL (Design Decisions)
+### 3. Quyết định Thiết kế & Kiến trúc (Architecture Decisions)
 
 - **Tách biệt `chat_sessions` và `chat_messages`:**
   Thay vì gộp chung, việc chia thành 2 bảng (quan hệ 1-N) giúp tối ưu tốc độ tải giao diện (Sidebar chỉ cần query tiêu đề Session thay vì quét hàng ngàn tin nhắn), tránh lặp dữ liệu và giúp cô lập ngữ cảnh (Context) chính xác cho từng phiên chat của AI.
@@ -71,8 +71,12 @@ Dự án được chia làm 2 phân hệ chính:
   - Vai trò (Role) **Admin** được map với cả 3 quyền trên, trong khi Role **User** chỉ có quyền `USER_R`.
   - Nếu có yêu cầu: *"Cho phép nhóm **Trưởng phòng** được quyền xóa User"*. Bạn chỉ cần dùng giao diện UI gán quyền `USER_D` cho nhóm này (lưu xuống `GroupPermission`). Code backend `checkPermission('USER_D')` sẽ tự động cho phép người dùng thuộc nhóm Trưởng phòng thực hiện thao tác xóa mà bạn không cần phải sửa lại mã nguồn (như `if (role === 'Admin' || group === 'Trưởng phòng')`) hay khởi động lại server.
 
-- **Kiến trúc Clean Code (Tối ưu MVC):**
-  Hệ thống tách biệt triệt để trách nhiệm giữa luồng xử lý phản hồi Stream của AI (`aiController`, `aiService`) và logic thao tác Cơ sở dữ liệu của phiên trò chuyện (`chatController`, `chatService`). Điều này giúp Controller gọn nhẹ (tránh Fat Controller) và tuân thủ nguyên tắc Single Responsibility.
+- **Kiến trúc Clean Code (Tối ưu MVC & Strategy Pattern):**
+  Hệ thống tách biệt triệt để trách nhiệm giữa luồng xử lý phản hồi Stream của AI (`aiController`, `aiService`) và logic thao tác CSDL (`chatController`). Đặc biệt, việc giao tiếp với các mô hình AI khác nhau (Groq, Flowise) và xử lý file đính kèm đa định dạng được thiết kế chuẩn mực theo **Strategy Pattern**. Cấu trúc này đảm bảo nguyên tắc Open/Closed (SOLID) – bạn có thể cắm thêm vô số AI mới (OpenAI, Gemini) vào hệ thống mà không cần đụng chạm hay sửa đổi các file lõi.
+- **Nguyên tắc Fail First (Early Return) & Bảo mật Routing:**
+  Frontend áp dụng triệt để nguyên tắc Fail First thông qua component `ProtectedRoute`. Thay vì lồng ghép logic kiểm tra token phức tạp vào từng thẻ Route, hệ thống "rào chắn" ngay từ ngoài cửa. Các truy cập trái phép sẽ lập tức bị chặn (return) và đẩy về trang Đăng nhập, giúp file điều hướng trung tâm cực kỳ phẳng (flat), dễ đọc và dễ bảo trì.
+- **Đa ngôn ngữ (i18n) Toàn diện từ Server:**
+  Không chỉ Frontend, mà toàn bộ các phản hồi và báo lỗi từ Backend đều hỗ trợ đa ngôn ngữ. Bộ Axios Interceptor sẽ tự động trích xuất ngôn ngữ người dùng đang dùng để nhét vào Header, giúp Backend luôn trả về thông báo lỗi chuẩn xác bằng Tiếng Việt hoặc Tiếng Anh tương ứng.
 - **Xử lý hình ảnh thông minh (OCR Workaround):**
   Để vượt qua giới hạn không hỗ trợ ảnh của các mô hình Text-only LLMs (như Llama 3) và tránh làm sập bộ nhớ (Storage limit exceeded) của Flowise khi truyền chuỗi Base64 khổng lồ, hệ thống tích hợp sẵn thư viện OCR `Tesseract.js`. Ảnh tải lên sẽ được quét tự động tại server để lấy văn bản, sau đó gửi đoạn văn bản siêu nhẹ đó tới AI.
 - **Kiến trúc Tối ưu Hiệu suất & Bảo mật với Redis (Nâng cao):**

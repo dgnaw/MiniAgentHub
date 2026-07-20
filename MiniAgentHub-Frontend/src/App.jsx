@@ -10,6 +10,16 @@ import { Toaster } from 'react-hot-toast';
 import ChangePasswordModal from './components/modals/ChangePasswordModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const mustChangePassword = useAuthStore((state) => state.mustChangePassword);
@@ -18,74 +28,18 @@ function App() {
     <ErrorBoundary>
       <Toaster position="top-right" reverseOrder={false} />
       {isAuthenticated && mustChangePassword && <ChangePasswordModal isOpen={mustChangePassword} isForced={true} onClose={() => { }} />}
+      
       <BrowserRouter>
         <Routes>
-          <Route
-            path="/login"
-            element={isAuthenticated ? <Navigate to="/" /> : <Login />}
-          />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
+          <Route path="/shared/chat/:id" element={<SharedChat />} />
 
-          <Route
-            path="/shared/chat/:id"
-            element={<SharedChat />}
-          />
-
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? (
-                <Dashboard />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
-          <Route
-            path="/chat/:id"
-            element={
-              isAuthenticated ? (
-                <Dashboard />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
-          <Route
-            path="/settings"
-            element={
-              isAuthenticated ? (
-                <Settings />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
-          <Route
-            path="/groups"
-            element={
-              isAuthenticated ? (
-                <GroupManagement />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
-          <Route
-            path="/users"
-            element={
-              isAuthenticated ? (
-                <UserManagement />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
+          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/chat/:id" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/groups" element={<ProtectedRoute><GroupManagement /></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
         </Routes>
-
       </BrowserRouter>
     </ErrorBoundary>
   );
