@@ -200,7 +200,18 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     }
     setLocalError('');
 
+    let streamTimeout;
+    let isTimeout = false;
+
     try {
+      const resetTimeout = () => {
+        if (streamTimeout) clearTimeout(streamTimeout);
+        streamTimeout = setTimeout(() => {
+          isTimeout = true;
+          controller.abort();
+        }, 60000); 
+      };
+
       let fetchOptions = {
         method: 'POST',
         credentials: 'include',
@@ -226,6 +237,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         });
       }
 
+      resetTimeout(); // Bắt đầu tính giờ chờ phản hồi đầu tiên
       const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, fetchOptions);
 
       if (!response.ok) {
@@ -251,10 +263,13 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
 
       try {
         while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
+          const { done, value } = await reader.read();
+          resetTimeout(); // Làm mới giờ chờ mỗi khi có một chunk mới
 
-          buffer += decoder.decode(value, { stream: true });
+          if (done) {
+            isDone = true;
+            break;
+          } buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop();
 
@@ -335,7 +350,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         didAutoNavigate = true;
       }
     } catch (error) {
-      if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      if (isTimeout) {
+        error = new Error('Yêu cầu mất quá nhiều thời gian để phản hồi (Timeout). Vui lòng thử lại.');
+      } else if (error.name === 'AbortError' || error.message?.includes('aborted')) {
         return;
       }
       console.error("Error chatting:", error);
@@ -351,6 +368,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         setMessages([...currentMessages]);
       }
     } finally {
+      if (streamTimeout) clearTimeout(streamTimeout);
       const finalTargetId = newSessionId || originalSessionId || 'new';
       
       if (finalTargetId) {
