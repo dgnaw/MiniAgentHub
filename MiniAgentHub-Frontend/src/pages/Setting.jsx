@@ -33,7 +33,7 @@ const Settings = () => {
     try {
       await axiosClient.post('/logout');
     } catch (error) {
-      console.error('Lỗi khi đăng xuất:', error);
+      console.error('Error logging out:', error);
     } finally {
       if (logout) logout();
       navigate('/login');
@@ -61,7 +61,7 @@ const Settings = () => {
       window.dispatchEvent(new Event('sessions-cleared'));
       toast.success(t('settings.clearSuccess'));
     } catch (error) {
-      console.error('Lỗi khi xóa lịch sử:', error);
+      console.error('Error clearing history:', error);
       toast.error(t('settings.clearError'));
     }
   };

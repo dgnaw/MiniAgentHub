@@ -22,14 +22,14 @@ const flowiseStrategy = async function* (params) {
             body: JSON.stringify(payload)
         });
     } catch (err) {
-        console.error('Lỗi kết nối Flowise:', err.message);
+        console.error('Error connecting to Flowise:', err.message);
         yield { error: 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.' };
         return;
     }
 
     if (!response.ok) {
         const errBody = await response.text().catch(() => '');
-        console.error('Flowise trả về lỗi HTTP:', response.status, errBody.substring(0, 200));
+        console.error('Flowise returned HTTP error:', response.status, errBody.substring(0, 200));
         yield { error: 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.' };
         return;
     }
@@ -46,7 +46,8 @@ const flowiseStrategy = async function* (params) {
             } else {
                 yield { chunk: text };
             }
-        } catch {
+        } catch (err) {
+            console.error('Error parsing Flowise non-stream response:', err.message);
             yield { error: 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.' };
         }
         return;
@@ -83,7 +84,8 @@ const flowiseStrategy = async function* (params) {
                     try {
                         const errParsed = JSON.parse(event.data);
                         errorMessage = errParsed.data || errParsed.message || 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.';
-                    } catch {
+                    } catch (err) {
+                        console.error('Error parsing Flowise event string:', err.message);
                         errorMessage = event.data || 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.';
                     }
                     streamFailed = true;
@@ -107,6 +109,7 @@ const flowiseStrategy = async function* (params) {
 
                     if (parsed.event === 'error') {
                         errorMessage = parsed.data || parsed.message || 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.';
+                        console.error('Flowise stream event error:', errorMessage);
                         streamFailed = true;
                         continue;
                     }
@@ -115,7 +118,8 @@ const flowiseStrategy = async function* (params) {
                     if (typeof token === 'string' && !FLOWISE_STATUS_STRINGS.has(token)) {
                         yield { chunk: token };
                     }
-                } catch {
+                } catch (err) {
+                    console.debug('Flowise JSON parse failed for stream chunk:', err.message);
                     if (!FLOWISE_STATUS_STRINGS.has(dataStr)) {
                         yield { chunk: dataStr };
                     }
@@ -130,7 +134,7 @@ const flowiseStrategy = async function* (params) {
             }
         }
     } catch (err) {
-        console.error('Lỗi khi đọc stream Flowise:', err.message);
+        console.error('Error reading Flowise stream:', err.message);
         yield { error: 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.' };
     }
 };

@@ -17,10 +17,12 @@ const chatService = {
             if (!currentSessionId) {
                 let title = cleanMessage.substring(0, 30) + (cleanMessage.length > 30 ? "..." : "");
                 try {
-                    const aiService = require('./aiService'); 
+                    const aiService = require('./aiService');
                     const aiTitle = await aiService.generateTitle(cleanMessage, customGroqKey);
                     if (aiTitle) title = aiTitle;
-                } catch (error) { }
+                } catch (error) { 
+                    console.error('Error generating title in chatService:', error.message);
+                }
 
                 const newSession = await ChatSession.create({ user_id: userId, title: title }, { transaction });
                 currentSessionId = newSession.id;
@@ -35,10 +37,9 @@ const chatService = {
                         throw new AppError('chat.limitExceeded', 'BAD_REQUEST');
                     }
                 }
-                await ChatSession.update(
-                    { updated_at: sequelize.literal('CURRENT_TIMESTAMP') },
-                    { where: { id: currentSessionId }, transaction }
-                );
+                session.changed('updated_at', true);
+                session.setDataValue('updated_at', new Date());
+                await session.save({ transaction });
             }
 
             if (parsedEditIndex !== undefined && !isNaN(parsedEditIndex) && currentSessionId && !isNewSession) {
@@ -83,16 +84,16 @@ const chatService = {
         if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
 
         const lastMessage = await ChatMessage.findOne({
-            where: { session_id: sessionId, role: 'ai' },
+            where: { session_id: sessionId },
             order: [['created_at', 'DESC']]
         });
 
-        if (lastMessage) {
+        if (lastMessage && lastMessage.role === 'ai') {
             lastMessage.content = content;
             await lastMessage.save();
             return { message: 'chat.truncateSuccess' };
         }
-        
+
         await ChatMessage.create({ session_id: sessionId, role: 'ai', content });
         return { message: 'chat.truncateSuccess' };
     },
@@ -106,9 +107,9 @@ const chatService = {
                 await ChatSession.destroy({ where: { id: currentSessionId } });
             }
         } catch (cleanupError) {
-            console.error('Lỗi khi dọn dẹp DB:', cleanupError);
+            console.error('Error cleaning up DB:', cleanupError);
         }
-        
+
 
     },
 
@@ -167,14 +168,14 @@ const chatService = {
         });
         const sessionIds = sessions.map(s => s.id);
         if (sessionIds.length > 0) {
-            const messages = await ChatMessage.findAll({ where: { session_id: sessionIds}});
+            const messages = await ChatMessage.findAll({ where: { session_id: sessionIds } });
             await chatService.deleteImagesFromMessages(messages);
             const transaction = await sequelize.transaction();
             try {
                 await ChatMessage.destroy({ where: { session_id: sessionIds }, transaction });
                 await ChatSession.destroy({ where: { user_id: userId }, transaction });
                 await transaction.commit();
-                
+
 
             } catch (error) {
                 await transaction.rollback();
@@ -187,8 +188,8 @@ const chatService = {
     deleteSession: async (sessionId, userId) => {
         const session = await ChatSession.findOne({ where: { id: sessionId, user_id: userId } });
         if (!session) throw new AppError('chat.notFound', 'NOT_FOUND');
-        const messages = await ChatMessage.findAll({ where: {session_id: sessionId}});
-        await chatService.deleteImagesFromMessages(messages); 
+        const messages = await ChatMessage.findAll({ where: { session_id: sessionId } });
+        await chatService.deleteImagesFromMessages(messages);
         const transaction = await sequelize.transaction();
         try {
             await ChatMessage.destroy({ where: { session_id: sessionId }, transaction });
@@ -229,24 +230,24 @@ const chatService = {
         return { title: session.title, messages };
     },
 
-    deleteImagesFromMessages: async(messages) => {
+    deleteImagesFromMessages: async (messages) => {
         try {
             const regex = /\/api\/uploads\/([a-zA-Z0-9_.-]+)/g;
             for (const msg of messages) {
                 if (msg.content) {
                     let match;
-                    while ((match = regex.exec(msg.content)) !== null){
+                    while ((match = regex.exec(msg.content)) !== null) {
                         const filename = match[1];
-                        const filepath = path.join(__dirname, '..','..','uploads', filename);
+                        const filepath = path.join(__dirname, '..', '..', 'uploads', filename);
                         if (fs.existsSync(filepath)) {
-                            await fsp.unlink(filepath).catch(() => {});
+                            await fsp.unlink(filepath).catch(() => { });
                         }
                     }
                 }
-            } 
+            }
         } catch (err) {
             console.error("Error deleting images:", err);
-        }       
+        }
     }
 };
 

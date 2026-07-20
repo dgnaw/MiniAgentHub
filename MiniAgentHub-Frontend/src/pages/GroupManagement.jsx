@@ -69,7 +69,7 @@ const GroupManagement = () => {
       if (isMounted.current) setError('');
     } catch (err) {
       if (isMounted.current) {
-        console.error('Lỗi tải danh sách nhóm:', err);
+        console.error('Error loading group list:', err);
         setError(t('groupManagement.errorLoad'));
       }
     } finally {
@@ -91,7 +91,7 @@ const GroupManagement = () => {
           await axiosClient.delete(`/groups/${id}${force ? '?force=true' : ''}`);
           toast.success(t('groupManagement.deleteSuccess'));
         } catch (err) {
-          console.error('Lỗi khi xóa nhóm:', err);
+          console.error('Error deleting group:', err);
           if (!force && err.response?.data?.errorKey === 'group.deleteHasUsers') {
             setTimeout(() => handleDeleteGroup(id, true), 300);
           } else {
@@ -156,7 +156,7 @@ const GroupManagement = () => {
             }
           }
         } catch (err) {
-          console.error('Lỗi khi xóa nhiều nhóm:', err);
+          console.error('Error deleting multiple groups:', err);
           toast.error(t('groupManagement.deleteMultipleError'));
         } finally {
           fetchGroups();

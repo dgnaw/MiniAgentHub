@@ -4,7 +4,7 @@ const { User, Role, Permission, RolePermission, Group, UserGroup, GroupPermissio
 
 async function seedAdmin() {
     try {
-        console.log('Đang kiểm tra và khởi tạo dữ liệu mặc định...');
+        console.log('Checking and initializing default data...');
 
         const [adminRole] = await Role.findOrCreate({
             where: { name: 'Admin' },
@@ -79,25 +79,25 @@ async function seedAdmin() {
                 where: { user_id: newAdmin.id, group_id: adminGroup.id }
             });
 
-            console.log('Đã tạo tài khoản Admin thành công:');
+            console.log('Admin account created successfully:');
             console.log(`   - Email: ${adminEmail}`);
-            console.log(`   - Mật khẩu: ${adminPassword}`);
+            console.log(`   - Password: ${adminPassword}`);
         } else {
-            console.log('Tài khoản Admin đã tồn tại, bỏ qua bước khởi tạo.');
+            console.log('Admin account already exists, skipping initialization.');
             
             await UserGroup.findOrCreate({
                 where: { user_id: adminExist.id, group_id: adminGroup.id }
             });
         }
     } catch (error) {
-        console.error('Lỗi khi khởi tạo dữ liệu:', error);
+        console.error('Error initializing data:', error);
     }
 }
 
 seedAdmin().then(() => {
-    console.log('Hoàn tất quá trình khởi tạo.');
+    console.log('Initialization process completed.');
     process.exit(0);
 }).catch((err) => {
-    console.error('Lỗi không mong muốn:', err);
+    console.error('Unexpected error:', err);
     process.exit(1);
 });

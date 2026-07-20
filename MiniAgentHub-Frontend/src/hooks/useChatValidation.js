@@ -48,10 +48,10 @@ export const useChatValidation = (apiKeyChanged, setGroqModels, setSelectedModel
             }
           }
         } catch (modelsErr) {
-          console.error("Lỗi khi tải danh sách models:", modelsErr);
+          console.error("Error loading models list:", modelsErr);
         }
       } catch (error) {
-        console.error("Lỗi khi kiểm tra trạng thái API:", error);
+        console.error("Error checking API status:", error);
       }
     };
     checkApiKeyStatus();

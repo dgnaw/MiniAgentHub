@@ -48,7 +48,7 @@ const authenticateToken = async (req, res, next) => {
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
             return next(new AppError('auth.tokenInvalid', 'UNAUTHORIZED'));
         }
-        console.error('Lỗi xác thực token:', error);
+        console.error('Error validating token:', error);
         return next(error);
     }
 };
@@ -117,7 +117,7 @@ const checkPermission = (requiredPermission) => {
 
             next();
         } catch (error) {
-            console.error('Lỗi kiểm tra quyền:', error);
+            console.error('Error checking permissions:', error);
             return next(new AppError('server.initError', 'INTERNAL_ERROR'));
         }
     };

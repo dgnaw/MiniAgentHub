@@ -85,7 +85,7 @@ const aiController = {
 
             for await (const event of stream) {
                 if (streamManager.getStream(currentSessionId)?.isStopped) {
-                    console.log('Stream đã bị user dừng khẩn cấp!');
+                    console.log('Stream emergency stopped by user!');
                     break;
                 }
                 
@@ -120,7 +120,7 @@ const aiController = {
             streamManager.emitDone(currentSessionId);
 
             if (clientDisconnected || req.socket?.destroyed) {
-                console.log('Client ngắt kết nối giao diện, AI chạy ngầm hoàn tất. Lưu câu trả lời...');
+                console.log('Client disconnected, AI background task completed. Saving response...');
                 if (aiResponse) {
                     await chatService.saveAIMessage(currentSessionId, aiResponse);
                 }
@@ -134,17 +134,17 @@ const aiController = {
             res.write(`data: [DONE]\n\n`);
             res.end();
         } catch (error) {
-            console.error('Lỗi tại aiController.chat:', error);
+            console.error('Error in aiController.chat:', error);
 
             if (clientDisconnected || req.destroyed || req.socket?.destroyed) {
-                console.log('Lỗi xảy ra khi request bị client hủy. Lưu câu trả lời AI hiện tại...');
+                console.log('Error occurred when request cancelled by client. Saving current AI response...');
                 try {
                     const sessionIdToSave = aiProcessData.currentSessionId;
                     if (sessionIdToSave && aiResponse) {
                         await chatService.saveAIMessage(sessionIdToSave, aiResponse);
                     }
                 } catch (saveErr) {
-                    console.error('Lỗi khi lưu câu trả lời AI khi bị hủy:', saveErr);
+                    console.error('Error saving AI response when cancelled:', saveErr);
                 }
                 return;
             }

@@ -56,7 +56,7 @@ const UserManagement = () => {
       }
       setError('');
     } catch (err) {
-      console.error('Lỗi khi tải danh sách users:', err);
+      console.error('Error loading users list:', err);
       
       if (err.response?.status === 403) {
         toast.error(t('userManagement.forbidden'));
@@ -169,7 +169,7 @@ const UserManagement = () => {
             }
           }
         } catch (err) {
-          console.error('Lỗi khi xóa nhiều users:', err);
+          console.error('Error deleting multiple users:', err);
           toast.error(t('userManagement.deleteMultipleError'));
         } finally {
           setIsLoading(false);
@@ -187,7 +187,7 @@ const UserManagement = () => {
       setAllGroups(Array.isArray(res) ? res : (res.data || []));
       setIsAddGroupModalOpen(true);
     } catch (err) {
-      console.error('Lỗi lấy danh sách nhóm:', err);
+      console.error('Error fetching group list:', err);
       toast.error(t('userManagement.errorLoadGroups'));
     }
   };
@@ -206,7 +206,7 @@ const UserManagement = () => {
       fetchUsers(); 
       toast.success(t('userManagement.addUsersSuccess'));
     } catch (err) {
-      console.error('Lỗi thêm vào nhóm:', err);
+      console.error('Error adding to group:', err);
       setAddGroupError(t('userManagement.addUsersError') + ' ' + (err.response?.data?.message || ''));
     }
   };

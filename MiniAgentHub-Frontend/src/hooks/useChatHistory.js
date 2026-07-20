@@ -61,7 +61,7 @@ export const useChatHistory = (sessionId, messages, setMessages, isReloadingRef,
             }
             setChatPage(1);
           } catch (error) {
-            console.error("Lỗi tải lịch sử tin nhắn:", error);
+            console.error("Error loading message history:", error);
           }
         };
         fetchMessages();
@@ -90,7 +90,7 @@ export const useChatHistory = (sessionId, messages, setMessages, isReloadingRef,
          setHasMoreMessages(nextPage < res.totalPages);
       }
     } catch (error) {
-      console.error("Lỗi tải thêm tin nhắn:", error);
+      console.error("Error loading more messages:", error);
     } finally {
       setIsFetchingMore(false);
     }

@@ -82,7 +82,7 @@ const SharedChat = () => {
         setSession(res.data || res);
         setError('');
       } catch (err) {
-        console.error("Lỗi lấy phiên trò chuyện công khai:", err);
+        console.error("Error fetching public chat session:", err);
         setError(err.response?.data?.message || 'Phiên trò chuyện không tồn tại hoặc chưa được chia sẻ công khai.');
       } finally {
         setLoading(false);

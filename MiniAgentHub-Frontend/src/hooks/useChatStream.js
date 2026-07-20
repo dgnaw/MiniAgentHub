@@ -99,7 +99,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                 content: truncatedContent
               });
             } catch (error) {
-              console.error('Lỗi khi truncate tin nhắn AI:', error);
+              console.error('Error truncating AI message:', error);
             }
           }, 300);
         } else {
@@ -114,7 +114,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                 content: stopLabel
               });
             } catch (error) {
-              console.error('Lỗi khi lưu tin nhắn dừng AI:', error);
+              console.error('Error saving AI stop message:', error);
               toast.error('Lỗi đồng bộ dữ liệu: ' + error.message);
             }
           })();
@@ -189,6 +189,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     let currentMessages = isEdit ? [...messages.slice(0, editIdx)] : [...messages];
     currentMessages.push(userMessage);
     setMessages([...currentMessages]);
+    if (isEdit) {
+      setEditingIndex(null);
+    }
 
     setInput('');
     setSelectedFiles([]);
@@ -233,7 +236,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
             errMsg = errJson.message;
           }
         } catch (_) {
-          console.warn("Không thể parse JSON phản hồi lỗi từ server.");
+          console.warn("Cannot parse JSON error response from server.");
         }
         throw new Error(errMsg);
       }
@@ -270,8 +273,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                   if (!sessionId) {
                     useGenerationStore.getState().removeGeneration('new');
                     useGenerationStore.getState().addGeneration(newSessionId, controller);
-                    window.dispatchEvent(new CustomEvent('sessions-updated'));
                   }
+                  window.dispatchEvent(new CustomEvent('sessions-updated'));
                 }
                 if (parsed.error) {
                   streamError = parsed.error;
@@ -308,7 +311,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
                   }
                 }
               } catch (e) {
-                console.debug("Bỏ qua dòng dữ liệu stream lỗi parse JSON:", e.message);
+                console.debug("Skipping stream data due to JSON parse error:", e.message);
               }
               if (streamError) {
                   throw new Error(streamError);
@@ -319,7 +322,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         }
       } catch (readErr) {
         if (readErr.name !== 'AbortError' && readErr.message !== 'BodyStreamBuffer was aborted') {
-          console.warn('Stream reader bị ngắt:', readErr.message);
+          console.warn('Stream reader interrupted:', readErr.message);
           throw readErr;
         }
       } finally {
@@ -335,7 +338,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       if (error.name === 'AbortError' || error.message?.includes('aborted')) {
         return;
       }
-      console.error("Lỗi khi chat:", error);
+      console.error("Error chatting:", error);
       
       const errorMsg = error.message || 'Đã xảy ra lỗi khi kết nối server.';
       

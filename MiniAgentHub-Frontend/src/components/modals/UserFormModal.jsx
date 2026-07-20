@@ -62,7 +62,7 @@ const UserFormModal = ({ isOpen, onClose, onSuccess, mode = 'create', initialDat
           const res = await axiosClient.get('/groups');
           setAllGroups(Array.isArray(res) ? res : res.data || []);
         } catch (error) {
-          console.error("Lỗi lấy danh sách nhóm:", error);
+          console.error("Error fetching group list:", error);
         }
       };
       fetchGroups();

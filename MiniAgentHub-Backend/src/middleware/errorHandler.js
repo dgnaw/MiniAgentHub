@@ -12,6 +12,10 @@ const AppError = require('../utils/AppError');
 
 const errorHandler = (err, req, res, next) => {
     if (err instanceof AppError) {
+        if (process.env.NODE_ENV !== 'production') {
+            const translatedMsg = req.t ? req.t(err.message, err.params) : err.message;
+            console.warn(`[Client/Auth Error] ${err.errorCode}: ${translatedMsg} (Key: ${err.message})`, err.params || '');
+        }
        const statusCode = HTTP_STATUS_MAP[err.errorCode] || 500;
         return res.status(statusCode).json({
             message: req.t(err.message, err.params),

@@ -64,7 +64,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
               name: u.full_name || u.email,
               avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || u.email)}&background=random`
             })));
-          } catch (error) { console.error('Lỗi lấy thành viên nhóm:', error); }
+          } catch (error) { console.error('Error fetching group members:', error); }
         };
         fetchMembers();
       } else {
@@ -80,7 +80,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
           const res = await axiosClient.get('/users');
           setAllUsers(Array.isArray(res) ? res : (res.data || []));
         } catch (error) {
-          console.error('Lỗi khi lấy danh sách người dùng:', error);
+          console.error('Error fetching user list:', error);
         }
       };
       fetchUsers();
@@ -147,7 +147,7 @@ const GroupFormModal = ({ isOpen, onClose, onSave, mode = 'create', initialData 
         });
       }
     } catch (error) {
-      console.error('Lỗi khi lưu modal:', error);
+      console.error('Error saving modal:', error);
       setFormError(error.response?.data?.message || t('groupManagement.saveError'));
     } finally {
       setIsSubmitting(false);

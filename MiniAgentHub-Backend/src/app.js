@@ -25,7 +25,15 @@ const errorHandler = require('./middleware/errorHandler');
     
 const app = express();
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+        const allowedOrigin = process.env.FRONTEND_URL;
+        if (!origin || origin === allowedOrigin) {
+            callback(null, true);
+        } else {
+            console.error(`[CORS Error] Blocked request from unauthorized origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(cookieParser());
@@ -70,7 +78,7 @@ const startServer = async () => {
             });
         });
     } catch (error) {
-        console.error('Lỗi nghiêm trọng khi khởi động server:', error);
+        console.error('Critical error starting server:', error);
         process.exit(1); 
     }
 };

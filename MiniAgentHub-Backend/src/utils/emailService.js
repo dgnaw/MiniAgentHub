@@ -107,9 +107,9 @@ const sendWelcomeEmail = async (toEmail, fullName, rawPassword, lng = 'vi') => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Đã gửi email thành công tới: ${toEmail}`);
+        console.log(`Successfully sent email to: ${toEmail}`);
     } catch (error) {
-        console.error(`Lỗi gửi email tới ${toEmail}:`, error);
+        console.error(`Error sending email to ${toEmail}:`, error);
         throw new Error('Không thể gửi email lúc này.');
     }
 };
@@ -208,9 +208,9 @@ const sendResetPasswordEmail = async (toEmail, fullName, rawPassword, lng = 'vi'
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Đã gửi email khôi phục mật khẩu tới: ${toEmail}`);
+        console.log(`Password recovery email sent to: ${toEmail}`);
     } catch (error) {
-        console.error(`Lỗi gửi email khôi phục tới ${toEmail}:`, error);
+        console.error(`Error sending recovery email to ${toEmail}:`, error);
         throw new Error('Không thể gửi email lúc này.');
     }
 };

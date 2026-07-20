@@ -18,8 +18,8 @@ const cacheHelper = {
         try {
             return await redisClient.get(key);
         } catch (error) {
-            console.warn(`[CacheHelper] Lỗi khi lấy cache cho key ${key}:`, error.message);
-            return null;    
+            console.warn(`[CacheHelper] Error getting cache for key ${key}:`, error.message);
+            return null;
         }
     },
 
@@ -28,7 +28,7 @@ const cacheHelper = {
         try {
             await redisClient.setex(key, ttl, value);
         } catch (error) {
-            console.warn(`[CacheHelper] Lỗi khi lưu cache cho key ${key}:`, error.message);
+            console.warn(`[CacheHelper] Error saving cache for key ${key}:`, error.message);
         }
     },
 
@@ -37,7 +37,7 @@ const cacheHelper = {
         try {
             await redisClient.del(key);
         } catch (error) {
-            console.warn(`[CacheHelper] Lỗi khi xóa cache cho key ${key}:`, error.message);
+            console.warn(`[CacheHelper] Error clearing cache for key ${key}:`, error.message);
         }
     }
 };

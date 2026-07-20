@@ -67,7 +67,7 @@ const userService = {
                     lng 
                 });
             } catch (mailError) {
-                console.error('Lỗi khi đưa email vào hàng đợi:', mailError);
+                console.error('Error queuing email:', mailError);
             }
 
             await transaction.commit();

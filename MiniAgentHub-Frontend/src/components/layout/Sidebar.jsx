@@ -68,7 +68,7 @@ function Sidebar() {
       const targetPage = reset ? 1 : page;
       if (reset) setIsLoadingMore(false);
       
-      const res = await axiosClient.get(`/chat-sessions?page=${targetPage}&limit=20`);
+      const res = await axiosClient.get(`/chat-sessions?page=${targetPage}&limit=20&_t=${Date.now()}`);
       const data = res.data || (Array.isArray(res) ? res : []);
       const totalPages = res.totalPages || 1;
       
@@ -84,7 +84,7 @@ function Sidebar() {
         setHasMore(targetPage < totalPages);
       }
     } catch (error) {
-      console.error("Lỗi lấy danh sách chat:", error);
+      console.error("Error fetching chat list:", error);
     }
   };
 
@@ -158,7 +158,7 @@ function Sidebar() {
           setIsInGroup(false);
         }
       } catch (error) {
-        console.error("Lỗi kiểm tra nhóm của user:", error);
+        console.error("Error checking user groups:", error);
       }
     };
 
@@ -170,7 +170,7 @@ function Sidebar() {
   useEffect(() => {
     if (shareSessionId) {
       axiosClient.put(`/chat-sessions/${shareSessionId}/share`).catch(err => {
-        console.error("Lỗi khi kích hoạt chế độ công khai cho cuộc trò chuyện:", err);
+        console.error("Error enabling public mode for chat:", err);
       });
     }
   }, [shareSessionId]);
@@ -198,7 +198,7 @@ function Sidebar() {
       try {
         await axiosClient.post('/logout');
       } catch (error) {
-        console.error('Lỗi khi đăng xuất:', error);
+        console.error('Error logging out:', error);
       } finally {
         logout(); 
         navigate('/login');
@@ -214,7 +214,7 @@ function Sidebar() {
           navigate('/');
         }
       } catch (error) {
-        console.error('Lỗi xóa session:', error);
+        console.error('Error deleting session:', error);
         toast.error(t('sidebar.deleteSessionError'));
       } finally {
         setConfirmConfig({ isOpen: false, type: '', data: null });
@@ -238,7 +238,7 @@ function Sidebar() {
       setEditingSessionId(null);
       toast.success(t('sidebar.renameSessionSuccess'));
     } catch (error) {
-      console.error('Lỗi đổi tên:', error);
+      console.error('Error renaming:', error);
       toast.error(t('sidebar.renameSessionError'));
     }
   };

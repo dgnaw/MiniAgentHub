@@ -13,7 +13,7 @@ const invalidateGroupUsersCache = async (groupId, additionalUserIds = []) => {
             await Promise.all(promises);
         }
     } catch (error) {
-        console.error('Lỗi khi xóa cache cho group:', error);
+        console.error('Error clearing group cache:', error);
     }
 };
 

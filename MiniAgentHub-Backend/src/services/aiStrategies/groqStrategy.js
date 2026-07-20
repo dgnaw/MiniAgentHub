@@ -14,7 +14,7 @@ const groqStrategy = async function* (params) {
             }
         }
     } catch (groqError) {
-        console.error('Lỗi khi gọi Groq (Strategy):', groqError.message);
+        console.error('Error calling Groq (Strategy):', groqError.message);
         let errMsg;
         if (groqError.message?.includes('API Key') || groqError.status === 401) {
             errMsg = t ? t('ai.apiKeyInvalid') : 'API Key không hợp lệ.';

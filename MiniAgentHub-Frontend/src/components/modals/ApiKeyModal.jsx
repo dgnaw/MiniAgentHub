@@ -25,7 +25,7 @@ const ApiKeyModal = ({ isOpen, type, user, onClose, onSuccess }) => {
           }
         })
         .catch(err => {
-          console.error('Lỗi khi tải thông tin user:', err);
+          console.error('Error loading user info:', err);
         });
     }
   }, [isOpen, type, user]);

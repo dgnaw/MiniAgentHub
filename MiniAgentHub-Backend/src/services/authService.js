@@ -27,7 +27,7 @@ const loginUser = async (email, password) => {
     }
 
     if (!process.env.JWT_SECRET) {
-        console.error('Lỗi: JWT_SECRET chưa được cấu hình trong file .env');
+        console.error('Error: JWT_SECRET not configured in .env file');
         throw new AppError('server.configError', 'INTERNAL_ERROR');
     }
 
@@ -137,7 +137,7 @@ const logoutUser = async (userId, token) => {
                 }
             }
         } catch (error) {
-            console.error('Lỗi khi thêm token vào blacklist:', error);
+            console.error('Error adding token to blacklist:', error);
         }
     }
 
@@ -166,7 +166,7 @@ const forgotPassword = async (email, lng = 'vi') => {
                 lng 
             });
         } catch (mailError) {
-            console.error('Lỗi khi đưa email reset password vào hàng đợi:', mailError);
+            console.error('Error queuing reset password email:', mailError);
         }
     }
 

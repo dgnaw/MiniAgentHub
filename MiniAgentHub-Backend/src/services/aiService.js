@@ -14,9 +14,9 @@ let tesseractWorkerPromise = null;
 const getTesseractWorker = () => {
     if (!tesseractWorkerPromise) {
         tesseractWorkerPromise = (async () => {
-            console.log("Khởi tạo Tesseract OCR Worker (vie+eng)...");
+            console.log("Initializing Tesseract OCR Worker (vie+eng)...");
             const worker = await Tesseract.createWorker('vie+eng');
-            console.log("Tesseract OCR Worker đã sẵn sàng.");
+            console.log("Tesseract OCR Worker is ready.");
             return worker;
         })(); 
     }
@@ -46,7 +46,7 @@ const aiService = {
                     const pdfData = await pdfParse(dataBuffer);
                     fileContent = pdfData.text;
                 } catch (pdfErr) {
-                    console.error("Lỗi khi parse PDF:", pdfErr);
+                    console.error("Error parsing PDF:", pdfErr);
                     fileContent = aiPrompts.FILE_READ_ERRORS.PDF_PARSE_ERROR;
                 }
             } else if (file.mimetype.startsWith('image/')) {
@@ -58,7 +58,7 @@ const aiService = {
                         fileContent = aiPrompts.FILE_READ_ERRORS.OCR_NO_TEXT;
                     }
                 } catch (ocrErr) {
-                    console.error("Lỗi khi nhận diện ảnh (OCR):", ocrErr);
+                    console.error("Error recognizing image (OCR):", ocrErr);
                     fileContent = aiPrompts.FILE_READ_ERRORS.OCR_FORMAT_ERROR;
                 }
             } else if (
@@ -73,7 +73,7 @@ const aiService = {
                 fileContent = aiPrompts.FILE_READ_ERRORS.UNSUPPORTED_FORMAT(file.originalname);
             }
         } catch (err) {
-            console.error("Lỗi extract file content:", err);
+            console.error("Error extracting file content:", err);
             fileContent = aiPrompts.FILE_READ_ERRORS.GENERAL_ERROR;
         }
 
@@ -93,7 +93,7 @@ const aiService = {
             });
             return stream;
         } catch (error) {
-            console.error("Lỗi khi gọi API Groq (Stream):", error);
+            console.error("Error calling Groq API (Stream):", error);
             throw error;
         }
     },
@@ -115,24 +115,30 @@ const aiService = {
             title = title.replace(/^(Tiêu đề:\s*|Title:\s*)/i, '').trim();
             return title;
         } catch (error) {
-            console.error("Lỗi khi tạo tiêu đề bằng Groq SDK:", error.message);
+            console.error("Error generating title with Groq SDK:", error.message);
             return null;
         }
     },
 
 
     buildMessagesForAI: async (userId, currentSessionId, processedMessage, cleanBase64ImagesFn) => {
-        const pastMessagesResponse = await chatService.getSessionMessages(currentSessionId, userId, 1, 20);
+        const pastMessagesResponse = await chatService.getSessionMessages(currentSessionId, userId, 1, 10);
         const pastMessages = pastMessagesResponse.data || [];
 
         const systemContent = aiPrompts.SYSTEM_PROMPTS.BASE_SYSTEM_PROMPT;
 
         const messageForAI = [
             { role: 'system', content: systemContent },
-            ...pastMessages.map(m => ({
-                role: m.role === 'ai' ? 'assistant' : 'user',
-                content: cleanBase64ImagesFn(m.content)
-            }))
+            ...pastMessages.map((m, index) => {
+                let content = cleanBase64ImagesFn(m.content);
+                if (index < pastMessages.length - 1 && content.length > 4000) {
+                    content = content.substring(0, 4000) + '\n...[Nội dung quá dài đã được rút gọn]';
+                }
+                return {
+                    role: m.role === 'ai' ? 'assistant' : 'user',
+                    content: content
+                };
+            })
         ];
 
         if (messageForAI.length > 0 && messageForAI[messageForAI.length - 1].role === 'user') {
@@ -236,7 +242,7 @@ const aiService = {
                 }
             }
         } catch (err) {
-            console.error("Lỗi xử lý file đính kèm:", err);
+            console.error("Error processing attachment:", err);
             if (files && files.length > 0) {
                 for (const file of files) {
                     if (file.path && fs.existsSync(file.path)) {
@@ -298,7 +304,7 @@ const aiService = {
             await cacheHelper.setex(cacheKey, 86400, JSON.stringify(result)); // Cache 24 hours
             return result;
         } catch (error) {
-            console.error("Lỗi khi lấy danh sách model từ Groq API:", error.message);
+            console.error("Error fetching model list from Groq API:", error.message);
             throw error;
         }
     }

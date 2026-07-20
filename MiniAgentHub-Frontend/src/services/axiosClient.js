@@ -75,6 +75,16 @@ axiosClient.interceptors.response.use(
         isRefreshing = false;
       }
     }
+
+    if (!error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
+      console.error('CORS or Network Error detected, logging out... Details:', {
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+        originalError: error
+      });
+      useAuthStore.getState().logout();
+    }
     
     return Promise.reject(error);
   }
