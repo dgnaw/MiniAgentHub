@@ -25,7 +25,7 @@ const authLimiter = rateLimit({
 const chatLimiter = rateLimit({
     store: getStore('rl_chat:'),
     windowMs: 60 * 1000, 
-    max: 30, 
+    max: 20, 
     handler: (req, res, next, options) => {
         res.status(options.statusCode).json({ message: req.t('rateLimit.chat') });
     },

@@ -193,26 +193,21 @@ const aiService = {
                         };
                     }
 
-                    if (model === "Data Analyst") {
-                        if (!localBase64Data) {
-                            const fileData = await fsp.readFile(file.path);
-                            localBase64Data = fileData.toString('base64');
+                    const aiFactory = require('./aiStrategies/aiFactory');
+                    const strategy = aiFactory.getChatStrategy(model);
+                    
+                    if (strategy && strategy.processAttachment) {
+                        const attachmentResult = await strategy.processAttachment(file, localBase64Data);
+                        if (attachmentResult.fileFlowiseUpload) {
+                            fileFlowiseUpload = attachmentResult.fileFlowiseUpload;
                         }
-                        fileFlowiseUpload = {
-                            data: `data:${file.mimetype};base64,${localBase64Data}`,
-                            type: 'file',
-                            name: file.originalname,
-                            mime: file.mimetype
-                        };
-                        if (!file.mimetype.startsWith('image/')) {
-                            await fsp.unlink(file.path).catch(() => { });
+                        if (attachmentResult.fileExtractedText) {
+                            fileExtractedText = attachmentResult.fileExtractedText;
                         }
-                    } else {
-                        const fileContent = await aiService.extractFileContent(file);
-                        fileExtractedText = `\n--- Tài liệu: ${file.originalname} ---\n${fileContent}\n`;
-                        if (!file.mimetype.startsWith('image/')) {
-                            await fsp.unlink(file.path).catch(() => { });
-                        }
+                    }
+
+                    if (!file.mimetype.startsWith('image/')) {
+                        await fsp.unlink(file.path).catch(() => { });
                     }
 
                     return { replacement, fileFlowiseUpload, fileExtractedText, mime: file.mimetype };

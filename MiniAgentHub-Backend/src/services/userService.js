@@ -4,8 +4,6 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { sequelize } = require('../config/database');
 const { Sequelize } = require('sequelize');
-
-const { sendWelcomeEmail } = require('../utils/emailService');
 const { emailQueue } = require('../config/queue');
 const AppError = require('../utils/AppError');
 

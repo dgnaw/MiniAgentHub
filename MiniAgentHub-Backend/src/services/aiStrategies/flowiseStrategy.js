@@ -1,6 +1,8 @@
 const { createParser } = require('eventsource-parser');
+const fsp = require('fs').promises;
 
-const flowiseStrategy = async function* (params) {
+const flowiseStrategy = {
+    generateStream: async function* (params) {
     const { processedMessage, currentSessionId, flowiseUploads, customFlowiseUrl } = params;
     const flowiseUrl = customFlowiseUrl || process.env.FLOWISE_API_URL;
     
@@ -137,6 +139,23 @@ const flowiseStrategy = async function* (params) {
         console.error('Error reading Flowise stream:', err.message);
         yield { error: 'Hệ thống Data Analyst hiện đang gặp sự cố hoặc quá tải. Vui lòng thử lại sau.' };
     }
+},
+    
+    processAttachment: async (file, localBase64Data) => {
+        let base64 = localBase64Data;
+        if (!base64) {
+            const fileData = await fsp.readFile(file.path);
+            base64 = fileData.toString('base64');
+        }
+        const fileFlowiseUpload = {
+            data: `data:${file.mimetype};base64,${base64}`,
+            type: 'file',
+            name: file.originalname,
+            mime: file.mimetype
+        };
+        return { fileFlowiseUpload };
+    }
+    
 };
 
 module.exports = flowiseStrategy;

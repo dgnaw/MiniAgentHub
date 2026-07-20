@@ -81,7 +81,7 @@ const aiController = {
             };
 
             const chatStrategy = aiFactory.getChatStrategy(model);
-            const stream = chatStrategy(strategyParams);
+            const stream = chatStrategy.generateStream(strategyParams);
 
             for await (const event of stream) {
                 if (streamManager.getStream(currentSessionId)?.isStopped) {
