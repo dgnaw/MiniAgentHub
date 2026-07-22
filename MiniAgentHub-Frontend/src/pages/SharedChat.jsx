@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, AlertCircle, Check, Copy, Mic, Paperclip, ArrowUp, ChevronDown, Sun, Moon, Plus, Send, X } from 'lucide-react';
+import { Loader2, AlertCircle, Check, Copy, Mic, Paperclip, ArrowUp, ArrowDown, ChevronDown, Sun, Moon, Plus, Send, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import axiosClient from '../services/axiosClient';
@@ -69,6 +69,26 @@ const SharedChat = () => {
   const [error, setError] = useState('');
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const messagesEndRef = useRef(null);
+  
+  const chatContainerRef = useRef(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const isAutoScrollingRef = useRef(true);
+
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const isBottom = Math.ceil(scrollHeight - scrollTop - clientHeight) <= 15;
+    
+    if (isAutoScrollingRef.current !== isBottom) {
+      isAutoScrollingRef.current = isBottom;
+      setShowScrollButton(!isBottom);
+    }
+  };
+
+  const scrollToBottom = () => {
+    isAutoScrollingRef.current = true;
+    setShowScrollButton(false);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
     useThemeStore.getState().setTheme(theme);
@@ -94,7 +114,9 @@ const SharedChat = () => {
   }, [id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isAutoScrollingRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [session?.messages]);
 
   const handleAction = () => {
@@ -125,7 +147,11 @@ const SharedChat = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6 pt-14 md:pt-6">
+        <div 
+          className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6 pt-14 md:pt-6"
+          ref={chatContainerRef}
+          onScroll={handleScroll}
+        >
           <div className="w-full max-w-3xl mx-auto flex flex-col space-y-6">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -246,6 +272,14 @@ const SharedChat = () => {
 
         {!loading && !error && (
           <div className="absolute bottom-0 w-full p-4 md:p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
+            {showScrollButton && (
+              <button
+                onClick={scrollToBottom}
+                className="absolute -top-4 md:-top-6 bg-white/90 dark:bg-[#1e1f24]/90 backdrop-blur-sm text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-[#2a2b30] p-2 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-[#2a2b30] transition-all z-20 animate-in fade-in slide-in-from-bottom-5"
+              >
+                <ArrowDown size={20} />
+              </button>
+            )}
             <div
               onClick={handleAction}
               className="w-full max-w-3xl relative flex items-center bg-white dark:bg-[#212227] shadow-lg dark:shadow-none rounded-3xl p-2 border border-gray-300 dark:border-[#333] cursor-pointer hover:border-gray-400 dark:hover:border-[#444] transition-colors"

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Sidebar from '../components/layout/Sidebar';
-import { Sparkles, Code, AlertCircle, X, Paperclip } from 'lucide-react';
+import { Sparkles, Code, AlertCircle, X, Paperclip, ArrowDown } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -80,8 +80,42 @@ const Dashboard = () => {
     setApiKeyModalConfig({ isOpen: true, type });
   };
 
-  useEffect(() => {
+  const chatContainerRef = useRef(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const isAutoScrollingRef = useRef(true);
+  const prevMessagesLengthRef = useRef(messages.length);
+
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const isBottom = Math.ceil(scrollHeight - scrollTop - clientHeight) <= 15;
+    
+    if (isAutoScrollingRef.current !== isBottom) {
+      isAutoScrollingRef.current = isBottom;
+      setShowScrollButton(!isBottom);
+    }
+  };
+
+  const scrollToBottom = () => {
+    isAutoScrollingRef.current = true;
+    setShowScrollButton(false);
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    const isNewMessage = messages.length > prevMessagesLengthRef.current;
+    const isUserMessage = isNewMessage && messages[messages.length - 1]?.role === 'user';
+    
+    if (isUserMessage) {
+      isAutoScrollingRef.current = true;
+      setShowScrollButton(false);
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    } else if (isAutoScrollingRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+    
+    prevMessagesLengthRef.current = messages.length;
   }, [messages, isLoading]);
 
   return (
@@ -144,7 +178,11 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6 min-h-0">
+          <div 
+            className="flex-1 overflow-y-auto px-4 py-6 md:px-8 pb-32 flex flex-col space-y-6 min-h-0"
+            onScroll={handleScroll}
+            ref={chatContainerRef}
+          >
             <div className="max-w-3xl w-full mx-auto flex flex-col space-y-6">
               {hasMoreMessages && (
                 <div className="flex justify-center mt-2 mb-2">
@@ -204,6 +242,15 @@ const Dashboard = () => {
         )}
 
         <div className="absolute bottom-0 w-full p-4 md:p-6 flex flex-col items-center bg-gradient-to-t from-gray-50 via-gray-50 dark:from-[#131417] dark:via-[#131417] to-transparent">
+          {showScrollButton && (
+            <button
+              onClick={scrollToBottom}
+              className="absolute -top-4 md:-top-6 bg-white/90 dark:bg-[#1e1f24]/90 backdrop-blur-sm text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-[#2a2b30] p-2 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-[#2a2b30] transition-all z-20 animate-in fade-in slide-in-from-bottom-5"
+            >
+              <ArrowDown size={20} />
+            </button>
+          )}
+
           {localError && (
             <div className="mb-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg border border-red-200 dark:border-red-500/20 text-sm flex items-center gap-2 shadow-sm animate-pulse">
               <AlertCircle size={16} />
