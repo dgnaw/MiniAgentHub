@@ -131,8 +131,8 @@ const aiService = {
             { role: 'system', content: systemContent },
             ...pastMessages.map((m, index) => {
                 let content = cleanBase64ImagesFn(m.content);
-                if (index < pastMessages.length - 1 && content.length > 4000) {
-                    content = content.substring(0, 4000) + '\n...[Nội dung quá dài đã được rút gọn]';
+                if (index < pastMessages.length - 1 && content.length > 2000) {
+                    content = content.substring(0, 2000) + '\n...[Nội dung quá dài đã được rút gọn]';
                 }
                 return {
                     role: m.role === 'ai' ? 'assistant' : 'user',

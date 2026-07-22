@@ -90,7 +90,8 @@ const aiController = {
                 }
                 
                 if (clientDisconnected || req.socket?.destroyed) {
-                    clientDisconnected = true;
+                    console.log('Client đã ngắt kết nối. Dừng luồng AI ngay lập tức!');
+                    break; 
                 }
                 
                 if (event.error) {

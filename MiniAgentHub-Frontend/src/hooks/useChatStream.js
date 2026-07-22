@@ -4,7 +4,7 @@ import axiosClient from '../services/axiosClient';
 import useGenerationStore from '../store/useGenerationStore';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { backgroundStreams } from '../utils/chatCaches';
+import { backgroundStreams, messageCache } from '../utils/chatCaches';
 import { useChatFiles, getBase64 } from './useChatFiles';
 import { useChatValidation } from './useChatValidation';
 import { useChatHistory } from './useChatHistory';
@@ -81,17 +81,17 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       
       const currentMsgs = latestMessages.current;
       if (currentMsgs && currentMsgs.length > 0) {
+        let updatedMsgs = [...currentMsgs];
         if (currentMsgs[currentMsgs.length - 1].role === 'ai') {
           const stopLabel = `\n\n${t('chat.generationStoppedByUser')}`;
           const truncatedContent = currentMsgs[currentMsgs.length - 1].content + stopLabel;
           
-          setMessages(prev => {
-            const newMsgs = [...prev];
-            if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'ai') {
-              newMsgs[newMsgs.length - 1].content = truncatedContent;
-            }
-            return newMsgs;
-          });
+          updatedMsgs[updatedMsgs.length - 1] = {
+            ...updatedMsgs[updatedMsgs.length - 1],
+            content: truncatedContent
+          };
+
+          setMessages(updatedMsgs);
 
           setTimeout(async () => {
             try {
@@ -105,8 +105,9 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         } else {
           const stopLabel = `*${t('chat.generationStoppedByUser')}*`;
           const newAiMessage = { role: 'ai', content: stopLabel };
+          updatedMsgs = [...currentMsgs, newAiMessage];
           
-          setMessages(prev => [...prev, newAiMessage]);
+          setMessages(updatedMsgs);
 
           (async () => {
             try {
@@ -119,6 +120,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
             }
           })();
         }
+
+        messageCache.set(targetSessionId, updatedMsgs);
       }
     }
   };
@@ -372,6 +375,10 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       const finalTargetId = newSessionId || originalSessionId || 'new';
       
       if (finalTargetId) {
+        if (!isStoppedRef.current && currentMessages && currentMessages.length > 0) {
+          messageCache.set(finalTargetId, currentMessages);
+        }
+
         backgroundStreams.delete(finalTargetId);
         useGenerationStore.getState().removeGeneration(finalTargetId);
       }
