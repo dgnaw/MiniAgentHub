@@ -10,6 +10,12 @@ const cleanBase64Images = (text) => {
     return text.replace(/!\[(.*?)\]\(data:image\/[^;]+;base64,[^\)]+\)/g, '[Hình ảnh đính kèm: $1]');
 };
 
+const sendSSE = (res, type, data) => {
+    if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ type, data })}\n\n`);
+    }
+};
+
 const aiController = {
     chat: async (req, res, next) => {
         let aiProcessData = {};
@@ -59,7 +65,7 @@ const aiController = {
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
 
-            res.write(`data: ${JSON.stringify({ sessionId: currentSessionId })}\n\n`);
+            sendSSE(res, 'session', { sessionId: currentSessionId });
 
             aiResponse = "";
             
@@ -97,7 +103,7 @@ const aiController = {
                 if (event.error) {
                     streamManager.emitError(currentSessionId, event.error);
                     if (!clientDisconnected) {
-                        res.write(`data: ${JSON.stringify({ error: event.error })}\n\n`);
+                        sendSSE(res, 'error', { message: event.error });
                     }
                     break;
                 }
@@ -105,7 +111,7 @@ const aiController = {
                 if (event.flowiseUnavailable) {
                     streamManager.emitFlowiseUnavailable(currentSessionId);
                     if (!clientDisconnected) {
-                        res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
+                        sendSSE(res, 'warning', { code: 'FLOWISE_UNAVAILABLE' });
                     }
                 }
                 
@@ -113,7 +119,7 @@ const aiController = {
                     aiResponse += event.chunk;
                     streamManager.emitChunk(currentSessionId, event.chunk);
                     if (!clientDisconnected) {
-                        res.write(`data: ${JSON.stringify({ chunk: event.chunk })}\n\n`);
+                        sendSSE(res, 'chunk', { content: event.chunk });
                     }
                 }
             }
@@ -167,7 +173,7 @@ const aiController = {
             if (!res.headersSent) {
                 return next(error);
             } else {
-                res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
+                sendSSE(res, 'error', { message: errorMessage });
                 res.write(`data: [DONE]\n\n`);
                 res.end();
             }
@@ -186,15 +192,15 @@ const aiController = {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        res.write(`data: ${JSON.stringify({ sessionId: streamData.newSessionId || sessionId })}\n\n`);
+        sendSSE(res, 'session', { sessionId: streamData.newSessionId || sessionId });
 
         if (streamData.fullText) {
-            res.write(`data: ${JSON.stringify({ chunk: streamData.fullText })}\n\n`);
+            sendSSE(res, 'chunk', { content: streamData.fullText });
         }
 
-        const onChunk = (chunk) => res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-        const onError = (err) => res.write(`data: ${JSON.stringify({ error: err })}\n\n`);
-        const onFlowiseUnavailable = () => res.write(`data: ${JSON.stringify({ flowiseUnavailable: true })}\n\n`);
+        const onChunk = (chunk) => sendSSE(res, 'chunk', { content: chunk });
+        const onError = (err) => sendSSE(res, 'error', { message: err });
+        const onFlowiseUnavailable = () => sendSSE(res, 'warning', { code: 'FLOWISE_UNAVAILABLE' });
         const onDone = () => {
             res.write(`data: [DONE]\n\n`);
             res.end();

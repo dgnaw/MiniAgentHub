@@ -8,6 +8,7 @@ import { backgroundStreams, messageCache } from '../utils/chatCaches';
 import { useChatFiles, getBase64 } from './useChatFiles';
 import { useChatValidation } from './useChatValidation';
 import { useChatHistory } from './useChatHistory';
+import { createSSEHandlers, dispatchSSEEvent } from '../utils/sseHandlers';
 
 export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKeyChanged, setGroqModels) => {
   const navigate = useNavigate();
@@ -264,6 +265,42 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       let isAiMessageAdded = false;
       isDone = false;
 
+      const sseHandlers = createSSEHandlers({
+        originalSessionId,
+        newSessionIdRef: {
+          get current() { return newSessionId; },
+          set current(val) { newSessionId = val; }
+        },
+        currentMessages,
+        aiTextRef: {
+          get current() { return aiResponseText; },
+          set current(val) { aiResponseText = val; }
+        },
+        isAiMessageAddedRef: {
+          get current() { return isAiMessageAdded; },
+          set current(val) { isAiMessageAdded = val; }
+        },
+        isStoppedRef,
+        isDoneRef: {
+          get current() { return isDone; },
+          set current(val) { isDone = val; }
+        },
+        isUnmountedRef,
+        currentSessionIdRef,
+        setMessages,
+        setActiveSessionId,
+        setIsFlowiseAvailable,
+        backgroundStreams,
+        onNewSession: (id) => {
+          activeSessionIdRef.current = id;
+          if (!sessionId) {
+            useGenerationStore.getState().removeGeneration('new');
+            useGenerationStore.getState().addGeneration(id, controller);
+          }
+          window.dispatchEvent(new CustomEvent('sessions-updated'));
+        }
+      });
+
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -272,7 +309,8 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
           if (done) {
             isDone = true;
             break;
-          } buffer += decoder.decode(value, { stream: true });
+          } 
+          buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop();
 
@@ -280,59 +318,26 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') { isDone = true; break; }
-              let streamError = null;
               try {
                 const parsed = JSON.parse(dataStr);
-                if (parsed.sessionId) {
-                  newSessionId = parsed.sessionId;
-                  activeSessionIdRef.current = newSessionId;
-                  setActiveSessionId(newSessionId);
-                  
-                  if (!sessionId) {
-                    useGenerationStore.getState().removeGeneration('new');
-                    useGenerationStore.getState().addGeneration(newSessionId, controller);
+                
+                // Hỗ trợ cả định dạng mới ({ type, data }) và định dạng cũ
+                if (parsed.type && parsed.data) {
+                  await dispatchSSEEvent(parsed.type, parsed.data, sseHandlers);
+                } else {
+                  // Fallback cho định dạng cũ đang chạy ở backend
+                  if (parsed.sessionId) {
+                    await dispatchSSEEvent('session', { sessionId: parsed.sessionId }, sseHandlers);
                   }
-                  window.dispatchEvent(new CustomEvent('sessions-updated'));
-                }
-                if (parsed.error) {
-                  streamError = parsed.error;
-                }
-                if (parsed.chunk) {
-                  if (!isAiMessageAdded) {
-                    currentMessages.push({ role: 'ai', content: '' });
-                    isAiMessageAdded = true;
+                  if (parsed.chunk) {
+                    await dispatchSSEEvent('chunk', { content: parsed.chunk }, sseHandlers);
                   }
-
-                  const words = parsed.chunk.match(/\S+|\s+/g) || [];
-                  for (const word of words) {
-                    if (isStoppedRef.current || isDone) break;
-
-                    aiResponseText += word;
-                    currentMessages[currentMessages.length - 1] = {
-                      ...currentMessages[currentMessages.length - 1],
-                      content: aiResponseText
-                    };
-                    
-                    const isActive = !isUnmountedRef.current && (currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === newSessionId);
-                    
-                    const targetSessionId = newSessionId || originalSessionId;
-                    if (targetSessionId) {
-                      backgroundStreams.set(targetSessionId, currentMessages);
-                    }
-
-                    if (isActive) {
-                      setMessages([...currentMessages]);
-                    }
-
-                    const delayTime = 5;
-                    await new Promise(resolve => setTimeout(resolve, delayTime));
+                  if (parsed.error) {
+                    await dispatchSSEEvent('error', { message: parsed.error }, sseHandlers);
                   }
                 }
               } catch (e) {
-                console.debug("Skipping stream data due to JSON parse error:", e.message);
-              }
-              if (streamError) {
-                  throw new Error(streamError);
+                console.debug("Lỗi xử lý luồng (Skipping):", e.message);
               }
             }
           }
