@@ -174,18 +174,24 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
     }
 
     let finalContent = textToSend.trim();
+    let backendContent = textToSend.trim();
+
     if (selectedFiles.length > 0 && !isEdit) {
       let filesMarkdown = '';
+      let backendMarkdown = '';
       for (const file of selectedFiles) {
         const safeName = file.name.replace(/[\\]/g, '_');
         if (file.type.startsWith('image/')) {
           const base64 = await getBase64(file);
           filesMarkdown += `![${safeName}](${base64})\n\n`;
+          backendMarkdown += `[🖼️ Hình ảnh đính kèm: ${safeName}]\n\n`;
         } else {
           filesMarkdown += `[📎 File đính kèm: ${safeName}]\n\n`;
+          backendMarkdown += `[📎 File đính kèm: ${safeName}]\n\n`;
         }
       }
       finalContent = finalContent ? `${filesMarkdown}${finalContent}` : filesMarkdown.trim();
+      backendContent = backendContent ? `${backendMarkdown}${backendContent}` : backendMarkdown.trim();
     }
 
     const userMessage = { role: 'user', content: finalContent };
@@ -304,7 +310,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       try {
         while (true) {
           const { done, value } = await reader.read();
-          resetTimeout(); // Làm mới giờ chờ mỗi khi có một chunk mới
+          resetTimeout(); 
 
           if (done) {
             isDone = true;
@@ -318,26 +324,26 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') { isDone = true; break; }
+              let parsed;
               try {
-                const parsed = JSON.parse(dataStr);
-                
-                // Hỗ trợ cả định dạng mới ({ type, data }) và định dạng cũ
-                if (parsed.type && parsed.data) {
-                  await dispatchSSEEvent(parsed.type, parsed.data, sseHandlers);
-                } else {
-                  // Fallback cho định dạng cũ đang chạy ở backend
-                  if (parsed.sessionId) {
-                    await dispatchSSEEvent('session', { sessionId: parsed.sessionId }, sseHandlers);
-                  }
-                  if (parsed.chunk) {
-                    await dispatchSSEEvent('chunk', { content: parsed.chunk }, sseHandlers);
-                  }
-                  if (parsed.error) {
-                    await dispatchSSEEvent('error', { message: parsed.error }, sseHandlers);
-                  }
-                }
+                parsed = JSON.parse(dataStr);
               } catch (e) {
-                console.debug("Lỗi xử lý luồng (Skipping):", e.message);
+                console.debug("Stream JSON parse error (Skipping):", e.message);
+                continue;
+              }
+                
+              if (parsed.type && parsed.data) {
+                await dispatchSSEEvent(parsed.type, parsed.data, sseHandlers);
+              } else {
+                if (parsed.sessionId) {
+                  await dispatchSSEEvent('session', { sessionId: parsed.sessionId }, sseHandlers);
+                }
+                if (parsed.chunk) {
+                  await dispatchSSEEvent('chunk', { content: parsed.chunk }, sseHandlers);
+                }
+                if (parsed.error) {
+                  await dispatchSSEEvent('error', { message: parsed.error }, sseHandlers);
+                }
               }
             }
           }

@@ -8,7 +8,8 @@ const UserMessage = ({
   editingIndex, setEditingIndex,
   editInput, setEditInput,
   handleSend,
-  setFullScreenImage
+  setFullScreenImage,
+  setViewedFile
 }) => {
   const { t } = useTranslation();
 
@@ -54,12 +55,10 @@ const UserMessage = ({
     );
   }
 
-  // Tìm và bóc tách đoạn text đính kèm file ra khỏi nội dung
   const content = msg.content || '';
-  const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
+  const fileRegex = /\[📎 File đính kèm: (.*?)\](?:\((.*?)\))?/g;
   const fileMatches = [...content.matchAll(fileRegex)];
 
-  // Tìm và bóc tách hình ảnh
   const imgRegex = /!\[(.*?)\]\(([^)]+)\)/g;
   const imgMatches = [...content.matchAll(imgRegex)];
 
@@ -83,14 +82,27 @@ const UserMessage = ({
         })}
         {(contentText || fileMatches.length > 0) && (
           <div className="rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed bg-blue-600 text-white rounded-br-sm break-words">
-            {fileMatches.map((match, i) => (
-              <div key={i} className={`bg-white/20 dark:bg-black/20 text-white rounded-xl p-2 flex items-center gap-3 w-fit shadow-sm border border-white/10 ${contentText ? 'mb-2.5' : ''}`}>
-                <div className="p-1.5 bg-white/20 rounded-lg">
-                  <Paperclip size={16} />
+            {fileMatches.map((match, i) => {
+              const filename = match[1];
+              const fileUrl = match[2];
+              return (
+                <div 
+                  key={i} 
+                  onClick={() => {
+                    if (fileUrl && setViewedFile) {
+                      setViewedFile({ name: filename, url: fileUrl });
+                    }
+                  }}
+                  className={`bg-white/20 dark:bg-black/20 text-white rounded-xl p-2 flex items-center gap-3 w-fit shadow-sm border border-white/10 ${contentText ? 'mb-2.5' : ''} ${fileUrl ? 'cursor-pointer hover:bg-white/30 dark:hover:bg-black/30 transition-colors' : ''}`}
+                  title={fileUrl ? 'Nhấn để xem tài liệu' : ''}
+                >
+                  <div className="p-1.5 bg-white/20 rounded-lg">
+                    <Paperclip size={16} />
+                  </div>
+                  <span className="text-sm font-medium truncate max-w-[200px]">{filename}</span>
                 </div>
-                <span className="text-sm font-medium truncate max-w-[200px]">{match[1]}</span>
-              </div>
-            ))}
+              );
+            })}
             {contentText && <span className="whitespace-pre-wrap">{contentText}</span>}
           </div>
         )}

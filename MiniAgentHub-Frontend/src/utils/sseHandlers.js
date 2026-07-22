@@ -21,6 +21,15 @@ export const createSSEHandlers = (context) => {
             const newSessionId = data.sessionId || data; 
             newSessionIdRef.current = newSessionId;
             setActiveSessionId(newSessionId);
+            
+            if (data.userMessageContent && currentMessages.length > 0) {
+                const userIdx = isAiMessageAddedRef.current ? currentMessages.length - 2 : currentMessages.length - 1;
+                if (userIdx >= 0 && currentMessages[userIdx]?.role === 'user') {
+                    currentMessages[userIdx] = { ...currentMessages[userIdx], content: data.userMessageContent };
+                    setMessages([...currentMessages]);
+                }
+            }
+
             if (onNewSession) onNewSession(newSessionId);
         },
 

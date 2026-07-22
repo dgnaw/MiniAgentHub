@@ -376,5 +376,12 @@
     "reloadPage": "Tải lại trang",
     "errorDetails": "Chi tiết lỗi (Chỉ hiện ở Dev):",
     "loggedError": "Lỗi được bắt bởi ErrorBoundary:"
+  },
+  "documentViewer": {
+    "loadError": "Không thể tải nội dung file",
+    "downloadOrOpen": "Tải xuống hoặc Mở tab mới",
+    "previewModeTitle": "Chế độ xem trước văn bản:",
+    "previewModeDesc": "Định dạng gốc không được hỗ trợ hiển thị trực tiếp. Đây là văn bản được trích xuất cho AI.",
+    "downloadOriginal": "Tải xuống file gốc"
   }
 }

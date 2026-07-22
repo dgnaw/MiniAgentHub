@@ -17,7 +17,7 @@ if (isRedisEnabled) {
     let queueErrorLogged = false;
     queueConnection.on('error', (err) => {
         if (!queueErrorLogged) {
-            console.error('BullMQ Redis Error:', err.message, '- Đang thử kết nối lại ngầm (mỗi 5s)...');
+            console.error('BullMQ Redis Error:', err.message, '- Retrying connection in background (every 5s)...');
             queueErrorLogged = true;
         }
     });

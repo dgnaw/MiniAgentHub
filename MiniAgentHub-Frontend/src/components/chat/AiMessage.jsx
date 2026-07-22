@@ -59,7 +59,7 @@ const PreBlock = ({ children, ...props }) => {
   );
 };
 
-const AiMessage = React.memo(({ content, index }) => {
+const AiMessage = React.memo(({ content, index, setViewedFile }) => {
   const { t } = useTranslation();
 
   return (
@@ -75,7 +75,26 @@ const AiMessage = React.memo(({ content, index }) => {
             strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
             pre: PreBlock,
             code: ({ node, inline, ...props }) => inline ? <code className="bg-black/10 dark:bg-white/10 text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-sm font-mono" {...props} /> : <code {...props} />,
-            a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+            a: ({ node, href, children, ...props }) => {
+              if (href?.startsWith('/api/uploads/')) {
+                return (
+                  <span
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (setViewedFile) {
+                        const fileName = Array.isArray(children) ? children.join('') : (children || 'Tài liệu');
+                        setViewedFile({ name: fileName, url: href });
+                      }
+                    }}
+                    className="text-blue-500 hover:underline cursor-pointer inline-flex items-center gap-1"
+                    title="Nhấn để xem tài liệu"
+                  >
+                    {children}
+                  </span>
+                );
+              }
+              return <a className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" href={href} {...props}>{children}</a>;
+            },
             img: ({ node, src, alt, ...props }) => {
               const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
               const finalSrc = src?.startsWith('/api/uploads') ? `${backendUrl}${src}` : src;

@@ -7,8 +7,10 @@ class StreamManager {
 
     addStream(sessionId) {
         if (!this.activeStreams.has(sessionId)) {
+            const emitter = new EventEmitter();
+            emitter.on('error', () => {});  
             this.activeStreams.set(sessionId, {
-                emitter: new EventEmitter(),
+                emitter: emitter,
                 fullText: '',
                 isDone: false,
                 isStopped: false,

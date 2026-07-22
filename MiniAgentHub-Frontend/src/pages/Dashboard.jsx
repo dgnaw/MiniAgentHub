@@ -12,6 +12,7 @@ import ChatInput from '../components/chat/ChatInput';
 import UserMessage from '../components/chat/UserMessage';
 import { useChatStream } from '../hooks/useChatStream';
 import useGenerationStore from '../store/useGenerationStore';
+import DocumentViewerPanel from '../components/chat/DocumentViewerPanel';
 
 const Dashboard = () => {
   useThemeStore();
@@ -49,6 +50,7 @@ const Dashboard = () => {
   const [apiKeyModalConfig, setApiKeyModalConfig] = useState({ isOpen: false, type: 'groq' });
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
+  const [viewedFile, setViewedFile] = useState(null);
 
   const generatingSessions = useGenerationStore((state) => state.generatingSessions);
   const isGeneratingBackground = sessionId && generatingSessions.has(sessionId);
@@ -174,9 +176,10 @@ const Dashboard = () => {
                       setEditInput={setEditInput}
                       handleSend={handleSend}
                       setFullScreenImage={setFullScreenImage}
+                      setViewedFile={setViewedFile}
                     />
                   ) : (
-                    <AiMessage content={msg.content} index={index} />
+                    <AiMessage content={msg.content} index={index} setViewedFile={setViewedFile} />
                   )}
                 </div>
               ))}
@@ -227,6 +230,12 @@ const Dashboard = () => {
           </p>
         </div>
       </main>
+
+      {viewedFile && (
+        <aside className="w-[35vw] min-w-[300px] max-w-[600px] h-full flex-shrink-0 z-[40]">
+           <DocumentViewerPanel fileInfo={viewedFile} onClose={() => setViewedFile(null)} />
+        </aside>
+      )}
 
       {fullScreenImage && (
         <div

@@ -61,11 +61,41 @@ const aiService = {
                     console.error("Error recognizing image (OCR):", ocrErr);
                     fileContent = aiPrompts.FILE_READ_ERRORS.OCR_FORMAT_ERROR;
                 }
+            } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.mimetype === 'application/msword' || /\.docx?$/i.test(file.originalname)) {
+                try {
+                    const mammoth = require('mammoth');
+                    const result = await mammoth.extractRawText({ path: filePath });
+                    fileContent = result.value;
+                    if (!fileContent || !fileContent.trim()) {
+                        fileContent = "[File Word rỗng hoặc không thể trích xuất văn bản]";
+                    }
+                } catch (docErr) {
+                    console.error("Error parsing Word document:", docErr);
+                    fileContent = aiPrompts.FILE_READ_ERRORS.GENERAL_ERROR || "[Lỗi khi đọc file Word]";
+                }
+            } else if (file.mimetype.includes('excel') || file.mimetype.includes('spreadsheet') || /\.(xlsx|xls)$/i.test(file.originalname)) {
+                try {
+                    const XLSX = require('xlsx');
+                    const workbook = XLSX.readFile(filePath);
+                    let excelText = '';
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const csv = XLSX.utils.sheet_to_csv(worksheet);
+                        if (csv && csv.trim()) {
+                            excelText += `\n--- Sheet: ${sheetName} ---\n${csv}\n`;
+                        }
+                    });
+                    fileContent = excelText.trim() || "[File Excel rỗng]";
+                } catch (xlsxErr) {
+                    console.error("Error parsing Excel document:", xlsxErr);
+                    fileContent = aiPrompts.FILE_READ_ERRORS.GENERAL_ERROR || "[Lỗi khi đọc file Excel]";
+                }
             } else if (
                 file.mimetype.includes('text') ||
                 file.mimetype.includes('csv') ||
                 file.mimetype === 'application/json' ||
-                /\.(csv|txt|json|md|xml|html|js|jsx|ts|tsx|py|java|c|cpp|cs|h|css|scss|sql|sh|bat)$/i.test(file.originalname)
+                file.mimetype === 'application/xml' ||
+                /\.(csv|txt|json|md|xml|html|htm|js|jsx|ts|tsx|py|java|c|cpp|cs|h|hpp|css|scss|sql|sh|bat|yaml|yml|env|ini|conf|toml|log|php|rb|go|rs|kt|swift|vue|svelte)$/i.test(file.originalname)
             ) {
                 const rawContent = await fsp.readFile(filePath, 'utf8');
                 fileContent = rawContent.length > 10000000 ? rawContent.substring(0, 10000000) + '\n\n[Nội dung đã bị cắt bớt do quá dài...]' : rawContent;
@@ -127,18 +157,34 @@ const aiService = {
 
         const systemContent = aiPrompts.SYSTEM_PROMPTS.BASE_SYSTEM_PROMPT;
 
+        let totalLength = systemContent.length;
+        const maxTotalLength = 12000; 
+        const formattedMessages = [];
+
+        for (let i = pastMessages.length - 1; i >= 0; i--) {
+            const m = pastMessages[i];
+            let content = cleanBase64ImagesFn(m.content);
+            
+            const isVeryLastMessage = (i === pastMessages.length - 1);
+
+            if (!isVeryLastMessage && content.length > 2000) {
+                content = content.substring(0, 2000) + '\n...[Nội dung quá dài đã được rút gọn]';
+            }
+
+            if (!isVeryLastMessage && totalLength + content.length > maxTotalLength) {
+                break;
+            }
+
+            totalLength += content.length;
+            formattedMessages.unshift({
+                role: m.role === 'ai' ? 'assistant' : 'user',
+                content: content
+            });
+        }
+
         const messageForAI = [
             { role: 'system', content: systemContent },
-            ...pastMessages.map((m, index) => {
-                let content = cleanBase64ImagesFn(m.content);
-                if (index < pastMessages.length - 1 && content.length > 2000) {
-                    content = content.substring(0, 2000) + '\n...[Nội dung quá dài đã được rút gọn]';
-                }
-                return {
-                    role: m.role === 'ai' ? 'assistant' : 'user',
-                    content: content
-                };
-            })
+            ...formattedMessages
         ];
 
         if (messageForAI.length > 0 && messageForAI[messageForAI.length - 1].role === 'user') {
@@ -163,25 +209,25 @@ const aiService = {
                     let replacement = null;
 
                     const safeName = file.originalname.replace(/[\\]/g, '_');
+                    const fileData = await fsp.readFile(file.path);
+                    const ext = require('path').extname(file.originalname) || '';
+                    const crypto = require('crypto');
+                    const hash = crypto.createHash('md5').update(fileData).digest('hex');
+                    const newFilename = `${hash}${ext}`;
+                    const newPath = require('path').join(require('path').dirname(file.path), newFilename);
+
+                    if (fs.existsSync(newPath)) {
+                        await fsp.unlink(file.path);
+                        file.path = newPath;
+                    } else {
+                        await fsp.rename(file.path, newPath);
+                        file.path = newPath;
+                    }
+
+                    const publicUrl = `/api/uploads/${newFilename}`;
+
                     if (file.mimetype.startsWith('image/')) {
-                        const fileData = await fsp.readFile(file.path);
                         localBase64Data = fileData.toString('base64');
-                        const ext = require('path').extname(file.originalname) || '.png';
-
-                        const crypto = require('crypto');
-                        const hash = crypto.createHash('md5').update(fileData).digest('hex');
-                        const newFilename = `${hash}${ext}`;
-                        const newPath = require('path').join(require('path').dirname(file.path), newFilename);
-
-                        if (fs.existsSync(newPath)) {
-                            await fsp.unlink(file.path);
-                            file.path = newPath;
-                        } else {
-                            await fsp.rename(file.path, newPath);
-                            file.path = newPath;
-                        }
-
-                        const publicUrl = `/api/uploads/${newFilename}`;
                         replacement = {
                             from: `[🖼️ Hình ảnh đính kèm: ${safeName}]`,
                             to: `![${safeName}](${publicUrl})`
@@ -189,7 +235,7 @@ const aiService = {
                     } else {
                         replacement = {
                             from: `[📎 File đính kèm: ${safeName}]`,
-                            to: `[📎 File đính kèm: ${file.originalname}]`
+                            to: `[📎 File đính kèm: ${file.originalname}](${publicUrl})`
                         };
                     }
 
@@ -203,11 +249,14 @@ const aiService = {
                         }
                         if (attachmentResult.fileExtractedText) {
                             fileExtractedText = attachmentResult.fileExtractedText;
+                            
+                            if (!file.mimetype.startsWith('image/')) {
+                                const extractedPath = `${newPath}.extracted.txt`;
+                                if (!fs.existsSync(extractedPath)) {
+                                    await fsp.writeFile(extractedPath, fileExtractedText);
+                                }
+                            }
                         }
-                    }
-
-                    if (!file.mimetype.startsWith('image/')) {
-                        await fsp.unlink(file.path).catch(() => { });
                     }
 
                     return { replacement, fileFlowiseUpload, fileExtractedText, mime: file.mimetype };
@@ -228,7 +277,12 @@ const aiService = {
                 }
 
                 if (allExtractedTexts.trim() !== '') {
-                    processedMessage = aiPrompts.ATTACHMENT_PROMPTS.OCR_CONTEXT(allExtractedTexts, processedMessage);
+                    let truncatedText = allExtractedTexts;
+                    const MAX_ATTACHMENT_CHARS = 12000;
+                    if (truncatedText.length > MAX_ATTACHMENT_CHARS) {
+                        truncatedText = truncatedText.substring(0, MAX_ATTACHMENT_CHARS) + '\n\n[Nội dung tài liệu đính kèm đã được cắt bớt để đảm bảo không vượt quá giới hạn Token per Minute của AI...]';
+                    }
+                    processedMessage = aiPrompts.ATTACHMENT_PROMPTS.OCR_CONTEXT(truncatedText, processedMessage);
                 }
 
                 if (model === "Data Analyst" && flowiseUploads.some(u => u.mime.startsWith('image/'))) {

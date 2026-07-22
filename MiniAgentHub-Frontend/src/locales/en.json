@@ -376,5 +376,12 @@
     "reloadPage": "Reload page",
     "errorDetails": "Error details (Dev only):",
     "loggedError": "Error caught by ErrorBoundary:"
+  },
+  "documentViewer": {
+    "loadError": "Unable to load file content",
+    "downloadOrOpen": "Download or Open in new tab",
+    "previewModeTitle": "Text Preview Mode:",
+    "previewModeDesc": "Native format cannot be rendered directly. Showing extracted text for AI.",
+    "downloadOriginal": "Download original file"
   }
 }

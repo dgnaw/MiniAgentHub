@@ -99,18 +99,7 @@ const chatService = {
     },
 
     cleanupOnError: async (userMessageRecord, isNewSession, currentSessionId, parsedEditIndex) => {
-        try {
-            if (userMessageRecord && parsedEditIndex === undefined) {
-                await ChatMessage.destroy({ where: { id: userMessageRecord.id } });
-            }
-            if (isNewSession && currentSessionId) {
-                await ChatSession.destroy({ where: { id: currentSessionId } });
-            }
-        } catch (cleanupError) {
-            console.error('Error cleaning up DB:', cleanupError);
-        }
-
-
+        console.log(`[Cleanup] Skipping message/session deletion (Session: ${currentSessionId}). Keeping user message.`);
     },
 
     getSessions: async (userId, page = 1, limit = 20) => {

@@ -54,18 +54,27 @@ const aiController = {
 
             const cleanMessage = cleanBase64Images(message) || '';
 
+            if (files && files.length > 0) {
+                files.forEach(file => {
+                    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+                });
+            }
+
             const [fileData] = await Promise.all([
                 aiService.processChatAttachment(files, message, cleanMessage, model)
             ]);
 
             aiProcessData = await chatService.prepareChatSessionAndMessage(userId, sessionId, cleanMessage, fileData.messageToSave, parsedEditIndex, customGroqKey);
-            const { currentSessionId } = aiProcessData;
+            const { currentSessionId, userMessageRecord } = aiProcessData;
 
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
 
-            sendSSE(res, 'session', { sessionId: currentSessionId });
+            sendSSE(res, 'session', { 
+                sessionId: currentSessionId,
+                userMessageContent: userMessageRecord?.content 
+            });
 
             aiResponse = "";
             
@@ -96,7 +105,7 @@ const aiController = {
                 }
                 
                 if (clientDisconnected || req.socket?.destroyed) {
-                    console.log('Client đã ngắt kết nối. Dừng luồng AI ngay lập tức!');
+                    console.log('Client disconnected. Stopping AI stream immediately!');
                     break; 
                 }
                 
@@ -105,6 +114,7 @@ const aiController = {
                     if (!clientDisconnected) {
                         sendSSE(res, 'error', { message: event.error });
                     }
+                    aiResponse += `\n\n*(Lỗi: ${event.error.trim()})*`;
                     break;
                 }
                 
@@ -168,6 +178,10 @@ const aiController = {
             if (aiProcessData && aiProcessData.currentSessionId) {
                 streamManager.emitError(aiProcessData.currentSessionId, errorMessage);
                 streamManager.removeStream(aiProcessData.currentSessionId);
+                
+                try {
+                    await chatService.saveAIMessage(aiProcessData.currentSessionId, `*(Lỗi: ${errorMessage.trim()})*`);
+                } catch(e) {}
             }
 
             if (!res.headersSent) {

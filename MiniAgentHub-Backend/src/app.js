@@ -64,7 +64,7 @@ const startServer = async () => {
         await sequelize.sync();
         
         const server = app.listen(PORT, () => {
-            console.log(`Server dang chay tai cong ${PORT}`);
+            console.log(`Server is running on port ${PORT}`);
             if (process.env.USE_REDIS !== 'false') {
                 require('./workers/emailWorker'); // Start BullMQ worker
             }

@@ -21,7 +21,7 @@ if (isRedisEnabled) {
 
     redisClient.on('error', (err) => {
         if (!errorLogged) {
-            console.error('Redis Connection Error:', err.message, '- Đang thử kết nối lại ngầm (mỗi 5s)...');
+            console.error('Redis Connection Error:', err.message, '- Retrying connection in background (every 5s)...');
             errorLogged = true;
         }
     });

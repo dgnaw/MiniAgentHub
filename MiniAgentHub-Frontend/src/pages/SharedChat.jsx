@@ -150,7 +150,7 @@ const SharedChat = () => {
                         {isUser ? (
                           (() => {
                             const content = msg.content || '';
-                            const fileRegex = /\[📎 File đính kèm: (.*?)\]/g;
+                            const fileRegex = /\[📎 File đính kèm: (.*?)\](?:\((.*?)\))?/g;
                             const fileMatches = [...content.matchAll(fileRegex)];
 
                             const imgRegex = /!\[(.*?)\]\(([^)]+)\)/g;
@@ -167,7 +167,7 @@ const SharedChat = () => {
                                       <div key={`img-${i}`} className="relative group inline-block">
                                         <img 
                                           src={imgSrc} 
-                                          alt={match[1]} 
+                                          alt="undefined" 
                                           className="max-h-64 w-auto rounded-2xl object-contain shadow-sm cursor-zoom-in" 
                                           onClick={() => setFullScreenImage(imgSrc)}
                                         />
@@ -181,7 +181,7 @@ const SharedChat = () => {
                                           <div className="p-1.5 bg-white/20 rounded-lg">
                                             <Paperclip size={16} />
                                           </div>
-                                          <span className="text-sm font-medium truncate max-w-[200px]">{match[1]}</span>
+                                          <span className="text-sm font-medium truncate max-w-[200px]">undefined</span>
                                         </div>
                                       ))}
                                       {contentText && <span className="whitespace-pre-wrap">{contentText}</span>}
@@ -204,11 +204,20 @@ const SharedChat = () => {
                                   strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
                                   pre: PreBlock,
                                   code: ({node, inline, ...props}) => inline ? <code className="bg-gray-100 dark:bg-[#2b2d31] text-red-600 dark:text-red-400 rounded px-1.5 py-0.5 text-[13px] font-mono border border-gray-200 dark:border-[#383a40]" {...props} /> : <code {...props} />,
-                                  a: ({node, ...props}) => <a className="text-[#0068ff] dark:text-[#4799ff] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                                  a: ({node, href, children, ...props}) => {
+                                    if (href?.startsWith('/api/uploads/')) {
+                                      return (
+                                        <span className="text-blue-500 font-medium cursor-default">
+                                          undefined
+                                        </span>
+                                      );
+                                    }
+                                    return <a className="text-[#0068ff] dark:text-[#4799ff] hover:underline" target="_blank" rel="noopener noreferrer" href={href} {...props}>{children}</a>;
+                                  },
                                   img: ({node, src, alt, ...props}) => {
                                     const backendUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
                                     const finalSrc = src?.startsWith('/api/uploads') ? `${backendUrl}${src}` : src;
-                                    return <img src={finalSrc} alt={alt} className="max-w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-[#333] shadow-sm my-2 cursor-zoom-in" onClick={() => window.open(finalSrc, '_blank')} {...props} />;
+                                    return <img src={finalSrc} alt="undefined" className="max-w-full max-h-96 object-contain rounded-lg border border-gray-200 dark:border-[#333] shadow-sm my-2 cursor-zoom-in" onClick={() => setFullScreenImage(finalSrc)} {...props} />;
                                   },
                                   table: ({node, ...props}) => <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 dark:border-[#2b2d31]"><table className="min-w-full divide-y divide-gray-200 dark:divide-[#2b2d31] text-sm" {...props} /></div>,
                                   thead: ({ node, ...props }) => <thead className="bg-gray-100 dark:bg-gray-800/80" {...props} />,
