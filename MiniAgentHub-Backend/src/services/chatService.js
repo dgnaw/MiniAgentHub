@@ -5,6 +5,7 @@ const { sequelize } = require('../config/database');
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
+const streamManager = require('./streamManager');
 
 const chatService = {
     prepareChatSessionAndMessage: async (userId, sessionId, cleanMessage, messageToSave, parsedEditIndex, customGroqKey) => {
@@ -125,15 +126,18 @@ const chatService = {
             offset
         });
 
-        // Đảo ngược mảng vì chúng ta lấy DESC (từ mới nhất đến cũ nhất) để hiển thị từ cũ đến mới (trên xuống dưới)
         rows.reverse();
+
+        const streamData = streamManager.getStream(sessionId);
+        const isGenerating = !!(streamData && !streamData.isDone);
 
         return {
             data: rows,
             total: count,
             page: parseInt(page),
             limit: parseInt(limit),
-            totalPages: Math.ceil(count / limit)
+            totalPages: Math.ceil(count / limit),
+            isGenerating
         };
     },
 

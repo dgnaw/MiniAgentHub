@@ -4,6 +4,7 @@ const userService = require('../services/userService');
 const aiFactory = require('../services/aiStrategies/aiFactory');
 const catchAsync = require('../utils/catchAsync');
 const streamManager = require('../services/streamManager');
+const { stream } = require('pdf-parse-new');
 
 const cleanBase64Images = (text) => {
     if (!text) return text;
@@ -104,11 +105,6 @@ const aiController = {
                     break;
                 }
                 
-                if (clientDisconnected || req.socket?.destroyed) {
-                    console.log('Client disconnected. Stopping AI stream immediately!');
-                    break; 
-                }
-                
                 if (event.error) {
                     streamManager.emitError(currentSessionId, event.error);
                     if (!clientDisconnected) {
@@ -134,16 +130,22 @@ const aiController = {
                 }
             }
 
-            streamManager.emitDone(currentSessionId);
 
             if (clientDisconnected || req.socket?.destroyed) {
                 console.log('Client disconnected, AI background task completed. Saving response...');
                 if (aiResponse) {
                     await chatService.saveAIMessage(currentSessionId, aiResponse);
                 }
-                setTimeout(() => streamManager.removeStream(currentSessionId), 5000);
+                streamManager.emitDone(currentSessionId);
+
+                setTimeout(() => {
+                    streamManager.removeStream(currentSessionId);
+                }, 3 * 6 * 1000);
                 return;
             }
+
+            streamManager.emitDone(currentSessionId);
+
 
             await chatService.saveAIMessage(currentSessionId, aiResponse);
             streamManager.removeStream(currentSessionId);
@@ -208,10 +210,18 @@ const aiController = {
 
         sendSSE(res, 'session', { sessionId: streamData.newSessionId || sessionId });
 
-        if (streamData.fullText) {
-            sendSSE(res, 'chunk', { content: streamData.fullText });
+        const fullText = await streamManager.getFullText(sessionId);
+        if (fullText) {
+            sendSSE(res, 'catchup', { content: fullText });
         }
 
+        if (streamData.isDone) {
+            if (streamData.error) {
+                sendSSE(res, 'error', { message: streamData.error});
+            }
+             res.write(`data: [DONE]\n\n`);
+        return res.end();
+        }
         const onChunk = (chunk) => sendSSE(res, 'chunk', { content: chunk });
         const onError = (err) => sendSSE(res, 'error', { message: err });
         const onFlowiseUnavailable = () => sendSSE(res, 'warning', { code: 'FLOWISE_UNAVAILABLE' });
