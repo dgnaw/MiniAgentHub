@@ -230,7 +230,7 @@ const Dashboard = () => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>
                     <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                      Đang kết nối lại phiên chat...
+                      {t('dashboard.reconnectingSession')}
                     </span>
                     <div className="flex items-center gap-1 ml-1">
                       <span className="w-1.5 h-1.5 bg-amber-500/80 rounded-full animate-bounce"></span>
@@ -240,7 +240,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
-              {(isLoading || isGeneratingBackground) && (!messages.length || messages[messages.length - 1].role !== 'ai') && (
+              {(isLoading || isGeneratingBackground) && !isReconnecting && (!messages.length || messages[messages.length - 1].role !== 'ai') && (
                 <div className="flex flex-col items-start">
                   <div className="max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-3.5 text-[15px] bg-white dark:bg-[#1e1f24] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#2a2b30] rounded-bl-sm flex items-center gap-3">
                     <Sparkles size={16} className="text-blue-500 animate-pulse" />

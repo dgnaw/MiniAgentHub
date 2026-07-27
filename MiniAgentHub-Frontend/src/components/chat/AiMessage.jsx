@@ -109,7 +109,7 @@ const AiMessage = React.memo(({ content, index, setViewedFile }) => {
           {content}
         </ReactMarkdown>
       </div>
-      <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 ml-2">
+      <div className="flex items-center gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1.5 ml-2">
         <button
           onClick={() => {
             if (!content) return;

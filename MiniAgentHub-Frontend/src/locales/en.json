@@ -75,6 +75,7 @@
     "errorConnect": "Sorry, an error occurred while connecting to the AI server.",
     "analyzing": "Performing deep data analysis",
     "thinking": "Generating response",
+    "reconnectingSession": "Reconnecting to chat session...",
     "modelLlamaDesc": "Versatile chat (via Groq)",
     "modelDataDesc": "Data analysis",
     "modelLlama318b": "Fast, lightweight, basic processing",

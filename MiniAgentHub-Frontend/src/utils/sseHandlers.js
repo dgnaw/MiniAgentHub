@@ -59,7 +59,6 @@ export const createSSEHandlers = (context) => {
                 window.dispatchEvent(new CustomEvent('stream-chunk-updated', { detail: { sessionId: targetSessionId, messages: [...currentMessages] } }));
             }
 
-            // Tắt loading reconnect ngay khi có text
             if (setIsReconnecting) setIsReconnecting(false);
 
             const isActive = !isUnmountedRef.current && (currentSessionIdRef.current === originalSessionId || currentSessionIdRef.current === currentNewSessionId);
@@ -76,6 +75,8 @@ export const createSSEHandlers = (context) => {
 
             const chunkContent = typeof data === 'string' ? data : (data.content || data.chunk || '');
             const words = chunkContent.match(/\S+|\s+/g) || [];
+            
+            if (setIsReconnecting) setIsReconnecting(false);
             
             for (const word of words) {
                 if (isStoppedRef.current || isDoneRef.current) break;

@@ -11,6 +11,7 @@ const groqStrategy = {
         for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content || "";
             if (content) {
+                await new Promise(resolve => setTimeout(resolve, 50)); 
                 yield { chunk: content };
             }
         }

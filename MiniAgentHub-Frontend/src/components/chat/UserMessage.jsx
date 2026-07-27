@@ -47,7 +47,7 @@ const UserMessage = ({
               if (files.length > 0) finalEdit = `${files.join('\n')}\n\n${finalEdit}`;
               if (imgs.length > 0) finalEdit = `${imgs.join('\n')}\n\n${finalEdit}`;
 
-              handleSend(finalEdit.trim(), true, index);
+              handleSend(finalEdit.trim());
             }} className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">{t('chat.resendEdit')}</button>
           </div>
         </div>
@@ -107,7 +107,7 @@ const UserMessage = ({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 mr-2">
+      <div className="flex items-center gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1.5 mr-2">
         <button onClick={() => { if (!contentText) return; navigator.clipboard.writeText(contentText); toast.success(t('chat.copiedMessage')); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy size={13} /> {t('chat.copy')}</button>
         <button onClick={() => { setEditInput(contentText); setEditingIndex(index); }} className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"><Pencil size={13} /> {t('chat.edit')}</button>
       </div>

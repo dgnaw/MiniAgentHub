@@ -119,6 +119,7 @@
     "errorConnect": "Xin lỗi, đã có lỗi xảy ra khi kết nối với máy chủ AI.",
     "analyzing": "Đang phân tích dữ liệu chuyên sâu",
     "thinking": "Đang tạo câu trả lời",
+    "reconnectingSession": "Đang kết nối lại phiên chat...",
     "modelLlamaDesc": "Trò chuyện đa năng (qua Groq)",
     "modelDataDesc": "Phân tích dữ liệu (qua Flowise)",
     "modelLlama318b": "Nhanh, nhẹ, xử lý cơ bản",

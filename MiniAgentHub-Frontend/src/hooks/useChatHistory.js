@@ -61,8 +61,6 @@ export const useChatHistory = (sessionId, messages, setMessages, isReloadingRef,
           
           try {
             const res = await axiosClient.get(`/chat-sessions/${sessionId}/messages?page=1&limit=50`);
-
-            // Guard: nếu effect đã bị cleanup (StrictMode chạy lần 2) thì bỏ qua kết quả fetch lần 1
             if (!isSubscribed || currentSessionIdRef.current !== sessionId) return;
 
             const msgList = Array.isArray(res) ? res : (res.data || []);

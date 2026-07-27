@@ -431,18 +431,18 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
 
   const handleReconnect = async (targetSessionId, initialMessages = null) => {
     const isAlreadyGenerating = useGenerationStore.getState().generatingSessions.has(targetSessionId);
-    if (isAlreadyGenerating || !targetSessionId) return;
+    if (isAlreadyGenerating || !targetSessionId) {
+      return;
+    }
 
     isStoppedRef.current = false;
 
-    // Đặt guard ngay lập tức TRƯỚC khi delay để tránh race condition gọi đôi
     const controller = new AbortController();
     abortControllerRef.current = controller;
     useGenerationStore.getState().addGeneration(targetSessionId, controller);
 
     setIsReconnecting(true);
-    // Cho React 1 tick để render loading trước khi kết nối SSE
-    await new Promise(resolve => setTimeout(resolve, 30));
+    await new Promise(resolve => setTimeout(resolve, 2000)); 
 
     controller.signal.addEventListener('abort', () => {
       if (!isStoppedRef.current) {
@@ -456,7 +456,7 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'text/event-stream'
+          'Accept': 'text/event-stream'
         },
         signal: controller.signal
       };
@@ -598,13 +598,13 @@ export const useChatStream = (sessionId, selectedModel, setSelectedModel, apiKey
       const currentMsgs = latestMessages.current;
 
       if (userIndex >= 0 && currentMsgs[userIndex] && currentMsgs[userIndex].role === 'user') {
-        latestHandleSend.current(currentMsgs[userIndex].content, true, userIndex);
+        latestHandleSend.current(currentMsgs[userIndex].content);
       }
     };
 
     window.addEventListener('regenerate-message', handleRegenerateEvent);
     return () => window.removeEventListener('regenerate-message', handleRegenerateEvent);
-  }, []); // Dependency array rỗng: Chỉ cài đặt 1 lần duy nhất lúc load trang!
+  }, []); 
 
   return {
     input, setInput,
